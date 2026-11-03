@@ -103,7 +103,7 @@ if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
     );
     combined = combined.replace(
       `          \${\n            payload.canUpgradeToLandmarkAfter\n              ? \`<button class="gold-btn" id="btnTakeoverAndLandmark" \${!canAffordBoth ? 'disabled' : ''} style="padding:12px 30px; font-size:17px; font-weight:900;">\n                  🏰 ซื้อต่อ + สร้างแลนด์มาร์ก (\${formatMarbleFull(totalWithLandmark)}) \${!canAffordBoth ? '— เงินไม่พอ' : ''}\n                </button>\`\n              : ''\n          }`,
-      `          \${\n            canShowLandmarkBtn\n              ? \`<button class="gold-btn" id="btnTakeoverAndLandmark" \${!canAffordBoth ? 'disabled' : ''} style="padding:12px 26px; font-size:16px; font-weight:900;">\n                  🏰 ซื้อต่อ + สร้างแลนด์มาร์ก (+\${formatMarbleCompact(payload.landmarkUpgradeCost)} = \${formatMarbleFull(totalWithLandmark)}) \${!canAffordBoth ? '— เงินไม่พอ' : ''}\n                </button>\`\n              : ''\n          }`
+      ``
     );
   }
 
@@ -158,19 +158,22 @@ if (fs.existsSync(engineFile)) {
       `  public confirmTakeover(alsoUpgradeLandmark: boolean = false): boolean {`
     );
     engSrc = engSrc.replace(
-      `    // After taking over an enemy city, allow upgrading it immediately (e.g. HOTEL -> LANDMARK!)\n    this.openBuyOrUpgradePrompt(buyer, tile.index, true);\n    return true;`,
-      `    if (alsoUpgradeLandmark && tile.buildingLevel === BuildingLevel.HOTEL) {\n      const lmCost = this.calculateBuildCost(buyer.id, tile.index, BuildingLevel.HOTEL, BuildingLevel.LANDMARK);\n      if (buyer.marble >= lmCost) {\n        buyer.marble -= lmCost;\n        tile.buildingLevel = BuildingLevel.LANDMARK;\n        this.appendLog(buyer.id, \`🏰 \${buyer.name} สร้างแลนด์มาร์กทันทีหลังซื้อต่อที่ \${def.nameTh} (-\${formatMarbleCompact(lmCost)})!\`, 'BUILD');\n        this.callbacks.onFloatingText?.({ tileIndex: tile.index, text: \`🏰 LANDMARK!\`, colorHex: buyer.colorHex });\n        if (this.checkAndApplyVictoryConditions()) {\n          this.emitStateChange();\n          return true;\n        }\n        this.runPostBuildHooks(buyer, tile.index);\n        return true;\n      }\n    }\n    this.finishTileResolution();\n    return true;`
+      `      if (prompt.type === 'TAKEOVER_PROMPT') {\n        if (decideAiTakeover(this, this.matchState, ai)) {\n          this.confirmTakeover();\n        } else {`,
+      `      if (prompt.type === 'ANGEL_CARD_PROMPT') {\n        const shouldUseAngel =\n          prompt.discountedTollAmount >= 350_000 ||\n          prompt.discountedTollAmount > ai.marble * 0.35 ||\n          prompt.discountedTollAmount > ai.marble;\n        this.resolveAngelCardPrompt(shouldUseAngel);\n        return true;\n      }\n\n      if (prompt.type === 'TAKEOVER_PROMPT') {\n        if (decideAiTakeover(this, this.matchState, ai)) {\n          this.confirmTakeover();\n        } else {`
     );
     engSrc = engSrc.replace(
-      `  private resolveTaxAuditTile(player: PlayerState): void {\n    if (!this.matchState) return;\n    const totalAssets = this.calculatePlayerTotalAssets(player.id);\n    const taxAmount = Math.max(50_000, Math.round(totalAssets * MATCH_CONFIG.taxAuditRate));\n\n    if (player.marble >= taxAmount) {`,
-      `  private resolveTaxAuditTile(player: PlayerState): void {\n    if (!this.matchState) return;\n    const totalAssets = this.calculatePlayerTotalAssets(player.id);\n    const taxAmount = Math.max(50_000, Math.round(totalAssets * MATCH_CONFIG.taxAuditRate));\n\n    if (taxAmount > 0 && player.hasAngelCard) {\n      this.matchState.activePrompt = {\n        type: 'ANGEL_CARD_PROMPT',\n        playerId: player.id,\n        tileIndex: player.tileIndex,\n        creditorId: 'BANK',\n        tollAmount: taxAmount,\n        hasDiscountCoupon: false,\n        discountedTollAmount: taxAmount,\n        reason: 'TAX',\n      };\n      this.emitStateChange();\n      return;\n    }\n\n    this.executeTaxAuditPayment(player, taxAmount);\n  }\n\n  private executeTaxAuditPayment(player: PlayerState, taxAmount: number): void {\n    if (!this.matchState) return;\n    if (player.marble >= taxAmount) {`
-    );
-    engSrc = engSrc.replace(
-      /      if \(prompt\.type === 'TAKEOVER_PROMPT'\) \{\n        if \(decideAiTakeover\(this, this\.matchState, ai\)\) \{\n          this\.confirmTakeover\((?:true)?\);\n        \} else \{/,
-      `      if (prompt.type === 'ANGEL_CARD_PROMPT') {\n        const shouldUseAngel =\n          prompt.discountedTollAmount >= 350_000 ||\n          prompt.discountedTollAmount > ai.marble * 0.35 ||\n          prompt.discountedTollAmount > ai.marble;\n        this.resolveAngelCardPrompt(shouldUseAngel);\n        return true;\n      }\n\n      if (prompt.type === 'TAKEOVER_PROMPT') {\n        if (decideAiTakeover(this, this.matchState, ai)) {\n          this.confirmTakeover(true);\n        } else {`
+      /  private resolveTaxAuditTile\(mover: PlayerState\): void \{[\s\S]*?    this\.finishTileResolution\(\);\n  \}/,
+      `  private resolveTaxAuditTile(mover: PlayerState): void {\n    if (!this.matchState) return;\n    const tax = this.calculateTaxAuditAmount(mover);\n\n    if (tax <= 0) {\n      this.appendLog(mover.id, \`🧾 \${mover.name} ผ่านด่านสรรพากร (ไม่มีเมืองให้เก็บภาษี)\`, 'SYSTEM');\n      this.finishTileResolution();\n      return;\n    }\n\n    if (mover.hasAngelCard) {\n      this.matchState.activePrompt = {\n        type: 'ANGEL_CARD_PROMPT',\n        playerId: mover.id,\n        tileIndex: 30,\n        creditorId: 'BANK',\n        tollAmount: tax,\n        hasDiscountCoupon: false,\n        discountedTollAmount: tax,\n        reason: 'TAX',\n      };\n      this.emitStateChange();\n      return;\n    }\n\n    this.executeTaxAuditPayment(mover, tax);\n  }\n\n  private executeTaxAuditPayment(mover: PlayerState, tax: number): void {\n    if (!this.matchState) return;\n    if (mover.marble >= tax) {\n      mover.marble -= tax;\n      this.appendLog(mover.id, \`🧾 \${mover.name} จ่ายภาษีสรรพากร 10% เป็นเงิน \${formatMarbleCompact(tax)}\`, 'TOLL');\n      this.callbacks.onFloatingText?.({\n        tileIndex: 30,\n        text: \`TAX -\${formatMarbleCompact(tax)}\`,\n        colorHex: '#DC2626',\n      });\n    } else {\n      this.enqueueOrStartDebt({\n        debtorId: mover.id,\n        creditorId: 'BANK',\n        amountOwed: tax,\n        sourceTileIndex: 30,\n        allowPostPayTakeover: false,\n        isFromSkillPull: false,\n      });\n      return;\n    }\n\n    this.finishTileResolution();\n  }`
     );
     fs.writeFileSync(engineFile, engSrc, 'utf8');
   }
+  // Ensure confirmTakeover always opens openBuyOrUpgradePrompt(buyer, tile.index, true) on a separate screen
+  engSrc = fs.readFileSync(engineFile, 'utf8').replace(/\r\n/g, '\n');
+  engSrc = engSrc.replace(
+    /    if \(this\.checkAndApplyVictoryConditions\(\)\) \{\n      this\.emitStateChange\(\);\n      return true;\n    \}\n\n[\s\S]*?    return true;\n  \}\n\n  public skipTakeover\(\): void \{/,
+    `    if (this.checkAndApplyVictoryConditions()) {\n      this.emitStateChange();\n      return true;\n    }\n\n    this.openBuyOrUpgradePrompt(buyer, tile.index, true);\n    return true;\n  }\n\n  public skipTakeover(): void {`
+  );
+  fs.writeFileSync(engineFile, engSrc, 'utf8');
 }
 
 // 1. Bundle server-side authoritative engine
