@@ -14,6 +14,7 @@ import {
 } from './engine/gameEngine';
 import { IsoBoard3DRenderer } from './render/isoBoard3D';
 import {
+  AngelCardModalPayload,
   BoardPickModalPayload,
   CityConstructionOption,
   CityModalPayload,
@@ -258,6 +259,13 @@ class LgrPeakEraApp {
           this.sendWs({ type: 'SKIP_TAKEOVER' });
         } else {
           this.engine.skipTakeover();
+        }
+      },
+      onResolveAngelCard: (useCard) => {
+        if (this.isNetworkConnected()) {
+          this.sendWs({ type: 'RESOLVE_ANGEL_CARD', useCard });
+        } else {
+          this.engine.resolveAngelCardPrompt(useCard);
         }
       },
       onBonusCoinGuess: (guess) => {
@@ -680,7 +688,7 @@ class LgrPeakEraApp {
           oddEvenCharges: MATCH_CONFIG.oddEvenChargesPerMatch,
           selectedOddEven: 'NONE',
           skillUsesRemaining: {},
-          hasAngelCard: false,
+          hasAngelCard: isSlotActive,
           hasDiscountCoupon: false,
         };
       });
@@ -714,6 +722,7 @@ class LgrPeakEraApp {
     // Build City Modal Payload if activePrompt is BUY_OR_UPGRADE_CITY
     let pendingCityModal: CityModalPayload | null = null;
     let pendingTakeoverModal: TakeoverModalPayload | null = null;
+    let pendingAngelCardModal: AngelCardModalPayload | null = null;
 
     if (m.activePrompt?.type === 'BUY_OR_UPGRADE_CITY') {
       const p = m.activePrompt;
@@ -796,6 +805,17 @@ class LgrPeakEraApp {
         paidToll: p.paidToll ?? 0,
         tollExemptReason: p.tollExemptReason,
       };
+    } else if (m.activePrompt?.type === 'ANGEL_CARD_PROMPT') {
+      const p = m.activePrompt;
+      pendingAngelCardModal = {
+        playerId: p.playerId,
+        tileIndex: p.tileIndex,
+        creditorId: p.creditorId,
+        tollAmount: p.tollAmount,
+        hasDiscountCoupon: p.hasDiscountCoupon,
+        discountedTollAmount: p.discountedTollAmount,
+        reason: p.reason,
+      };
     }
 
     let pendingBoardPick: BoardPickModalPayload | null = null;
@@ -836,6 +856,7 @@ class LgrPeakEraApp {
       pendingBoardPick,
       pendingCityModal,
       pendingTakeoverModal,
+      pendingAngelCardModal,
       pendingFortuneCard:
         m.activePrompt?.type === 'FORTUNE_CARD_MODAL'
           ? m.activePrompt

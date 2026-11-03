@@ -156,7 +156,7 @@ function createRichGameRoom() {
           oddEvenCharges: MATCH_CONFIG.oddEvenChargesPerMatch,
           selectedOddEven: 'NONE',
           skillUsesRemaining: {},
-          hasAngelCard: false,
+          hasAngelCard: isSlotActive,
           hasDiscountCoupon: false
         };
       });
@@ -186,6 +186,7 @@ function createRichGameRoom() {
         pendingBoardPick: null,
         pendingCityModal: null,
         pendingTakeoverModal: null,
+        pendingAngelCardModal: null,
         victoryResult: null,
         monopolyAlerts: []
       };
@@ -269,6 +270,20 @@ function createRichGameRoom() {
       };
     }
 
+    let pendingAngelCardModal = null;
+    if (m.activePrompt?.type === 'ANGEL_CARD_PROMPT') {
+      const p = m.activePrompt;
+      pendingAngelCardModal = {
+        playerId: p.playerId,
+        tileIndex: p.tileIndex,
+        creditorId: p.creditorId,
+        tollAmount: p.tollAmount,
+        hasDiscountCoupon: p.hasDiscountCoupon,
+        discountedTollAmount: p.discountedTollAmount,
+        reason: p.reason
+      };
+    }
+
     let pendingBoardPick = null;
     if (m.phase === 'BOARD_TARGET_PICK' && m.boardPickReason) {
       pendingBoardPick = {
@@ -306,6 +321,7 @@ function createRichGameRoom() {
       pendingBoardPick,
       pendingCityModal,
       pendingTakeoverModal,
+      pendingAngelCardModal,
       pendingFortuneCard: m.activePrompt?.type === 'FORTUNE_CARD_MODAL' ? m.activePrompt : null,
       blackHole: m.blackHole ?? null,
       victoryResult: m.victoryResult,
@@ -742,6 +758,13 @@ function createRichGameRoom() {
 
         case 'SKIP_TAKEOVER': {
           engine.skipTakeover();
+          broadcastState();
+          checkAndTriggerAi();
+          break;
+        }
+
+        case 'RESOLVE_ANGEL_CARD': {
+          engine.resolveAngelCardPrompt(Boolean(msg.useCard));
           broadcastState();
           checkAndTriggerAi();
           break;
