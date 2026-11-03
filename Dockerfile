@@ -2,12 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies first for efficient layer caching
-COPY package*.json ./
-RUN npm install --omit=dev
-
-# Copy application sources
+# Copy application sources and install dependencies (triggers postinstall -> build-rich.js)
 COPY . .
+RUN npm install --omit=dev
 
 # Expose server port (Render & container defaults)
 EXPOSE 3000
