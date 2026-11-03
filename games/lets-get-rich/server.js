@@ -80,6 +80,7 @@ function createRichGameRoom() {
       return tokenToSlot.get(token);
     }
     const lobby = engine.getLobbyConfig();
+    const maxActive = getActiveSlotCount();
 
     // Check if any slot is currently assigned to this token
     for (const [t, s] of tokenToSlot.entries()) {
@@ -155,7 +156,7 @@ function createRichGameRoom() {
           oddEvenCharges: MATCH_CONFIG.oddEvenChargesPerMatch,
           selectedOddEven: 'NONE',
           skillUsesRemaining: {},
-          hasAngelCard: isSlotActive,
+          hasAngelCard: false,
           hasDiscountCoupon: false
         };
       });
@@ -191,6 +192,7 @@ function createRichGameRoom() {
     }
 
     // In-game snapshot
+    const activeSlotCount = m.gameMode === 'TEAM_2V2' ? 4 : (lobby.ffaPlayerCount ?? 4);
     const playersList = PLAYER_IDS.map((pid) => {
       const p = m.players[pid];
       if (!p) return null;
@@ -244,17 +246,26 @@ function createRichGameRoom() {
       const p = m.activePrompt;
       const buyer = m.players[p.playerId];
       const stats = computePlayerStats(buyer.characterId, buyer.treasureIds);
+      const propVal = engine.calculateTilePropertyValue(p.tileIndex);
+      const rawTakeoverCost = Math.round(propVal * MATCH_CONFIG.takeoverCostMultiplier);
+      // BuildingLevel.HOTEL = 4 (3 buildings); BuildingLevel.LANDMARK = 5
+      const canUpgradeToLandmarkAfter = p.buildingLevel === 4;
+      const landmarkUpgradeCost = canUpgradeToLandmarkAfter
+        ? engine.calculateBuildCost(p.playerId, p.tileIndex, 4, 5)
+        : 0;
       pendingTakeoverModal = {
         buyerId: p.playerId,
         ownerId: p.defenderId,
         tileIndex: p.tileIndex,
         buildingLevel: p.buildingLevel,
         acqDiscountPct: stats.acqDiscountPct,
-        rawTakeoverCost: p.takeoverCost,
+        rawTakeoverCost,
         netTakeoverCost: p.takeoverCost,
         resultingToll: engine.calculateTollBreakdown(p.tileIndex).rawToll,
-        canUpgradeToLandmarkAfter: p.buildingLevel === 3,
-        landmarkUpgradeCost: 0
+        canUpgradeToLandmarkAfter,
+        landmarkUpgradeCost,
+        paidToll: p.paidToll ?? 0,
+        tollExemptReason: p.tollExemptReason
       };
     }
 
@@ -723,10 +734,7 @@ function createRichGameRoom() {
         }
 
         case 'CONFIRM_TAKEOVER': {
-          const ok = engine.confirmTakeover();
-          if (ok && msg.alsoUpgradeLandmark) {
-            engine.confirmBuildOrUpgrade(5);
-          }
+          engine.confirmTakeover(Boolean(msg.alsoUpgradeLandmark));
           broadcastState();
           checkAndTriggerAi();
           break;

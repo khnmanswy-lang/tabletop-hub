@@ -250,18 +250,7 @@ class LgrPeakEraApp {
         if (this.isNetworkConnected()) {
           this.sendWs({ type: 'CONFIRM_TAKEOVER', alsoUpgradeLandmark });
         } else {
-          const ok = this.engine.confirmTakeover();
-          if (ok && alsoUpgradeLandmark) {
-            const m = this.engine.getMatchState();
-            if (
-              m?.activePrompt?.type === 'BUY_OR_UPGRADE_CITY' &&
-              m.activePrompt.options.some(
-                (o) => o.level === BuildingLevel.LANDMARK && o.canAfford
-              )
-            ) {
-              this.engine.confirmBuildOrUpgrade(BuildingLevel.LANDMARK);
-            }
-          }
+          this.engine.confirmTakeover(alsoUpgradeLandmark);
         }
       },
       onPassTakeover: () => {
@@ -504,6 +493,17 @@ class LgrPeakEraApp {
     }
 
     this.ui.sync(snapshot);
+    if (snapshot.screen === 'IN_GAME' && Array.isArray(snapshot.players)) {
+      for (const p of snapshot.players) {
+        if (!p || p.isSlotActive === false) continue;
+        const prev = this.lastKnownMarbles[p.id];
+        const cur = p.marble;
+        if (typeof prev === 'number' && cur !== prev) {
+          this.ui.showCashDelta(p.id, cur - prev);
+        }
+        this.lastKnownMarbles[p.id] = cur;
+      }
+    }
     if (this.board3D) {
       this.board3D.syncBoard({
         tiles: snapshot.tiles,
@@ -680,7 +680,7 @@ class LgrPeakEraApp {
           oddEvenCharges: MATCH_CONFIG.oddEvenChargesPerMatch,
           selectedOddEven: 'NONE',
           skillUsesRemaining: {},
-          hasAngelCard: isSlotActive,
+          hasAngelCard: false,
           hasDiscountCoupon: false,
         };
       });
@@ -793,6 +793,8 @@ class LgrPeakEraApp {
         resultingToll,
         canUpgradeToLandmarkAfter,
         landmarkUpgradeCost,
+        paidToll: p.paidToll ?? 0,
+        tollExemptReason: p.tollExemptReason,
       };
     }
 

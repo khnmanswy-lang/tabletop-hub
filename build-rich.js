@@ -14,7 +14,8 @@ if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
     : ['uiManager.p1', 'uiManager.p2', 'uiManager.p3'];
   let combined = parts
     .map(f => fs.readFileSync(path.join(uiDir, f), 'utf8'))
-    .join('');
+    .join('')
+    .replace(/\r\n/g, '\n');
 
   // Default 3-Tab High-Legibility Lobby on both PC and Mobile (with toggle button for Compact All-in-One view)
   combined = combined.replace(
@@ -70,13 +71,33 @@ if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
     );
   }
 
+  // Ensure TakeoverModalPayload and renderTakeoverModal show paidToll, tollExemptReason, and only show Landmark button on 3-building HOTEL
+  if (!combined.includes('tollExemptReason?: string;')) {
+    combined = combined.replace(
+      `  canUpgradeToLandmarkAfter: boolean;\n  landmarkUpgradeCost: number;\n}`,
+      `  canUpgradeToLandmarkAfter: boolean;\n  landmarkUpgradeCost: number;\n  paidToll?: number;\n  tollExemptReason?: string;\n}`
+    );
+    combined = combined.replace(
+      `    const tierLabels: Record<number, string> = {\n      [BuildingLevel.NONE]: 'ที่ดินเปล่า',\n      [BuildingLevel.VILLA]: '🏡 วิลล่า',\n      [BuildingLevel.BUILDING]: '🏢 ตึก',\n      [BuildingLevel.HOTEL]: '🏨 โรงแรม',\n      [BuildingLevel.LANDMARK]: '🏰 แลนด์มาร์ก',\n    };\n    const tierBadge = tierLabels[payload.buildingLevel] ?? 'สิ่งก่อสร้าง';`,
+      `    const tierLabels: Record<number, string> = {\n      [BuildingLevel.NONE]: 'ที่ดินเปล่า',\n      [BuildingLevel.LAND]: '🚩 ที่ดินเปล่า (0 หลัง)',\n      [BuildingLevel.VILLA]: '🏡 บ้านพัก (1 หลัง)',\n      [BuildingLevel.BUILDING]: '🏢 ตึกแถว (2 หลัง)',\n      [BuildingLevel.HOTEL]: '🏨 โรงแรม (3 หลัง)',\n      [BuildingLevel.LANDMARK]: '🏰 แลนด์มาร์ก',\n    };\n    const tierBadge = tierLabels[payload.buildingLevel] ?? 'สิ่งก่อสร้าง';\n    const paidTollVal = payload.paidToll ?? 0;\n    const canShowLandmarkBtn = payload.canUpgradeToLandmarkAfter && payload.buildingLevel === BuildingLevel.HOTEL && payload.landmarkUpgradeCost > 0;\n    const tollReceiptBannerHtml = paidTollVal > 0 ? \`<div style="background:#FEF2F2; border:2.5px solid #DC2626; border-radius:12px; padding:8px 16px; display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:900; color:#991B1B;"><span>💸 หักค่าผ่านทางให้ \${owner?.name ?? payload.ownerId} เรียบร้อยแล้ว:</span><span style="font-family:var(--font-num); font-size:18px; color:#DC2626; background:#FEE2E2; padding:2px 12px; border-radius:999px; border:1.5px solid #EF4444;">-\${formatMarbleFull(paidTollVal)}</span></div>\` : payload.tollExemptReason ? \`<div style="background:#EFF6FF; border:2.5px solid #2563EB; border-radius:12px; padding:8px 16px; display:flex; justify-content:space-between; align-items:center; font-size:14.5px; font-weight:900; color:#1E40AF;"><span>🛡️ \${payload.tollExemptReason}</span><span style="font-family:var(--font-num); font-size:16px; color:#15803D; background:#DCFCE7; padding:2px 12px; border-radius:999px; border:1.5px solid #22C55E;">เสียค่าผ่านทาง 0 M!</span></div>\` : '';`
+    );
+    combined = combined.replace(
+      `        <!-- Deed Card Container -->\n        <div style="background:#FFFFFF; border:3.5px solid #1E1612; border-radius:16px; padding:18px 22px; box-shadow:0 4px 0 #1E1612; text-align:left; display:flex; flex-direction:column; gap:14px;">`,
+      `        <!-- Deed Card Container -->\n        <div style="background:#FFFFFF; border:3.5px solid #1E1612; border-radius:16px; padding:16px 20px; box-shadow:0 4px 0 #1E1612; text-align:left; display:flex; flex-direction:column; gap:12px;">\n          \${tollReceiptBannerHtml}`
+    );
+    combined = combined.replace(
+      `          \${\n            payload.canUpgradeToLandmarkAfter\n              ? \`<button class="gold-btn" id="btnTakeoverAndLandmark" \${!canAffordBoth ? 'disabled' : ''} style="padding:12px 30px; font-size:17px; font-weight:900;">\n                  🏰 ซื้อต่อ + สร้างแลนด์มาร์ก (\${formatMarbleFull(totalWithLandmark)}) \${!canAffordBoth ? '— เงินไม่พอ' : ''}\n                </button>\`\n              : ''\n          }`,
+      `          \${\n            canShowLandmarkBtn\n              ? \`<button class="gold-btn" id="btnTakeoverAndLandmark" \${!canAffordBoth ? 'disabled' : ''} style="padding:12px 26px; font-size:16px; font-weight:900;">\n                  🏰 ซื้อต่อ + สร้างแลนด์มาร์ก (+\${formatMarbleCompact(payload.landmarkUpgradeCost)} = \${formatMarbleFull(totalWithLandmark)}) \${!canAffordBoth ? '— เงินไม่พอ' : ''}\n                </button>\`\n              : ''\n          }`
+    );
+  }
+
   fs.writeFileSync(path.join(uiDir, 'uiManager.ts'), combined, 'utf8');
 }
 
 // 0b. Ensure gameEngine.ts has per-slot isSlotActive kick/2P/3P support
 const engineFile = path.join(richDir, 'src', 'engine', 'gameEngine.ts');
 if (fs.existsSync(engineFile)) {
-  let engSrc = fs.readFileSync(engineFile, 'utf8');
+  let engSrc = fs.readFileSync(engineFile, 'utf8').replace(/\r\n/g, '\n');
   if (!engSrc.includes('syncFfaPlayerCountFromActiveSlots')) {
     engSrc = engSrc.replace(
       'treasureIds: [string, string, string];\n}',
@@ -89,6 +110,44 @@ if (fs.existsSync(engineFile)) {
     engSrc = engSrc.replace(
       /public kickPlayerSlot\(playerId: PlayerId\): void \{[\s\S]*?public startNewMatch\(\): MatchState \{\s*const mode = this\.lobbyConfig\.gameMode;\s*const ffaCount = this\.lobbyConfig\.ffaPlayerCount \?\? 4;\s*const activeSlotCount = mode === 'TEAM_2V2' \? 4 : ffaCount;\s*const players: Record<PlayerId, PlayerState> = \{\} as Record<PlayerId, PlayerState>;\s*for \(let idx = 0; idx < PLAYER_IDS\.length; idx\+\+\) \{\s*const pid = PLAYER_IDS\[idx\];\s*const isSlotActive = idx < activeSlotCount;\s*const slot = this\.lobbyConfig\.players\[pid\];/,
       `public kickPlayerSlot(playerId: PlayerId): void {\n    const slot = this.lobbyConfig.players[playerId];\n    if (!slot) return;\n    slot.isSlotActive = false;\n    this.syncFfaPlayerCountFromActiveSlots();\n    const activeIds = PLAYER_IDS.filter((pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false);\n    if (!activeIds.includes(this.lobbyConfig.loadoutInspectPlayerId)) {\n      this.lobbyConfig.loadoutInspectPlayerId = activeIds[0] ?? 'P1';\n    }\n    this.emitStateChange();\n  }\n\n  public startNewMatch(): MatchState {\n    const mode = this.lobbyConfig.gameMode;\n    const currentlyActive = PLAYER_IDS.filter((pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false);\n    if (currentlyActive.length < 2) {\n      for (const pid of PLAYER_IDS) {\n        if (this.lobbyConfig.players[pid].isSlotActive === false) {\n          this.lobbyConfig.players[pid].isSlotActive = true;\n          break;\n        }\n      }\n      this.syncFfaPlayerCountFromActiveSlots();\n    }\n    const players: Record<PlayerId, PlayerState> = {} as Record<PlayerId, PlayerState>;\n    for (let idx = 0; idx < PLAYER_IDS.length; idx++) {\n      const pid = PLAYER_IDS[idx];\n      const slot = this.lobbyConfig.players[pid];\n      const isSlotActive = slot.isSlotActive !== false;`
+    );
+    fs.writeFileSync(engineFile, engSrc, 'utf8');
+  }
+
+  // Ensure gameEngine.ts has hasAngelCard: false at start, tollExemptReason on TAKEOVER_PROMPT, and clean confirmTakeover(alsoUpgradeLandmark)
+  engSrc = fs.readFileSync(engineFile, 'utf8').replace(/\r\n/g, '\n');
+  if (!engSrc.includes('tollExemptReason?: string;')) {
+    engSrc = engSrc.replace(
+      `      canAfford: boolean;\n      paidToll: number;\n    }`,
+      `      canAfford: boolean;\n      paidToll: number;\n      tollExemptReason?: string;\n    }`
+    );
+    engSrc = engSrc.replace(
+      `        skillUsesRemaining: createInitialSkillUsesMap(slot.characterId, cleanTreasures),\n        hasAngelCard: isSlotActive,\n        hasDiscountCoupon: false,`,
+      `        skillUsesRemaining: createInitialSkillUsesMap(slot.characterId, cleanTreasures),\n        hasAngelCard: false,\n        hasDiscountCoupon: false,`
+    );
+    engSrc = engSrc.replace(
+      `      this.proceedAfterEnemyTollPaid(mover, tile, def, 0);\n      return;\n    }\n\n    const breakdown = this.calculateTollBreakdown(tile.index, mover.id);\n    let payableToll = breakdown.netToll;\n\n    // Hook 5: ON_BEFORE_PAY_TOLL -> S07_BLACK_CARD (100% Toll Exemption Once)\n    if (payableToll > 0 && this.tryTriggerSkill(mover, 'S07_BLACK_CARD')) {\n      payableToll = 0;\n      this.appendLog(\n        mover.id,\n        \`💳 \${mover.name} ใช้บัตรเครดิตดำ! ยกเว้นค่าผ่านทางที่ \${def.nameTh} 100%!\`,\n        'SKILL'\n      );\n      this.callbacks.onFloatingText?.({\n        tileIndex: tile.index,\n        text: \`FREE! บัตรดำ 100%\`,\n        colorHex: '#E5A93B',\n      });\n      this.proceedAfterEnemyTollPaid(mover, tile, def, 0);\n      return;\n    }\n\n    // Check Held Angel Shield Card (100% Toll Exemption from Chance Card)\n    if (payableToll > 0 && mover.hasAngelCard) {\n      mover.hasAngelCard = false;\n      payableToll = 0;\n      this.callbacks.onAngelCardUsed?.({\n        playerId: mover.id,\n        tileIndex: tile.index,\n        targetName: def.nameTh,\n        reason: 'TOLL',\n      });\n      this.appendLog(\n        mover.id,\n        \`👼 \${mover.name} ใช้การ์ดนางฟ้า! ยกเว้นค่าผ่านทางที่ \${def.nameTh} 100%!\`,\n        'TOLL'\n      );\n      this.callbacks.onFloatingText?.({\n        tileIndex: tile.index,\n        text: \`👼 นางฟ้า! ฟรี 100%\`,\n        colorHex: '#FDE047',\n      });\n      this.proceedAfterEnemyTollPaid(mover, tile, def, 0);\n      return;\n    }`,
+      `      this.proceedAfterEnemyTollPaid(mover, tile, def, 0, '🔌 เมืองไฟดับ (ยกเว้นค่าผ่านทาง 100%)');\n      return;\n    }\n\n    const breakdown = this.calculateTollBreakdown(tile.index, mover.id);\n    let payableToll = breakdown.netToll;\n\n    // Hook 5: ON_BEFORE_PAY_TOLL -> S07_BLACK_CARD (100% Toll Exemption Once)\n    if (payableToll > 0 && this.tryTriggerSkill(mover, 'S07_BLACK_CARD')) {\n      payableToll = 0;\n      this.appendLog(\n        mover.id,\n        \`💳 \${mover.name} ใช้บัตรเครดิตดำ! ยกเว้นค่าผ่านทางที่ \${def.nameTh} 100%!\`,\n        'SKILL'\n      );\n      this.callbacks.onFloatingText?.({\n        tileIndex: tile.index,\n        text: \`FREE! บัตรดำ 100%\`,\n        colorHex: '#E5A93B',\n      });\n      this.proceedAfterEnemyTollPaid(mover, tile, def, 0, '💳 สกิลบัตรเครดิตดำ [S07] (ยกเว้นค่าผ่านทาง 100%)');\n      return;\n    }\n\n    // Check Held Angel Shield Card (100% Toll Exemption from Chance Card)\n    if (payableToll > 0 && mover.hasAngelCard) {\n      mover.hasAngelCard = false;\n      payableToll = 0;\n      this.callbacks.onAngelCardUsed?.({\n        playerId: mover.id,\n        tileIndex: tile.index,\n        targetName: def.nameTh,\n        reason: 'TOLL',\n      });\n      this.appendLog(\n        mover.id,\n        \`👼 \${mover.name} ใช้การ์ดนางฟ้า! ยกเว้นค่าผ่านทางที่ \${def.nameTh} 100%!\`,\n        'TOLL'\n      );\n      this.callbacks.onFloatingText?.({\n        tileIndex: tile.index,\n        text: \`👼 นางฟ้า! ฟรี 100%\`,\n        colorHex: '#FDE047',\n      });\n      this.proceedAfterEnemyTollPaid(mover, tile, def, 0, '👼 การ์ดนางฟ้าคุ้มครอง (ยกเว้นค่าผ่านทาง 100%)');\n      return;\n    }`
+    );
+    engSrc = engSrc.replace(
+      `  private proceedAfterEnemyTollPaid(\n    mover: PlayerState,\n    tile: BoardTileState,\n    def: WorldTileDef,\n    paidToll: number\n  ): void {`,
+      `  private proceedAfterEnemyTollPaid(\n    mover: PlayerState,\n    tile: BoardTileState,\n    def: WorldTileDef,\n    paidToll: number,\n    tollExemptReason?: string\n  ): void {`
+    );
+    engSrc = engSrc.replace(
+      `          canAfford: true,\n          paidToll,\n        };`,
+      `          canAfford: true,\n          paidToll,\n          tollExemptReason,\n        };`
+    );
+    engSrc = engSrc.replace(
+      `  public confirmTakeover(): boolean {`,
+      `  public confirmTakeover(alsoUpgradeLandmark: boolean = false): boolean {`
+    );
+    engSrc = engSrc.replace(
+      `    // After taking over an enemy city, allow upgrading it immediately (e.g. HOTEL -> LANDMARK!)\n    this.openBuyOrUpgradePrompt(buyer, tile.index, true);\n    return true;`,
+      `    if (alsoUpgradeLandmark && tile.buildingLevel === BuildingLevel.HOTEL) {\n      const lmCost = this.calculateBuildCost(buyer.id, tile.index, BuildingLevel.HOTEL, BuildingLevel.LANDMARK);\n      if (buyer.marble >= lmCost) {\n        buyer.marble -= lmCost;\n        tile.buildingLevel = BuildingLevel.LANDMARK;\n        this.appendLog(buyer.id, \`🏰 \${buyer.name} สร้างแลนด์มาร์กทันทีหลังซื้อต่อที่ \${def.nameTh} (-\${formatMarbleCompact(lmCost)})!\`, 'BUILD');\n        this.callbacks.onFloatingText?.({ tileIndex: tile.index, text: \`🏰 LANDMARK!\`, colorHex: buyer.colorHex });\n        if (this.checkAndApplyVictoryConditions()) {\n          this.emitStateChange();\n          return true;\n        }\n        this.runPostBuildHooks(buyer, tile.index);\n        return true;\n      }\n    }\n    this.finishTileResolution();\n    return true;`
+    );
+    engSrc = engSrc.replace(
+      `      if (prompt.type === 'TAKEOVER_PROMPT') {\n        if (decideAiTakeover(this, this.matchState, ai)) {\n          this.confirmTakeover();\n        } else {`,
+      `      if (prompt.type === 'TAKEOVER_PROMPT') {\n        if (decideAiTakeover(this, this.matchState, ai)) {\n          this.confirmTakeover(true);\n        } else {`
     );
     fs.writeFileSync(engineFile, engSrc, 'utf8');
   }
