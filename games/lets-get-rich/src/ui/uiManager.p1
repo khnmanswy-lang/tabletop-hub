@@ -280,6 +280,9 @@ export class UIManager {
   private inspectedPlayerId: PlayerId = 'P1';
   private rulesTab: 'SKILLS' | 'CHANCE' | 'DICE' | 'MONOPOLY' = 'SKILLS';
   private speedMultiplier: 1 | 2 | 3 = 1;
+  private mobileLobbyTab: 'PLAYERS' | 'CHAR' | 'TREASURES' = 'PLAYERS';
+  private forceMobileLobbyOverride: boolean | null = null;
+  private lastDetectedMobileLobby = false;
 
   // Rainbow Arc Gauge Charging State (2.00 .. 12.00)
   private gaugeVal = 7.0;
@@ -749,6 +752,16 @@ export class UIManager {
     this.updateScreenVisibility();
   }
 
+  private isMobileLobbyMode(): boolean {
+    if (this.forceMobileLobbyOverride !== null) {
+      return this.forceMobileLobbyOverride;
+    }
+    const vv = window.visualViewport;
+    const vw = vv ? vv.width : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+    return vw <= 1100 || vh <= 620;
+  }
+
   private setupResponsiveScale(): void {
     const updateScale = (): void => {
       const vv = window.visualViewport;
@@ -759,7 +772,15 @@ export class UIManager {
         '--ui-scale',
         scale.toFixed(4)
       );
+      const nowMobile = this.isMobileLobbyMode();
+      if (nowMobile !== this.lastDetectedMobileLobby) {
+        this.lastDetectedMobileLobby = nowMobile;
+        if (this.state.screen === 'LOBBY') {
+          this.renderLobbyScreen();
+        }
+      }
     };
+    this.lastDetectedMobileLobby = this.isMobileLobbyMode();
     updateScale();
     window.addEventListener('resize', updateScale);
     window.addEventListener('orientationchange', () => {
@@ -1348,3 +1369,182 @@ export class UIManager {
     container
       .querySelector('#btnConfirmLoadout')
       ?.addEventListener('click', () => this.showScreen('LOBBY'));
+
+    container.querySelectorAll('.loadout-p-switch').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        if (pid) {
+          this.selectedLoadoutPlayerId = pid;
+          this.renderLoadoutScreen();
+        }
+      });
+    });
+
+    container.querySelector('#invTabChar')?.addEventListener('click', () => {
+      this.loadoutInvTab = 'CHAR';
+      this.renderLoadoutScreen();
+    });
+    container.querySelector('#invTabTr')?.addEventListener('click', () => {
+      this.loadoutInvTab = 'TR';
+      this.renderLoadoutScreen();
+    });
+
+    container.querySelectorAll('.inv-char-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const charId = (card as HTMLElement).dataset.charId;
+        if (!charId) return;
+        const newChar = getCharacterDef(charId);
+        // Auto-remove any treasure that conflicts with new character's Main skill
+        const filtered = targetPlayer.treasureIds.filter(
+          (tid) =>
+            !isMainSkillConflict(getTreasureDef(tid).mainSkill.skillId, newChar.mainSkill.skillId)
+        );
+        for (const tr of TREASURE_POOL) {
+          if (
+            filtered.length < 3 &&
+            !isMainSkillConflict(tr.mainSkill.skillId, newChar.mainSkill.skillId) &&
+            !filtered.includes(tr.id)
+          ) {
+            filtered.push(tr.id);
+          }
+        }
+        const nextTr = [filtered[0], filtered[1], filtered[2]] as [
+          string,
+          string,
+          string,
+        ];
+        targetPlayer.characterId = newChar.id;
+        targetPlayer.treasureIds = nextTr;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          newChar.id,
+          nextTr
+        );
+        this.renderLoadoutScreen();
+      });
+    });
+
+    container.querySelectorAll('.inv-tr-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const trId = (card as HTMLElement).dataset.trId;
+        if (!trId) return;
+        const trDef = getTreasureDef(trId);
+        if (isMainSkillConflict(trDef.mainSkill.skillId, curChar.mainSkill.skillId)) {
+          return; // Blocked: conflicts with Character Main
+        }
+        const list = [...targetPlayer.treasureIds];
+        if (list.includes(trId)) {
+          return; // Already equipped
+        }
+        list.shift();
+        list.push(trId);
+        const nextTr = [list[0], list[1], list[2]] as [string, string, string];
+        targetPlayer.treasureIds = nextTr;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          targetPlayer.characterId,
+          nextTr
+        );
+        this.renderLoadoutScreen();
+      });
+    });
+  }
+
+  // ==========================================================================
+  // ==========================================================================
+  // SCREEN 3: UNIFIED LOBBY (Topbar + 4x Player Banners + 1/3 Pick / 2/3 Inspect)
+  // ==========================================================================
+  private renderLobbyScreen(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_LOBBY'
+    ) as HTMLElement;
+    if (!container) return;
+
+    const isTeamMode = this.state.mode === 'TEAM_2V2';
+    const ffaCount = this.state.ffaPlayerCount ?? 4;
+    const activeSlotCount = isTeamMode ? 4 : ffaCount;
+
+    // Ensure selected player is valid
+    if (!this.state.players.some((p) => p.id === this.selectedLoadoutPlayerId)) {
+      this.selectedLoadoutPlayerId = 'P1';
+    }
+    const targetPlayer =
+      this.state.players.find((p) => p.id === this.selectedLoadoutPlayerId) ??
+      this.state.players[0];
+
+    const curChar: CharacterDef = getCharacterDef(targetPlayer.characterId);
+    const curTrIds = [...targetPlayer.treasureIds] as [string, string, string];
+    const charMainDef = getSkillDef(curChar.mainSkill.skillId);
+    const combinedSkills = computeCombinedPlayerSkills(
+      curChar.id,
+      curTrIds,
+      targetPlayer.skillUsesRemaining
+    );
+
+    // 1. Topbar Mode Buttons & Controls
+    const startBalLabel = formatMarbleCompact(
+      MATCH_CONFIG.startingMarbleByPlayer[targetPlayer.id] ?? MATCH_CONFIG.startingMarble
+    );
+
+    // 2. Player Banners (4x Horizontal Row - Chunky Toy License Cards)
+    const playerBannerGradients: Record<PlayerId, string> = {
+      P1: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
+      P2: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+      P3: 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
+      P4: 'linear-gradient(135deg, #F59E0B 0%, #B45309 100%)',
+    };
+
+    const playerBannersHtml = PLAYER_IDS.map((pid, idx) => {
+      const isActiveSlot = isTeamMode || idx < ffaCount;
+      const p = this.state.players[idx];
+      const isSelected = pid === this.selectedLoadoutPlayerId;
+
+      if (!isActiveSlot || !p) {
+        return `
+          <div class="lobby-banner-empty" style="background:#FFF9EB; border:3px dashed #A89078; border-radius:14px; padding:6px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:88px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.06);">
+            <div style="font-size:11px; font-weight:900; color:#786C5E;">SLOT ${pid} EMPTY</div>
+            <div style="display:flex; gap:6px; width:100%;">
+              <button class="gold-btn btn-lobby-add-ai" data-idx="${idx}" style="flex:1; padding:4px 6px; font-size:10px; font-weight:900; border-radius:8px;">
+                🤖 + Add AI
+              </button>
+              <button class="tab-pill btn-lobby-add-human" data-idx="${idx}" style="flex:1; padding:4px 4px; font-size:10px; font-weight:900; border-radius:8px;">
+                👤 + Human
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      const pChar = getCharacterDef(p.characterId);
+      const teamBadge = isTeamMode
+        ? p.teamId === 'ALPHA' ? 'TEAM A' : 'TEAM B'
+        : `SOLO ${p.id}`;
+
+      const isYou = this.youPlayerId ? p.id === this.youPlayerId : false;
+      const isHuman = p.controlType === 'HUMAN';
+      const isRemoteConnected = isHuman && p.connected && !isYou;
+
+      let controlBadgeHtml = '';
+      if (isRemoteConnected) {
+        controlBadgeHtml = `<span style="font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:999px; background:#F0FDF4; color:#15803D; border:2px solid #1E1612;">👤 Online</span>`;
+      } else {
+        controlBadgeHtml = `
+          <button class="btn-lobby-toggle-control" data-pid="${p.id}" title="คลิกสลับ: Human (Pass 'n Play) / AI Bot" style="background:${isHuman ? 'linear-gradient(180deg,#22C55E 0%,#16A34A 100%)' : 'linear-gradient(180deg,#38BDF8 0%,#0284C7 100%)'}; border:2px solid #1E1612; color:#fff; border-radius:999px; padding:2px 8px; font-size:9.5px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 0 #1E1612;">
+            ${isHuman ? '🟢 Pass \'n Play' : '🤖 AI Bot'}
+          </button>
+        `;
+      }
+
+      const youBadgeHtml = isYou
+        ? `<span style="background:#FFD43B; color:#1E1612; font-weight:900; font-size:9px; padding:1px 7px; border-radius:999px; border:2px solid #1E1612; transform:rotate(-3deg); display:inline-block; box-shadow:0 2px 0 #1E1612;">YOU ★</span>`
+        : '';
+
+      const kickBtnHtml = !isYou
+        ? `<button class="btn-lobby-kick" data-pid="${p.id}" title="Kick Player / Clear Slot" style="background:linear-gradient(180deg,#FF5A5F 0%,#DC2626 100%); border:2px solid #1E1612; color:#fff; border-radius:999px; padding:1px 7px; font-size:9px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:2px; box-shadow:0 2px 0 #7F1D1D;">✕ Kick</button>`
+        : '';
+
+      return `
+        <div class="lobby-player-banner" data-pid="${p.id}" style="background:${playerBannerGradients[p.id]}; border:3px solid #1E1612; outline:${isSelected ? '4px solid #FFD43B' : 'none'}; box-shadow:${isSelected ? '0 6px 0 #1E1612, inset 0 2px 0 rgba(255,255,255,0.4)' : '0 4px 0 #1E1612, inset 0 2px 0 rgba(255,255,255,0.3)'}; border-radius:14px; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; height:88px; position:relative; cursor:pointer; transition:transform 0.15s ease;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="background:#FFF9EB; border:2px solid #1E1612; border-radius:999px; padding:1px 7px; font-size:9.5px; font-weight:900; color:#1E1612; box-shadow:0 1.5px 0 #1E1612;">
+              ${teamBadge}
