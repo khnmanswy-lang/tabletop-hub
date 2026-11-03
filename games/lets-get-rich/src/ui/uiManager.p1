@@ -1,0 +1,1350 @@
+/**
+ * LINE Let's Get Rich (Peak Era Recreation) — 16:9 UI & Interactive Modals Manager
+ * Faithful to the 6 Reference Screenshots & Approved Stage 3 Mock UI:
+ * - Screen 1: MAIN_MENU (Clean Header — NO fake Gold/Diamond/Clover/Lv/sessionStorage clutter)
+ * - Screen 2: LOADOUT (P1..P4 Switcher, Pedestal, 5 Stat Bars +0..+5, Stacked Skill Rates (÷3)×1.6, 3-Treasure Inventory with Main Conflict Guard)
+ * - Screen 3: LOBBY (4P Free-For-All vs 2v2 Team Match Alpha/Bravo, 4 Vertical Player Cards, Pass-and-Play / AI Bot Toggle)
+ * - Screen 4: IN_GAME Overlay (4-Corner HUD Cards, Curved Rainbow Gauge Arc 2..12 with DC-scaled Needle, ROLL + ODD/EVEN Capsules, Skill Cut-In Banner)
+ * - Screen 5: PLAYER INFO & SKILL INSPECTOR Modal (3-Column Inspector: Assets & Monopoly Progress, Core Stats & Stacked Skills, 3 Treasures)
+ * - Screen 6: CITY PURCHASE & CONSTRUCTION Modal (Lap 1 Hotel Lock, Landmark Upgrade, Discount & Resulting Toll)
+ * - Plus Modals: Hostile Takeover, Coin Flip Minigame (S09 Coin Master), Board Target Picker Banner, Debt / Bank Loan / Sell City, Rules & Odds, Victory Summary
+ */
+
+import confetti from 'canvas-confetti';
+import { soundManager } from '../audio/soundManager';
+import { getMascotSvg, getCoinSvg, getBuildingSvg, getMarbleGemSvg } from './mascots';
+import { FortuneCardModalPayload, MonopolyAlertInfo, PLAYER_IDS, isMainSkillConflict } from '../engine/gameEngine';
+import {
+  BLUE_TOURISM_INDICES,
+  BoardPickReason,
+  BoardTileState,
+  BuildingLevel,
+  CHARACTER_ROSTER,
+  CHARACTER_SYNERGIES,
+  CharacterDef,
+  ControlType,
+  DICE_TABLE_EVEN,
+  DICE_TABLE_NONE,
+  DICE_TABLE_ODD,
+  GameMode,
+  getTourismMultiplierForTile,
+  MATCH_CONFIG,
+  MainSkillId,
+  OddEvenMode,
+  PendingBonusGameState,
+  PendingDebtState,
+  PlayerId,
+  PlayerState,
+  RED_TOURISM_INDICES,
+  SKILL_CATALOG,
+  STAT_SCALING_TABLE,
+  ScreenState,
+  SkillDefinition,
+  SubSkillId,
+  TREASURE_POOL,
+  TeamId,
+  TurnPhase,
+  UNIVERSAL_DOUBLE_PROB_PCT,
+  VictoryResult,
+  WORLD_MAP_TILES,
+  WorldTileDef,
+  FORTUNE_CARD_DECK,
+  formatMarbleCompact,
+  formatMarbleFull,
+  getCharacterDef,
+  getSkillDef,
+  getTreasureDef,
+} from '../data/lgrGameData';
+
+export interface ActiveSkillSummary {
+  mainSkills: {
+    skill: SkillDefinition;
+    procPct: number;
+    sourceLabel: string;
+    usesLeft: number | null;
+  }[];
+  subSkills: {
+    skill: SkillDefinition;
+    totalProcPct: number;
+    breakdown: string;
+    usesLeft: number | null;
+  }[];
+}
+
+export interface CityConstructionOption {
+  level: BuildingLevel;
+  label: string;
+  subLabel: string;
+  icon: string;
+  cost: number;
+  resultingToll: number;
+  locked: boolean;
+  lockReason?: string;
+}
+
+export interface CityModalPayload {
+  playerId: PlayerId;
+  tileIndex: number;
+  currentLevel: BuildingLevel;
+  lapCount: number;
+  constDiscountPct: number;
+  options: CityConstructionOption[];
+  defaultSelectedLevel: BuildingLevel;
+}
+
+export interface TakeoverModalPayload {
+  buyerId: PlayerId;
+  ownerId: PlayerId;
+  tileIndex: number;
+  buildingLevel: BuildingLevel;
+  acqDiscountPct: number;
+  rawTakeoverCost: number;
+  netTakeoverCost: number;
+  resultingToll: number;
+  canUpgradeToLandmarkAfter: boolean;
+  landmarkUpgradeCost: number;
+}
+
+export interface BoardPickModalPayload {
+  playerId: PlayerId;
+  reason: BoardPickReason;
+  validTileIndices: number[];
+  disruptMode?: 'SELL' | 'SWAP';
+}
+
+export interface UIGameStateSnapshot {
+  screen: ScreenState;
+  mode: GameMode;
+  ffaPlayerCount?: 2 | 3 | 4;
+  turnNumber: number;
+  maxTurns: number;
+  activePlayerIndex: number;
+  phase: TurnPhase;
+  players: PlayerState[];
+  tiles: BoardTileState[];
+  lastDice?: {
+    d1: number;
+    d2: number;
+    sum: number;
+    isDouble: boolean;
+    gaugeValue?: number;
+  } | null;
+  bannerText?: string;
+  pendingDebt?: PendingDebtState | null;
+  pendingBonusGame?: PendingBonusGameState | null;
+  pendingBoardPick?: BoardPickModalPayload | null;
+  pendingCityModal?: CityModalPayload | null;
+  pendingTakeoverModal?: TakeoverModalPayload | null;
+  pendingFortuneCard?: FortuneCardModalPayload | null;
+  victoryResult?: VictoryResult | null;
+  monopolyAlerts?: MonopolyAlertInfo[];
+}
+
+export interface UICallbacks {
+  onScreenChange?: (screen: ScreenState) => void;
+  onModeChange?: (mode: GameMode) => void;
+  onFfaPlayerCountChange?: (count: 2 | 3 | 4) => void;
+  onTogglePlayerControl?: (playerId: PlayerId) => void;
+  onUpdatePlayerLoadout?: (
+    playerId: PlayerId,
+    characterId: string,
+    treasureIds: [string, string, string]
+  ) => void;
+  onStartMatch?: () => void;
+  onSetOddEven?: (mode: OddEvenMode) => void;
+  onGaugeStepChange?: (fromTileIndex: number | null, activeStep: number | null) => void;
+  onGaugeReleaseRoll?: (gaugeValue: number) => void;
+  onPayIslandBail?: () => void;
+  onConfirmCityBuild?: (targetLevel: BuildingLevel) => void;
+  onPassCityBuild?: () => void;
+  onConfirmTakeover?: (alsoUpgradeLandmark?: boolean) => void;
+  onPassTakeover?: () => void;
+  onBonusCoinGuess?: (guess: 'HEADS' | 'TAILS') => void;
+  onBonusStopAndCollect?: () => void;
+  onConfirmFortuneCard?: () => void;
+  onBoardTilePicked?: (tileIndex: number, extraMode?: 'SELL' | 'SWAP') => void;
+  onTakeBankLoan?: () => void;
+  onSellCitiesForDebt?: (tileIndices: number[]) => void;
+  onPayResolvedDebt?: () => void;
+  onDeclareBankruptcy?: () => void;
+  onToggleSpeed?: (speedMultiplier: 1 | 2 | 3) => void;
+  onPlayerCardHover?: (playerId: PlayerId | null) => void;
+  onKickPlayerSlot?: (playerId: PlayerId) => void;
+  onAddAiSlot?: (slotIndex: number) => void;
+  onAddHumanSlot?: (slotIndex: number) => void;
+  onRandomizePlayerLoadout?: (playerId: PlayerId) => void;
+  onRematch?: () => void;
+  onReturnToLobby?: () => void;
+}
+
+/**
+ * Computes the 4 distinct Main skills and additively stacked Sub skills ((÷3)×1.6 rates)
+ * for any Character + 3 Treasures loadout.
+ */
+export function computeCombinedPlayerSkills(
+  characterId: string,
+  treasureIds: readonly string[],
+  skillUsesRemaining?: Record<string, number>
+): ActiveSkillSummary {
+  const charDef = getCharacterDef(characterId);
+  const mainSkills: ActiveSkillSummary['mainSkills'] = [];
+
+  const charMainDef = getSkillDef(charDef.mainSkill.skillId);
+  mainSkills.push({
+    skill: charMainDef,
+    procPct: charDef.mainSkill.procPct,
+    sourceLabel: `${charDef.name} (Main)`,
+    usesLeft:
+      charMainDef.maxUsesPerMatch !== null
+        ? (skillUsesRemaining?.[charMainDef.id] ?? charMainDef.maxUsesPerMatch)
+        : null,
+  });
+
+  for (const tid of treasureIds) {
+    const tr = getTreasureDef(tid);
+    const mDef = getSkillDef(tr.mainSkill.skillId);
+    if (!mainSkills.some((m) => m.skill.id === mDef.id)) {
+      mainSkills.push({
+        skill: mDef,
+        procPct: tr.mainSkill.procPct,
+        sourceLabel: `${tr.iconEmoji} ${tr.name}`,
+        usesLeft:
+          mDef.maxUsesPerMatch !== null
+            ? (skillUsesRemaining?.[mDef.id] ?? mDef.maxUsesPerMatch)
+            : null,
+      });
+    }
+  }
+
+  // Sub skills stack additively!
+  const subMap = new Map<
+    SubSkillId,
+    { skill: SkillDefinition; total: number; parts: string[] }
+  >();
+
+  for (const sub of charDef.subSkills) {
+    const sDef = getSkillDef(sub.skillId);
+    const entry = subMap.get(sub.skillId) ?? {
+      skill: sDef,
+      total: 0,
+      parts: [],
+    };
+    entry.total += sub.procPct;
+    entry.parts.push(`${sub.procPct}%`);
+    subMap.set(sub.skillId, entry);
+  }
+
+  for (const tid of treasureIds) {
+    const tr = getTreasureDef(tid);
+    const subId = tr.subSkill.skillId;
+    const sDef = getSkillDef(subId);
+    const entry = subMap.get(subId) ?? {
+      skill: sDef,
+      total: 0,
+      parts: [],
+    };
+    entry.total += tr.subSkill.procPct;
+    entry.parts.push(`${tr.subSkill.procPct}%`);
+    subMap.set(subId, entry);
+  }
+
+  const subSkills: ActiveSkillSummary['subSkills'] = Array.from(
+    subMap.values()
+  ).map((item) => ({
+    skill: item.skill,
+    totalProcPct: Math.min(100, item.total),
+    breakdown:
+      item.parts.length > 1
+        ? `${item.parts.join(' + ')} = ${Math.min(100, item.total)}%`
+        : `${item.total}%`,
+    usesLeft:
+      item.skill.maxUsesPerMatch !== null
+        ? (skillUsesRemaining?.[item.skill.id] ?? item.skill.maxUsesPerMatch)
+        : null,
+  }));
+
+  return { mainSkills, subSkills };
+}
+
+export class UIManager {
+  private rootEl: HTMLElement;
+  private canvasHostEl!: HTMLElement;
+  private stageEl!: HTMLElement;
+  private callbacks: UICallbacks;
+
+  private state: UIGameStateSnapshot;
+  private selectedLoadoutPlayerId: PlayerId = 'P1';
+  private selectedTreasureSlotIndex: 0 | 1 | 2 = 0;
+  private youPlayerId: PlayerId | null = null;
+  private loadoutInvTab: 'CHAR' | 'TR' = 'CHAR';
+  private inspectedPlayerId: PlayerId = 'P1';
+  private rulesTab: 'SKILLS' | 'CHANCE' | 'DICE' | 'MONOPOLY' = 'SKILLS';
+  private speedMultiplier: 1 | 2 | 3 = 1;
+
+  // Rainbow Arc Gauge Charging State (2.00 .. 12.00)
+  private gaugeVal = 7.0;
+  private gaugeDir: 1 | -1 = 1;
+  private gaugeRafId: number | null = null;
+  private isChargingGauge = false;
+  private lastGaugeFrameTime = 0;
+  private lastTickSoundTime = 0;
+
+  // Interactive Modal Local State
+  private selectedBuildLevel: BuildingLevel = BuildingLevel.BUILDING;
+  private lastCityModalKey: string | null = null;
+  private selectedDebtSellTiles: Set<number> = new Set();
+  private boardPickDisruptMode: 'SELL' | 'SWAP' = 'SELL';
+
+  constructor(
+    rootEl: HTMLElement,
+    initialState: UIGameStateSnapshot,
+    callbacks: UICallbacks = {}
+  ) {
+    this.rootEl = rootEl;
+    this.state = initialState;
+    this.callbacks = callbacks;
+
+    this.mountDOM();
+    this.setupResponsiveScale();
+    this.setupKeyboardShortcuts();
+    this.renderAll();
+  }
+
+  public getCanvasContainer(): HTMLElement {
+    return this.canvasHostEl;
+  }
+
+  public setCallbacks(callbacks: Partial<UICallbacks>): void {
+    this.callbacks = { ...this.callbacks, ...callbacks };
+  }
+
+  public sync(nextState: UIGameStateSnapshot): void {
+    const prevScreen = this.state.screen;
+    this.state = nextState;
+    if (prevScreen !== nextState.screen) {
+      this.updateScreenVisibility();
+    }
+    this.renderAll();
+
+    if (this.state.screen === 'IN_GAME') {
+      const activeP = this.getActivePlayer();
+      if (this.state.phase === 'IDLE_ROLL' && this.canHumanRollNow() && !this.isChargingGauge && activeP) {
+        this.callbacks.onGaugeStepChange?.(activeP.tileIndex, Math.round(this.gaugeVal));
+      } else if (this.state.phase !== 'IDLE_ROLL' && this.state.phase !== 'GAUGE_CHARGING' && !this.isChargingGauge) {
+        this.callbacks.onGaugeStepChange?.(null, null);
+      }
+    }
+  }
+
+  public setYouPlayerId(pid: PlayerId | null): void {
+    this.youPlayerId = pid;
+    if (pid) {
+      this.selectedLoadoutPlayerId = pid;
+    }
+  }
+
+  /**
+   * Checks whether the current screen/device is authorized to control the given player slot.
+   * Supports Pass 'n Play: local human slots are controlled on this device.
+   */
+  public canControlSlotLocally(pid: PlayerId): boolean {
+    const p = this.state.players.find((x) => x.id === pid);
+    if (!p || p.controlType !== 'HUMAN') return false;
+
+    // Offline mode: all human slots are local Pass 'n Play
+    if (!this.youPlayerId) return true;
+
+    // If directly assigned to this client
+    if (this.youPlayerId === pid) return true;
+
+    // If another remote player is connected to this slot, disallow local control
+    if (p.connected && p.id !== this.youPlayerId) return false;
+
+    // In local Pass 'n Play on host, any unassigned or local human slot is controllable
+    return true;
+  }
+
+  public showScreen(screen: ScreenState, playerForLoadout?: PlayerId): void {
+    if (playerForLoadout) {
+      this.selectedLoadoutPlayerId = playerForLoadout;
+    }
+    // Main Menu and Loadout are merged directly into Lobby
+    if (screen === 'MAIN_MENU' || screen === 'LOADOUT') {
+      screen = 'LOBBY';
+    }
+    this.state.screen = screen;
+    this.updateScreenVisibility();
+    this.renderAll();
+    this.callbacks.onScreenChange?.(screen);
+  }
+
+  public updateHoveredTile(tileIndex: number | null): void {
+    const card = this.stageEl.querySelector(
+      '#tileHoverCard'
+    ) as HTMLElement | null;
+    if (!card) return;
+
+    if (
+      tileIndex === null ||
+      tileIndex < 0 ||
+      tileIndex >= WORLD_MAP_TILES.length ||
+      this.state.screen !== 'IN_GAME'
+    ) {
+      card.classList.remove('visible');
+      return;
+    }
+
+    const def = WORLD_MAP_TILES[tileIndex];
+    const tileState = this.state.tiles[tileIndex];
+    if (!def || !tileState) {
+      card.classList.remove('visible');
+      return;
+    }
+
+    card.classList.add('visible');
+
+    let bodyHtml = '';
+
+    if (def.type === 'START') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          🏁 <strong style="color:#4ade80;">จุดเริ่มต้น (START)</strong><br/>
+          รับเงินเดือนก้อนโตเมื่อเดินผ่าน หรือลงจอดที่ช่องนี้ (สามารถเลือกอัปเกรดเมืองใดก็ได้ 1 ระดับ)
+        </div>
+      `;
+    } else if (def.type === 'DESERT_ISLAND') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          🏝️ <strong style="color:#f87171;">เกาะร้าง (DESERT ISLAND)</strong><br/>
+          ผู้เล่นที่ตกช่องนี้จะติดเกาะ 3 เทิร์น เว้นแต่จะทอยได้ดับเบิ้ล หรือจ่ายค่าหลบหนี
+        </div>
+      `;
+    } else if (def.type === 'OLYMPIC') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          🏅 <strong style="color:#fde047;">จัดโอลิมปิก (OLYMPIC EXPO)</strong><br/>
+          เลือกเมืองของตนเองเพื่อเป็นเจ้าภาพโอลิมปิก เพิ่มค่าผ่านทางอย่างถาวร x2, x4, x8
+        </div>
+      `;
+    } else if (def.type === 'WORLD_TRAVEL') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          ✈️ <strong style="color:#38bdf8;">สนามบินรอบโลก (SKY TERMINAL)</strong><br/>
+          จ่ายค่าตั๋วเพื่อจองเที่ยวบิน ในเทิร์นถัดไปสามารถบินไปยังช่องใดก็ได้บนกระดานทันที
+        </div>
+      `;
+    } else if (def.type === 'TAX_AUDIT') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          ⚖️ <strong style="color:#f87171;">สรรพากร (TAX AUDIT)</strong><br/>
+          จ่ายภาษี 10% ของเงินสดและมูลค่าทรัพย์สินทั้งหมดในครอบครอง
+        </div>
+      `;
+    } else if (def.type === 'CHANCE') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          ❓ <strong style="color:#f59e0b;">การ์ดดวง (FORTUNE CARD)</strong><br/>
+          สุ่มรับการ์ดสิทธิพิเศษ เช่น การ์ดนางฟ้า, บังคับขายเมือง, สลับเมือง, วาร์ป หรือจัดงานเทศกาล
+        </div>
+      `;
+    } else if (def.type === 'BONUS_GAME') {
+      bodyHtml = `
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+          🎰 <strong style="color:#a855f7;">มินิเกมโบนัส (BONUS GAME)</strong><br/>
+          ทายหัว/ก้อย 3 รอบ ชนะติดต่อกันเพื่อคูณเงินรางวัลสูงสุด x8 เท่า
+        </div>
+      `;
+    } else {
+      // CITY or TOURISM
+      const owner = tileState.ownerId
+        ? this.state.players.find((p) => p.id === tileState.ownerId)
+        : null;
+
+      let baseToll = 0;
+      if (def.type === 'TOURISM') {
+        const ownedIndices = owner
+          ? WORLD_MAP_TILES.filter(
+              (t) =>
+                t.type === 'TOURISM' &&
+                this.state.tiles[t.index]?.ownerId === owner.id
+            ).map((t) => t.index)
+          : [];
+        const scale = getTourismMultiplierForTile(def.index, ownedIndices);
+        baseToll = def.baseToll * scale;
+      } else {
+        const mult =
+          MATCH_CONFIG.buildingTollMultipliers[tileState.buildingLevel] ?? 1;
+        baseToll = def.baseToll * mult;
+      }
+
+      const isColorMonopoly =
+        def.group !== null &&
+        owner &&
+        WORLD_MAP_TILES.filter((t) => t.group === def.group).every(
+          (t) => this.state.tiles[t.index]?.ownerId === owner.id
+        );
+      const festivalMult = tileState.isFestival
+        ? MATCH_CONFIG.festivalTollMultiplier
+        : 1;
+      const monoMult = isColorMonopoly
+        ? MATCH_CONFIG.colorMonopolyTollMultiplier
+        : 1;
+      const olympicMult = Math.max(1, tileState.olympicMultiplier || 1);
+      const stepMult = Math.max(1, tileState.stepMultiplier || 1);
+      const isLate =
+        this.state.turnNumber >= MATCH_CONFIG.lateGameTurnThreshold;
+      const lateMult = isLate ? MATCH_CONFIG.lateGameTollMultiplier : 1;
+
+      const totalToll = tileState.isBlackout
+        ? 0
+        : Math.round(
+            baseToll *
+              festivalMult *
+              monoMult *
+              olympicMult *
+              stepMult *
+              lateMult
+          );
+
+      const levelLabels: Record<BuildingLevel, string> = {
+        [BuildingLevel.NONE]: 'ยังไม่มีสิ่งก่อสร้าง',
+        [BuildingLevel.LAND]: '🌱 ที่ดิน (Land)',
+        [BuildingLevel.VILLA]: '🏡 วิลล่า (Villa)',
+        [BuildingLevel.BUILDING]: '🏢 ตึก (Building)',
+        [BuildingLevel.HOTEL]: '🏨 โรงแรม (Hotel)',
+        [BuildingLevel.LANDMARK]: '⭐ แลนด์มาร์ก (Landmark)',
+      };
+
+      const tierBadge =
+        def.type === 'TOURISM'
+          ? (def.tourismGroup === 'BLUE' ? '🏝️ เกาะสีฟ้า (2x/4x)' : '🌺 เกาะสีแดง (3x)')
+          : levelLabels[tileState.buildingLevel] ?? 'อาคาร';
+
+      const multTags: string[] = [];
+      if (tileState.isFestival) multTags.push('🎉 เทศกาล x2');
+      if (isColorMonopoly) multTags.push('🎨 สีผูกขาด x2');
+      if (olympicMult > 1) multTags.push(`🏅 โอลิมปิก x${olympicMult}`);
+      if (stepMult > 1) multTags.push(`👣 สเต็ป x${stepMult}`);
+      if (isLate) multTags.push('🔥 ท้ายเกม x1.5');
+      if (tileState.isBlackout) multTags.push('⚡ ไฟดับ (0)');
+
+      const multRow =
+        multTags.length > 0
+          ? `<div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:2px;">
+              ${multTags
+                .map(
+                  (tag) =>
+                    `<span style="font-size:9px; background:rgba(234,88,12,0.3); border:1px solid #f97316; border-radius:3px; padding:0 4px; color:#fdba74;">${tag}</span>`
+                )
+                .join('')}
+            </div>`
+          : '';
+
+      let actionCostHtml = '';
+      if (!owner) {
+        actionCostHtml = `
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; border-top:1px dashed rgba(255,255,255,0.15); padding-top:4px;">
+            <span>💵 ราคาซื้อ:</span>
+            <strong style="color:#4ade80;">${formatMarbleCompact(def.baseCost)}</strong>
+          </div>
+        `;
+      } else if (tileState.buildingLevel === BuildingLevel.LANDMARK) {
+        actionCostHtml = `
+          <div style="font-size:10px; color:#fde047; font-weight:800; border-top:1px dashed rgba(255,255,255,0.15); padding-top:4px; text-align:center;">
+            🔒 แลนด์มาร์ก (ไม่สามารถเทคโอเวอร์ได้)
+          </div>
+        `;
+      } else {
+        const invested =
+          def.baseCost *
+          (MATCH_CONFIG.buildingCostMultipliers[tileState.buildingLevel] ?? 1);
+        const takeoverCost = Math.round(
+          invested * MATCH_CONFIG.takeoverCostMultiplier
+        );
+        actionCostHtml = `
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:#cbd5e1; border-top:1px dashed rgba(255,255,255,0.15); padding-top:4px;">
+            <span>💰 ค่าเทคโอเวอร์ (x2.0):</span>
+            <strong style="color:#f87171;">${formatMarbleCompact(takeoverCost)}</strong>
+          </div>
+        `;
+      }
+
+      bodyHtml = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:10px; color:#94a3b8;">เจ้าของ:</span>
+          ${
+            owner
+              ? `<span style="font-size:11px; font-weight:800; color:${owner.colorHex}; display:flex; align-items:center; gap:4px;">
+                  <span>${getCharacterDef(owner.characterId).avatarEmoji}</span>
+                  <span>${owner.name}</span>
+                </span>`
+              : `<span style="font-size:11px; font-weight:700; color:#4ade80;">ยังไม่มีเจ้าของ</span>`
+          }
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px;">
+          <span style="color:#94a3b8;">สิ่งก่อสร้าง:</span>
+          <span style="font-weight:800; color:#fef08a;">${tierBadge}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px;">
+          <span style="color:#94a3b8;">ค่าผ่านทาง:</span>
+          <strong style="font-size:12px; color:#fde047; text-shadow:0 0 6px rgba(253,224,71,0.4);">
+            ${owner ? formatMarbleFull(totalToll) : '0'}
+          </strong>
+        </div>
+        ${multRow}
+        ${actionCostHtml}
+      `;
+    }
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:4px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="display:inline-block; width:10px; height:10px; border-radius:3px; background:${def.colorHex}; box-shadow:0 0 6px ${def.colorHex};"></span>
+          <span style="font-weight:900; font-size:13px; color:#ffffff;">${def.nameTh}</span>
+          <span style="font-size:10px; color:#94a3b8;">${def.name}</span>
+        </div>
+        <span style="font-size:9.5px; font-weight:800; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px; color:#e2e8f0;">#${tileIndex} ${def.type}</span>
+      </div>
+      ${bodyHtml}
+    `;
+  }
+
+  public showSkillCutIn(message: string, isProc = true): void {
+    const banner = this.stageEl.querySelector(
+      '#liveBanner'
+    ) as HTMLElement | null;
+    if (!banner) return;
+    banner.innerHTML = message;
+    if (isProc) {
+      soundManager.playSkillCutin();
+      banner.classList.remove('proc-flash');
+      void banner.offsetWidth;
+      banner.classList.add('proc-flash');
+    }
+  }
+
+  public showCashDelta(playerId: PlayerId, deltaAmount: number): void {
+    if (Math.abs(deltaAmount) < 1) return;
+    const card = this.stageEl.querySelector(
+      `#hudCard_${playerId}`
+    ) as HTMLElement | null;
+    if (!card) return;
+
+    if (deltaAmount > 0) {
+      soundManager.playCoinGain();
+    } else {
+      soundManager.playCoinLoss();
+    }
+
+    const pill = document.createElement('div');
+    pill.className = `cash-delta-float ${deltaAmount > 0 ? 'gain' : 'loss'}`;
+    pill.textContent = `${deltaAmount > 0 ? '+' : ''}${formatMarbleCompact(deltaAmount)}`;
+    card.appendChild(pill);
+    window.setTimeout(() => {
+      pill.remove();
+    }, 1850);
+  }
+
+  public updateDiceVisuals(
+    d1: number,
+    d2: number,
+    gaugeValue?: number
+  ): void {
+    const isDouble = d1 === d2;
+    if (isDouble) {
+      soundManager.playDoubleFanfare();
+    }
+    this.state.lastDice = {
+      d1,
+      d2,
+      sum: d1 + d2,
+      isDouble,
+      gaugeValue,
+    };
+    if (typeof gaugeValue === 'number') {
+      this.gaugeVal = Math.max(2, Math.min(12, gaugeValue));
+      this.updateNeedleVisual();
+    }
+    this.renderCenterDiceReadout();
+  }
+
+  private mountDOM(): void {
+    this.rootEl.innerHTML = `
+      <!-- Portrait Orientation Guard (@media (orientation: portrait)) -->
+      <div class="portrait-guard-overlay" id="portraitGuardOverlay">
+        <div class="portrait-phone-icon">📱🔄</div>
+        <div style="font-size: 22px; font-weight: 900; color: #fde047;">
+          กรุณาหมุนหน้าจอเป็นแนวนอน (16:9 Landscape)
+        </div>
+        <div style="font-size: 14px; color: #cbd5e1; max-width: 420px; line-height: 1.5;">
+          LINE Let's Get Rich (Peak Era) ล็อกการแสดงผลแบบ <strong>แนวนอน (16:9 Horizontal)</strong> เพื่อให้แสดงกระดาน 3D Isometric 32 ช่องและการ์ดผู้เล่นทั้ง 4 มุมได้อย่างสมบูรณ์
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+          <button class="gold-btn" id="btnLockLandscape" style="padding: 12px 22px; font-size: 14px;">
+            ⛶ ขยายเต็มจอ & ล็อกแนวนอน (Lock Landscape)
+          </button>
+          <a href="/" style="text-decoration: none;">
+            <button class="tab-pill" type="button" style="padding: 12px 16px; font-size: 13px;">
+              ⬅ กลับสู่ Tabletop Lounge
+            </button>
+          </a>
+        </div>
+      </div>
+
+      <!-- 16:9 Widescreen Viewport Shell -->
+      <div class="lgr-viewport-shell" id="lgrViewportShell">
+        <!-- Three.js 3D Isometric Board Canvas Host -->
+        <div class="lgr-canvas-host" id="lgrCanvasHost"></div>
+
+        <!-- 1280x720 Scaled UI Stage -->
+        <div class="lgr-stage-16x9" id="lgrStage16x9">
+          <!-- SCREEN 1: MAIN MENU (Reference Image 3 without currency/Lv clutter) -->
+          <div id="screen_MAIN_MENU" class="screen-layer" style="background: radial-gradient(circle at 30% 50%, #3b82f6 0%, #1d4ed8 45%, #0f172a 100%); padding: 16px 24px;"></div>
+
+          <!-- SCREEN 2: CHARACTER & TREASURE LOADOUT (Reference Image 2 without currency clutter) -->
+          <div id="screen_LOADOUT" class="screen-layer" style="background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #091326 100%); padding: 12px 18px;"></div>
+
+          <!-- SCREEN 3: LOBBY 4P / 2v2 (Toy-Box Arcade Theme) -->
+          <div id="screen_LOBBY" class="screen-layer" style="background: radial-gradient(rgba(255, 255, 255, 0.18) 2px, transparent 2px), linear-gradient(180deg, #1D6FD8 0%, #0F4DA8 100%); background-size: 24px 24px, 100% 100%; padding: 14px 20px;"></div>
+
+          <!-- SCREEN 4: IN-GAME OVERLAY (Reference Image 1) -->
+          <div id="screen_IN_GAME" class="screen-layer in-game-layer"></div>
+
+          <!-- MODAL LAYER: SCREEN 5 PLAYER INFO & SKILL INSPECTOR -->
+          <div id="modal_PLAYER_INSPECTOR" class="lgr-modal-backdrop"></div>
+
+          <!-- MODAL LAYER: SCREEN 6 CITY PURCHASE & CONSTRUCTION / TAKEOVER / MINIGAME / DEBT / RULES / VICTORY -->
+          <div id="modal_GAMEPLAY_ACTION" class="lgr-modal-backdrop"></div>
+
+          <!-- MODAL LAYER: GAME RULES & ODDS ((÷3)×1.6) -->
+          <div id="modal_RULES_ODDS" class="lgr-modal-backdrop"></div>
+        </div>
+      </div>
+    `;
+
+    this.canvasHostEl = this.rootEl.querySelector(
+      '#lgrCanvasHost'
+    ) as HTMLElement;
+    this.stageEl = this.rootEl.querySelector('#lgrStage16x9') as HTMLElement;
+
+    // Wire Portrait Guard Buttons
+    const btnLock = this.rootEl.querySelector('#btnLockLandscape');
+    btnLock?.addEventListener('click', async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+        const orient = screen.orientation as unknown as {
+          lock?: (mode: string) => Promise<void>;
+        };
+        if (orient?.lock) {
+          await orient.lock('landscape');
+        }
+      } catch {
+        // Fallback if browser blocks orientation lock
+      }
+    });
+
+    this.buildInGameStaticHUD();
+    this.updateScreenVisibility();
+  }
+
+  private setupResponsiveScale(): void {
+    const updateScale = (): void => {
+      const vv = window.visualViewport;
+      const vw = vv ? vv.width : window.innerWidth;
+      const vh = vv ? vv.height : window.innerHeight;
+      const scale = Math.min(vw / 1280, vh / 720);
+      document.documentElement.style.setProperty(
+        '--ui-scale',
+        scale.toFixed(4)
+      );
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(updateScale, 120);
+    });
+    window.visualViewport?.addEventListener('resize', updateScale);
+  }
+
+  private setupKeyboardShortcuts(): void {
+    window.addEventListener('keydown', (e) => {
+      // 1. Esc: Close Inspector, Rules, or pass build/takeover
+      if (e.code === 'Escape') {
+        const inspector = this.stageEl.querySelector('#modal_PLAYER_INSPECTOR');
+        if (inspector?.classList.contains('open')) {
+          soundManager.playClick();
+          inspector.classList.remove('open');
+          return;
+        }
+        const rules = this.stageEl.querySelector('#modal_RULES_ODDS');
+        if (rules?.classList.contains('open')) {
+          soundManager.playClick();
+          rules.classList.remove('open');
+          return;
+        }
+        const passBuild = this.stageEl.querySelector(
+          '#btnPassBuild'
+        ) as HTMLButtonElement | null;
+        if (passBuild && passBuild.offsetParent !== null) {
+          soundManager.playClick();
+          passBuild.click();
+          return;
+        }
+        const skipTakeover = this.stageEl.querySelector(
+          '#btnSkipTakeover'
+        ) as HTMLButtonElement | null;
+        if (skipTakeover && skipTakeover.offsetParent !== null) {
+          soundManager.playClick();
+          skipTakeover.click();
+          return;
+        }
+      }
+
+      // 2. Enter: Quick confirm building or takeover
+      if (e.code === 'Enter' && !e.repeat) {
+        const confirmBuild = this.stageEl.querySelector(
+          '#btnConfirmBuild'
+        ) as HTMLButtonElement | null;
+        if (
+          confirmBuild &&
+          confirmBuild.offsetParent !== null &&
+          !confirmBuild.disabled
+        ) {
+          soundManager.playClick();
+          confirmBuild.click();
+          return;
+        }
+        const doTakeover = this.stageEl.querySelector(
+          '#btnDoTakeover'
+        ) as HTMLButtonElement | null;
+        if (
+          doTakeover &&
+          doTakeover.offsetParent !== null &&
+          !doTakeover.disabled
+        ) {
+          soundManager.playClick();
+          doTakeover.click();
+          return;
+        }
+      }
+
+      // 3. Digit1 or O: Toggle ODD
+      if (
+        (e.code === 'Digit1' || e.code === 'KeyO') &&
+        !e.repeat &&
+        this.state.screen === 'IN_GAME'
+      ) {
+        const oddBtn = this.stageEl.querySelector(
+          '#oeOddBtn'
+        ) as HTMLElement | null;
+        if (oddBtn && !oddBtn.classList.contains('disabled')) {
+          soundManager.playClick();
+          oddBtn.click();
+          return;
+        }
+      }
+
+      // 4. Digit2 or E: Toggle EVEN
+      if (
+        (e.code === 'Digit2' || e.code === 'KeyE') &&
+        !e.repeat &&
+        this.state.screen === 'IN_GAME'
+      ) {
+        const evenBtn = this.stageEl.querySelector(
+          '#oeEvenBtn'
+        ) as HTMLElement | null;
+        if (evenBtn && !evenBtn.classList.contains('disabled')) {
+          soundManager.playClick();
+          evenBtn.click();
+          return;
+        }
+      }
+
+      // 5. M: Toggle sound mute
+      if (e.code === 'KeyM' && !e.repeat) {
+        const soundBtn = this.stageEl.querySelector(
+          '#btnSoundToggle'
+        ) as HTMLButtonElement | null;
+        soundBtn?.click();
+        return;
+      }
+
+      // 6. Space: Charge roll
+      if (
+        e.code === 'Space' &&
+        !e.repeat &&
+        this.state.screen === 'IN_GAME' &&
+        this.canHumanRollNow()
+      ) {
+        e.preventDefault();
+        this.startArcCharge();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && this.isChargingGauge) {
+        e.preventDefault();
+        this.stopArcCharge();
+      }
+    });
+  }
+
+  private updateScreenVisibility(): void {
+    const screens: ScreenState[] = [
+      'MAIN_MENU',
+      'LOADOUT',
+      'LOBBY',
+      'IN_GAME',
+    ];
+    for (const s of screens) {
+      const el = this.stageEl.querySelector(`#screen_${s}`) as HTMLElement;
+      if (el) {
+        el.classList.toggle('active', this.state.screen === s);
+      }
+    }
+  }
+
+  private renderAll(): void {
+    this.renderMainMenuScreen();
+    this.renderLoadoutScreen();
+    this.renderLobbyScreen();
+    this.renderInGameHUD();
+    this.renderActiveGameplayModals();
+  }
+
+  // ==========================================================================
+  // SCREEN 1: MAIN MENU (Reference Image 3 — Clean Header without fake clutter)
+  // ==========================================================================
+  private renderMainMenuScreen(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_MAIN_MENU'
+    ) as HTMLElement;
+    if (!container) return;
+
+    container.innerHTML = `
+      <!-- Top Clean Header (Game Logo Emblem + Direct Navigation Pills, NO fake Gold/Diamond/Lv/sessionStorage) -->
+      <div style="display:flex; justify-content:space-between; align-items:center; height:64px;">
+        <div style="background:linear-gradient(180deg,#fde047 0%,#eab308 55%,#ca8a04 100%); border:3px solid #ffffff; border-radius:16px; padding:6px 18px; box-shadow:0 6px 16px rgba(0,0,0,0.45); display:flex; align-items:center; gap:12px;">
+          <span style="font-size:32px; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4));">🎲</span>
+          <div>
+            <div style="font-size:11px; font-weight:900; color:#78350f; letter-spacing:0.8px;">LINE CLASSIC RECREATION (32-TILE WORLD MAP)</div>
+            <div style="font-size:24px; font-weight:900; color:#1e3a8a; letter-spacing:0.4px;">
+              Let's Get Rich <span style="font-size:14px; color:#b91c1c; font-weight:900;">(Peak Era)</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="tab-pill" id="menuNavLoadout" style="padding:8px 14px; font-size:13px;">
+            🎒 จัดตัวละคร & สมบัติ
+          </button>
+          <button class="tab-pill" id="menuNavRules" style="padding:8px 14px; font-size:13px;">
+            📊 ตารางเรทสกิล & เต๋า
+          </button>
+          <button class="tab-pill" id="menuNavFullscreen" style="padding:8px 14px; font-size:13px;">
+            ⛶ Fullscreen
+          </button>
+        </div>
+      </div>
+
+      <!-- Center Content: Globe Hero on Left + 4P & 2v2 Tall Banners on Right -->
+      <div style="display:grid; grid-template-columns: 42% 58%; height:calc(100% - 136px); align-items:center; margin-top:8px;">
+        <!-- Left Hero: Mascot + World Landmarks Globe + Floating Red Dice -->
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; gap:14px;">
+          <div style="width:248px; height:248px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #6ee7b7 0%, #3b82f6 55%, #1e3a8a 100%); border:5px solid #bae6fd; box-shadow:0 0 42px rgba(56,189,248,0.7), inset 0 4px 12px rgba(255,255,255,0.55); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;">
+            <div style="font-size:48px; letter-spacing:2px;">🗼🗽🏛️🕌</div>
+            <div style="font-size:66px; margin-top:-6px;">🧞‍♂️🎲👸</div>
+            <div style="position:absolute; top:-10px; right:-16px; background:linear-gradient(180deg,#ef4444,#b91c1c); border:2.5px solid #ffffff; border-radius:10px; padding:5px 12px; font-weight:900; font-size:14px; transform:rotate(12deg); box-shadow:0 6px 14px rgba(0,0,0,0.5);">
+              🎲 DOUBLE 12!
+            </div>
+            <div style="position:absolute; bottom:-12px; background:#0f172a; border:2px solid #fde047; border-radius:99px; padding:4px 16px; font-size:12px; font-weight:900; color:#fde047; box-shadow:0 4px 10px rgba(0,0,0,0.5);">
+              8 ตัวละคร • 10 สมบัติ • 20 สกิลฮิต
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Mode Cards: 4P Free-For-All & 2v2 Team Match -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px; height:92%;">
+          <!-- 2-4P FREE-FOR-ALL Card -->
+          <div style="background:linear-gradient(180deg, #f97316 0%, #b45309 55%, #78350f 100%); border:3.5px solid #fde047; border-radius:20px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; text-align:center; box-shadow:0 12px 28px rgba(0,0,0,0.55), inset 0 2px 2px rgba(255,255,255,0.45);">
+            <div>
+              <div style="font-size:42px; font-weight:900; color:#fef08a; text-shadow:0 3px 6px rgba(0,0,0,0.65); line-height:1;">2–4P</div>
+              <div style="font-size:21px; font-weight:900; color:#ffffff; margin-top:4px;">FREE-FOR-ALL</div>
+              <div style="font-size:13px; color:#fed7aa; font-weight:800; margin-top:2px;">Solo Battle (ศึกเดี่ยว 2–4 คน ชิงความเป็นหนึ่ง)</div>
+            </div>
+            <div style="font-size:44px; background:rgba(0,0,0,0.28); width:92%; padding:14px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.35);">
+              👩‍🦰👦🧑👧
+              <div style="font-size:11px; color:#fef3c7; font-weight:800; margin-top:6px;">เลือกได้ 2P / 3P / 4P • Triple x2 • Line x3 • Tourism x5</div>
+            </div>
+            <button class="gold-btn" id="btnPlay4P" style="width:90%; padding:11px; font-size:16px;">
+              PLAY NOW
+            </button>
+          </div>
+
+          <!-- 2v2 TEAM MATCH Card -->
+          <div style="background:linear-gradient(180deg, #0284c7 0%, #1d4ed8 55%, #1e1b4b 100%); border:3.5px solid #7dd3fc; border-radius:20px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; text-align:center; box-shadow:0 12px 28px rgba(0,0,0,0.55), inset 0 2px 2px rgba(255,255,255,0.45);">
+            <div>
+              <div style="font-size:42px; font-weight:900; color:#fde047; text-shadow:0 3px 6px rgba(0,0,0,0.65); line-height:1;">2v2</div>
+              <div style="font-size:21px; font-weight:900; color:#ffffff; margin-top:4px;">TEAM MATCH</div>
+              <div style="font-size:13px; color:#bae6fd; font-weight:800; margin-top:2px;">Shared Monopoly (ทีม Alpha vs Bravo นับสีร่วมกัน)</div>
+            </div>
+            <div style="font-size:44px; background:rgba(0,0,0,0.28); width:92%; padding:14px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.35);">
+              🤝🎲🏙️
+              <div style="font-size:11px; color:#e0f2fe; font-weight:800; margin-top:6px;">เหยียบเมืองเพื่อนฟรี • รวมโฉนดชนะ Monopoly</div>
+            </div>
+            <button class="gold-btn" id="btnPlay2v2" style="width:90%; padding:11px; font-size:16px;">
+              PLAY NOW
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom 3 Buttons Bar -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px;">
+        <button class="royal-panel" id="btnBottomLoadout" style="padding:11px 14px; font-weight:900; font-size:14px; color:#fef08a; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          🎒 CHARACTERS & TREASURES
+        </button>
+        <button class="royal-panel" id="btnBottomRules" style="padding:11px 14px; font-weight:900; font-size:14px; color:#f8fafc; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          📊 GAME RULES / ODDS ((÷3)×1.6)
+        </button>
+        <button class="royal-panel" id="btnBottomLobby" style="padding:11px 14px; font-weight:900; font-size:14px; color:#7dd3fc; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          👥 MATCH LOBBY (4P / 2v2)
+        </button>
+      </div>
+    `;
+
+    container
+      .querySelector('#btnPlay4P')
+      ?.addEventListener('click', () => {
+        this.state.mode = 'FFA_4P';
+        this.callbacks.onModeChange?.('FFA_4P');
+        this.showScreen('LOBBY');
+      });
+
+    container
+      .querySelector('#btnPlay2v2')
+      ?.addEventListener('click', () => {
+        this.state.mode = 'TEAM_2V2';
+        this.callbacks.onModeChange?.('TEAM_2V2');
+        this.showScreen('LOBBY');
+      });
+
+    container
+      .querySelector('#btnBottomLoadout')
+      ?.addEventListener('click', () => this.showScreen('LOADOUT'));
+    container
+      .querySelector('#menuNavLoadout')
+      ?.addEventListener('click', () => this.showScreen('LOADOUT'));
+    container
+      .querySelector('#btnBottomLobby')
+      ?.addEventListener('click', () => this.showScreen('LOBBY'));
+    container
+      .querySelector('#btnBottomRules')
+      ?.addEventListener('click', () => this.openRulesModal());
+    container
+      .querySelector('#menuNavRules')
+      ?.addEventListener('click', () => this.openRulesModal());
+    container
+      .querySelector('#menuNavFullscreen')
+      ?.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+  }
+
+  // ==========================================================================
+  // SCREEN 2: CHARACTER & TREASURE LOADOUT (Reference Image 2 — Clean Header + P1..P4 Switcher)
+  // ==========================================================================
+  private renderLoadoutScreen(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_LOADOUT'
+    ) as HTMLElement;
+    if (!container) return;
+
+    const targetPlayer =
+      this.state.players.find((p) => p.id === this.selectedLoadoutPlayerId) ??
+      this.state.players[0];
+    if (!targetPlayer) return;
+
+    const curChar: CharacterDef = getCharacterDef(targetPlayer.characterId);
+    const curTrIds = [...targetPlayer.treasureIds] as [string, string, string];
+    const combinedSkills = computeCombinedPlayerSkills(
+      curChar.id,
+      curTrIds,
+      targetPlayer.skillUsesRemaining
+    );
+
+    const statsList = [
+      {
+        label: `🎲 Dice Control (DC ${STAT_SCALING_TABLE.dcProcPct[curChar.stats.dc]}%)`,
+        lv: curChar.stats.dc,
+        color: '#38bdf8',
+      },
+      {
+        label: `🛠️ Construction Discount (-${STAT_SCALING_TABLE.constDiscountPct[curChar.stats.constDc]}%)`,
+        lv: curChar.stats.constDc,
+        color: '#fb923c',
+      },
+      {
+        label: `🤝 Acquisition Discount (-${STAT_SCALING_TABLE.acqDiscountPct[curChar.stats.acqDc]}%)`,
+        lv: curChar.stats.acqDc,
+        color: '#facc15',
+      },
+      {
+        label: `🛡️ Toll Discount (-${STAT_SCALING_TABLE.tollDiscountPct[curChar.stats.tollDc]}%)`,
+        lv: curChar.stats.tollDc,
+        color: '#f59e0b',
+      },
+      {
+        label: `🍀 Salary/Luck (+${STAT_SCALING_TABLE.salLuckBonusPct[curChar.stats.salLuck]}%)`,
+        lv: curChar.stats.salLuck,
+        color: '#4ade80',
+      },
+    ];
+
+    const statBarsHtml = statsList
+      .map((s) => {
+        let segs = '';
+        for (let i = 1; i <= 5; i++) {
+          segs += `<div style="flex:1; height:10px; border-radius:3px; background:${
+            i <= s.lv ? s.color : '#0f172a'
+          }; border:1px solid #334155; box-shadow:${
+            i <= s.lv ? `0 0 6px ${s.color}88` : 'none'
+          };"></div>`;
+        }
+        return `
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800; margin-bottom:3px;">
+              <span>${s.label}</span>
+              <span style="color:#93c5fd;">+${s.lv} / +5</span>
+            </div>
+            <div style="display:flex; gap:4px;">${segs}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const equippedSlotsHtml = curTrIds
+      .map((tid, idx) => {
+        const tr = getTreasureDef(tid);
+        const mSkill = getSkillDef(tr.mainSkill.skillId);
+        const sSkill = getSkillDef(tr.subSkill.skillId);
+        return `
+          <div style="background:linear-gradient(180deg,#1e3a8a,#0f172a); border:2px solid #fde047; border-radius:10px; padding:6px 5px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="font-size:10px; color:#fde047; font-weight:900;">SLOT ${idx + 1}</div>
+            <div style="font-size:26px; line-height:1.1;">${tr.iconEmoji}</div>
+            <div style="font-size:11px; font-weight:900; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tr.name}</div>
+            <div style="font-size:10px; color:#93c5fd;">${mSkill.code} (${tr.mainSkill.procPct}%) + ${sSkill.code} (+${tr.subSkill.procPct}%)</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const charMainDef = getSkillDef(curChar.mainSkill.skillId);
+    const charSub1Def = getSkillDef(curChar.subSkills[0].skillId);
+    const charSub2Def = getSkillDef(curChar.subSkills[1].skillId);
+
+    const stackedSubsHtml = combinedSkills.subSkills
+      .map(
+        (sub) => `
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:3px 7px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+            <span><strong style="color:#7dd3fc;">${sub.skill.code}</strong> ${sub.skill.name}</span>
+            <strong style="color:#4ade80;">${sub.breakdown}</strong>
+          </div>
+        `
+      )
+      .join('');
+
+    const inventoryGridHtml =
+      this.loadoutInvTab === 'CHAR'
+        ? CHARACTER_ROSTER.map((c) => {
+            const isSelected = c.id === curChar.id;
+            const mDef = getSkillDef(c.mainSkill.skillId);
+            return `
+              <div class="inv-char-card" data-char-id="${c.id}" style="background:linear-gradient(180deg,#3b82f6,#1d4ed8); border:2.5px solid ${
+                isSelected ? '#fde047' : '#60a5fa'
+              }; border-radius:10px; padding:7px 5px; text-align:center; cursor:pointer; position:relative; box-shadow:${
+                isSelected ? '0 0 12px rgba(250,204,21,0.65)' : 'none'
+              };">
+                <span style="position:absolute; top:3px; left:5px; font-size:11px; font-weight:900; color:#fde047;">${c.rank}</span>
+                <div style="font-size:30px; line-height:1.15;">${c.avatarEmoji}</div>
+                <div style="font-size:12px; font-weight:900; color:#ffffff;">${c.name}</div>
+                <div style="font-size:10px; color:#fef08a; font-weight:800;">${mDef.code}: ${c.mainSkill.procPct}%</div>
+              </div>
+            `;
+          }).join('')
+        : TREASURE_POOL.map((t) => {
+            const isConflict = isMainSkillConflict(t.mainSkill.skillId, curChar.mainSkill.skillId);
+            const isEquipped = curTrIds.includes(t.id);
+            const mDef = getSkillDef(t.mainSkill.skillId);
+            const sDef = getSkillDef(t.subSkill.skillId);
+            return `
+              <div class="inv-tr-card" data-tr-id="${t.id}" style="background:linear-gradient(180deg,#1e293b,#0f172a); border:2.5px solid ${
+                isConflict
+                  ? '#ef4444'
+                  : isEquipped
+                    ? '#fde047'
+                    : '#475569'
+              }; opacity:${
+                isConflict ? 0.45 : 1
+              }; border-radius:10px; padding:6px 5px; text-align:center; cursor:${
+                isConflict ? 'not-allowed' : 'pointer'
+              }; position:relative;">
+                ${
+                  isEquipped
+                    ? `<span style="position:absolute; top:2px; right:4px; font-size:10px; font-weight:900; color:#4ade80;">✔</span>`
+                    : ''
+                }
+                <div style="font-size:26px; line-height:1.15;">${t.iconEmoji}</div>
+                <div style="font-size:11px; font-weight:900; color:#fde047; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.name}</div>
+                <div style="font-size:10px; color:${
+                  isConflict ? '#fca5a5' : '#93c5fd'
+                }; font-weight:800;">
+                  ${
+                    isConflict
+                      ? '⛔ ซ้ำ Main ตลค'
+                      : `${mDef.code}(${t.mainSkill.procPct}%) + ${sDef.code}(+${t.subSkill.procPct}%)`
+                  }
+                </div>
+              </div>
+            `;
+          }).join('');
+
+    const playerSwitcherHtml = this.state.players
+      .map((p) => {
+        const pChar = getCharacterDef(p.characterId);
+        const active = p.id === this.selectedLoadoutPlayerId;
+        return `
+          <button class="tab-pill loadout-p-switch ${active ? 'active' : ''}" data-pid="${p.id}" style="padding:5px 12px; font-size:12px; display:flex; align-items:center; gap:5px;">
+            <span>${pChar.avatarEmoji}</span>
+            <span>${p.id} (${pChar.name})</span>
+          </button>
+        `;
+      })
+      .join('');
+
+    container.innerHTML = `
+      <!-- Top Clean Bar: Back/Home + Title on Left | Player Switcher P1..P4 on Right (NO fake Gold/Diamond/Clover) -->
+      <div style="display:flex; justify-content:space-between; align-items:center; height:44px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="red-btn" id="loadoutBtnBackLobby" style="padding:5px 12px; font-size:13px;">⬅ LOBBY</button>
+          <button class="royal-panel" id="loadoutBtnHome" style="padding:5px 11px; font-size:13px; cursor:pointer;">🏠 MENU</button>
+          <span style="font-size:18px; font-weight:900; letter-spacing:0.5px; text-shadow:0 2px 4px #000; margin-left:4px;">
+            CHARACTER & TREASURE LOADOUT
+          </span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span style="font-size:12px; font-weight:900; color:#fde047; margin-right:4px;">เลือกผู้เล่น:</span>
+          ${playerSwitcherHtml}
+        </div>
+      </div>
+
+      <!-- 3-Column Body -->
+      <div style="display:grid; grid-template-columns: 28% 37% 33%; gap:12px; height:calc(100% - 52px);">
+        <!-- Left Column: Pedestal + 3 Treasure Slots -->
+        <div style="display:flex; flex-direction:column; gap:8px; height:100%;">
+          <div class="royal-panel" style="flex:1.25; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding-bottom:12px;">
+            <div class="royal-header" style="width:100%;">
+              <span>${targetPlayer.name} (${targetPlayer.id})</span>
+              <span style="color:#fde047;">RANK ${curChar.rank}</span>
+            </div>
+            <!-- S+ Character Card on Glowing Pedestal -->
+            <div style="width:162px; background:linear-gradient(180deg, ${curChar.accentColor} 0%, #1e1b4b 100%); border:3px solid #fde047; border-radius:14px; padding:10px; text-align:center; box-shadow:0 0 24px ${curChar.accentColor}99; position:relative;">
+              <span style="position:absolute; top:-8px; left:-8px; background:#0f172a; border:2px solid #fde047; border-radius:8px; padding:1px 6px; font-size:15px; font-weight:900; color:#fde047;">${curChar.rank}</span>
+              <div style="font-size:52px; line-height:1.1;">${curChar.avatarEmoji}</div>
+              <div style="font-size:16px; font-weight:900; color:#fef08a; margin-top:4px;">${curChar.name}</div>
+              <div style="font-size:11px; color:#e2e8f0; font-weight:700;">${curChar.title}</div>
+            </div>
+            <!-- Glowing Pedestal Base -->
+            <div style="width:190px; height:22px; border-radius:50%; background:radial-gradient(circle, #38bdf8 0%, #4f46e5 70%, transparent 100%); border:2px solid #a5f3fc; box-shadow:0 0 16px #38bdf8;"></div>
+          </div>
+
+          <div class="royal-panel" style="flex:0.85; display:flex; flex-direction:column;">
+            <div class="royal-header">
+              <span>TREASURE (ห้ามซ้ำ Main ตลค)</span>
+              <span style="color:#fde047;">3 ชิ้น</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:8px; flex:1; align-items:stretch;">
+              ${equippedSlotsHtml}
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Column: 5 Segmented Stat Bars + Active Skill Box -->
+        <div class="royal-panel" style="display:flex; flex-direction:column; overflow:hidden;">
+          <div class="royal-header">
+            <span>CHARACTER STATS & SKILLS</span>
+            <span style="color:#fde047;">+0 .. +5</span>
+          </div>
+          <div style="padding:10px 14px; display:flex; flex-direction:column; gap:8px; flex:1; justify-content:space-between; overflow-y:auto;" class="lgr-scroll">
+            <div style="display:flex; flex-direction:column; gap:7px;">
+              ${statBarsHtml}
+            </div>
+
+            <!-- SKILL Box -->
+            <div style="background:#112240; border:2px solid #3b82f6; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:5px;">
+              <div style="text-align:center; font-size:11px; font-weight:900; color:#93c5fd; border-bottom:1px solid #1e3a8a; padding-bottom:3px;">
+                SKILL ประจำตัวละคร & เรทรวมสุทธิ ((÷3)×1.6 | Sub บวกทับตรงๆ)
+              </div>
+              <div style="background:#1e1b4b; border:1px solid #a855f7; border-radius:6px; padding:4px 8px; font-size:11px;">
+                <strong style="color:#fde047;">Main (${charMainDef.code}):</strong> ${charMainDef.name} (${curChar.mainSkill.procPct}%) — <span style="color:#cbd5e1;">${charMainDef.effectDesc}</span>
+              </div>
+              <div style="background:#0f172a; border:1px solid #3b82f6; border-radius:6px; padding:4px 8px; font-size:11px;">
+                <strong style="color:#7dd3fc;">Char Sub 1 (${charSub1Def.code}):</strong> ${charSub1Def.name} (${curChar.subSkills[0].procPct}%)
+              </div>
+              <div style="background:#0f172a; border:1px solid #3b82f6; border-radius:6px; padding:4px 8px; font-size:11px;">
+                <strong style="color:#7dd3fc;">Char Sub 2 (${charSub2Def.code}):</strong> ${charSub2Def.name} (${curChar.subSkills[1].procPct}%)
+              </div>
+              <div style="font-size:11px; font-weight:900; color:#fde047; margin-top:2px;">
+                ⚡ Active Stacked Sub Skills (ตัวละคร + สมบัติ 3 ชิ้น):
+              </div>
+              <div style="display:flex; flex-direction:column; gap:3px;">
+                ${stackedSubsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: INVENTORY (Characters / Treasures Tabs + Grid + Confirm Button) -->
+        <div class="royal-panel" style="display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;">
+          <div class="royal-header">
+            <span>INVENTORY (${targetPlayer.id})</span>
+            <span style="color:#93c5fd;">เลือกจัดเซ็ต</span>
+          </div>
+          <div style="padding:8px 10px; display:flex; flex-direction:column; gap:8px; flex:1; overflow:hidden;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+              <button class="${this.loadoutInvTab === 'CHAR' ? 'gold-btn' : 'tab-pill'}" id="invTabChar" style="padding:6px; font-size:12px;">
+                CHARACTERS (8)
+              </button>
+              <button class="${this.loadoutInvTab === 'TR' ? 'gold-btn' : 'tab-pill'}" id="invTabTr" style="padding:6px; font-size:12px;">
+                TREASURES (10)
+              </button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; overflow-y:auto; flex:1; padding-right:3px; align-content:start;" class="lgr-scroll">
+              ${inventoryGridHtml}
+            </div>
+          </div>
+          <div style="padding:8px 12px;">
+            <button class="gold-btn" id="btnConfirmLoadout" style="width:100%; padding:9px; font-size:14px;">
+              ✔ CONFIRM LOADOUT (ไปหน้า LOBBY)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Wire events
+    container
+      .querySelector('#loadoutBtnBackLobby')
+      ?.addEventListener('click', () => this.showScreen('LOBBY'));
+    container
+      .querySelector('#loadoutBtnHome')
+      ?.addEventListener('click', () => this.showScreen('MAIN_MENU'));
+    container
+      .querySelector('#btnConfirmLoadout')
+      ?.addEventListener('click', () => this.showScreen('LOBBY'));
