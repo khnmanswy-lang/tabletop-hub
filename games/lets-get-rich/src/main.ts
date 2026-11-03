@@ -170,8 +170,6 @@ class LgrPeakEraApp {
           this.sendWs({ type: 'ADD_AI', slotIndex });
         } else {
           const pid = PLAYER_IDS[slotIndex];
-          const newCount = Math.min(4, Math.max(2, slotIndex + 1)) as 2 | 3 | 4;
-          this.engine.setFfaPlayerCount(newCount);
           this.engine.setPlayerControlType(pid, 'AI_BOT');
           this.engine.randomizePlayerLoadout(pid);
           this.syncAll();
@@ -182,8 +180,6 @@ class LgrPeakEraApp {
           this.sendWs({ type: 'ADD_HUMAN', slotIndex });
         } else {
           const pid = PLAYER_IDS[slotIndex];
-          const newCount = Math.min(4, Math.max(2, slotIndex + 1)) as 2 | 3 | 4;
-          this.engine.setFfaPlayerCount(newCount);
           this.engine.setPlayerControlType(pid, 'HUMAN');
           this.syncAll();
         }
@@ -660,11 +656,10 @@ class LgrPeakEraApp {
     const m = this.engine.getMatchState();
 
     if (!m) {
-      const ffaCount = lobby.ffaPlayerCount ?? 4;
-      const activeSlotCount = lobby.gameMode === 'TEAM_2V2' ? 4 : ffaCount;
-      const lobbyPlayers: PlayerState[] = PLAYER_IDS.map((pid, idx) => {
+      const ffaCount = this.engine.getFfaPlayerCount();
+      const lobbyPlayers: PlayerState[] = PLAYER_IDS.map((pid) => {
         const slot = lobby.players[pid];
-        const isSlotActive = idx < activeSlotCount;
+        const isSlotActive = slot.isSlotActive !== false;
         return {
           id: pid,
           name: slot.name,
