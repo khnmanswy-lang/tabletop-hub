@@ -80,17 +80,20 @@ function createRichGameRoom() {
       return tokenToSlot.get(token);
     }
     const lobby = engine.getLobbyConfig();
-    const maxActive = getActiveSlotCount();
 
     // Check if any slot is currently assigned to this token
     for (const [t, s] of tokenToSlot.entries()) {
       if (t === token) return s;
     }
 
-    // Find first vacant slot among active slots
+    // Find first vacant slot: prioritize active HUMAN slots -> active AI_BOT slots -> empty slots
     const occupiedSlots = new Set(Array.from(tokenToSlot.values()).filter(Boolean));
-    for (let i = 0; i < maxActive; i++) {
-      const pid = PLAYER_IDS[i];
+    const candidateOrder = [
+      ...PLAYER_IDS.filter((pid) => lobby.players[pid]?.isSlotActive !== false && lobby.players[pid]?.controlType === 'HUMAN'),
+      ...PLAYER_IDS.filter((pid) => lobby.players[pid]?.isSlotActive !== false && lobby.players[pid]?.controlType === 'AI_BOT'),
+      ...PLAYER_IDS.filter((pid) => lobby.players[pid]?.isSlotActive === false)
+    ];
+    for (const pid of candidateOrder) {
       if (!occupiedSlots.has(pid)) {
         tokenToSlot.set(token, pid);
         if (desiredName) tokenToName.set(token, desiredName);
@@ -127,11 +130,10 @@ function createRichGameRoom() {
     const m = engine.getMatchState();
 
     if (!m) {
-      const ffaCount = lobby.ffaPlayerCount ?? 4;
-      const activeSlotCount = lobby.gameMode === 'TEAM_2V2' ? 4 : ffaCount;
-      const lobbyPlayers = PLAYER_IDS.map((pid, idx) => {
+      const ffaCount = engine.getFfaPlayerCount();
+      const lobbyPlayers = PLAYER_IDS.map((pid) => {
         const slot = lobby.players[pid];
-        const isSlotActive = idx < activeSlotCount;
+        const isSlotActive = slot.isSlotActive !== false;
         return {
           id: pid,
           name: slot.name,
@@ -189,7 +191,6 @@ function createRichGameRoom() {
     }
 
     // In-game snapshot
-    const activeSlotCount = m.gameMode === 'TEAM_2V2' ? 4 : (lobby.ffaPlayerCount ?? 4);
     const playersList = PLAYER_IDS.map((pid) => {
       const p = m.players[pid];
       if (!p) return null;
@@ -556,10 +557,6 @@ function createRichGameRoom() {
           const idx = Number(msg.slotIndex);
           if (idx >= 0 && idx < 4) {
             const pid = PLAYER_IDS[idx];
-            const curCount = engine.getFfaPlayerCount();
-            if (idx >= curCount) {
-              engine.setFfaPlayerCount(Math.min(4, idx + 1));
-            }
             engine.setPlayerControlType(pid, 'AI_BOT');
             engine.randomizePlayerLoadout(pid);
             broadcastState();
@@ -571,10 +568,6 @@ function createRichGameRoom() {
           const idx = Number(msg.slotIndex);
           if (idx >= 0 && idx < 4) {
             const pid = PLAYER_IDS[idx];
-            const curCount = engine.getFfaPlayerCount();
-            if (idx >= curCount) {
-              engine.setFfaPlayerCount(Math.min(4, idx + 1));
-            }
             engine.setPlayerControlType(pid, 'HUMAN');
             broadcastState();
           }
