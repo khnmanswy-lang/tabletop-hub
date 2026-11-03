@@ -1,0 +1,338 @@
+{
+  "treasures": [
+    {
+      "id": "TR_01_MAGNET",
+      "name": "แกนแม่เหล็กพกพา",
+      "nameEn": "Magnetic Core",
+      "iconEmoji": "🧲",
+      "mainSkill": { "skillId": "M01_MAGNET", "procPct": 18 },
+      "subSkill": { "skillId": "S05_STEP_TOLL_X2", "procPct": 27 }
+    },
+    {
+      "id": "TR_02_BLACKHOLE",
+      "name": "เครื่องกำเนิดหลุมดำ",
+      "nameEn": "Void Generator",
+      "iconEmoji": "🌀",
+      "mainSkill": { "skillId": "M02_BLACK_HOLE", "procPct": 23 },
+      "subSkill": { "skillId": "S06_AUTO_EXPO", "procPct": 20 }
+    },
+    {
+      "id": "TR_03_HAMMER",
+      "name": "ค้อนทองนายช่างใหญ่",
+      "nameEn": "Master Builder Hammer",
+      "iconEmoji": "🔨",
+      "mainSkill": { "skillId": "M03_BUILD_TO_START", "procPct": 18 },
+      "subSkill": { "skillId": "S10_DOUBLE_BOOST", "procPct": 9 }
+    },
+    {
+      "id": "TR_04_COMPASS",
+      "name": "เข็มทิศเจ็ตสตรีม",
+      "nameEn": "Jetstream Compass",
+      "iconEmoji": "🧭",
+      "mainSkill": { "skillId": "M04_BUILD_TO_TRAVEL", "procPct": 15 },
+      "subSkill": { "skillId": "S03_ISLAND_ESCAPE", "procPct": 53 }
+    },
+    {
+      "id": "TR_05_TICKET",
+      "name": "ตั๋วบินเฟิร์สคลาส",
+      "nameEn": "Healing First-Class Ticket",
+      "iconEmoji": "🎫",
+      "mainSkill": { "skillId": "M05_HEALING_TRAVEL", "procPct": 15 },
+      "subSkill": { "skillId": "S07_BLACK_CARD", "procPct": 30, "maxUses": 1 }
+    },
+    {
+      "id": "TR_06_BLUEPRINT",
+      "name": "น้ำหอมมหาเสน่ห์",
+      "nameEn": "Charming Perfume Vial",
+      "iconEmoji": "🧪",
+      "mainSkill": { "skillId": "M06_SUPER_PERFUME", "procPct": 23 },
+      "subSkill": { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 24, "maxUses": 1 }
+    },
+    {
+      "id": "TR_07_GUIDEBOOK",
+      "name": "ไกด์บุ๊กฉบับพิมพ์ผิด",
+      "nameEn": "Misprinted Guidebook",
+      "iconEmoji": "📕",
+      "mainSkill": { "skillId": "M07_WRONG_GUIDEBOOK", "procPct": 15, "maxUses": 1 },
+      "subSkill": { "skillId": "S02_SHERIFF_TAX", "procPct": 18 }
+    },
+    {
+      "id": "TR_08_RADIO",
+      "name": "วิทยุเรียกด่วนประธาน",
+      "nameEn": "Executive Recall Radio",
+      "iconEmoji": "📻",
+      "mainSkill": { "skillId": "M08_AIRPORT_RECALL", "procPct": 21 },
+      "subSkill": { "skillId": "S04_TRIPLE_DBL_FLY", "procPct": 30, "maxUses": 1 }
+    },
+    {
+      "id": "TR_09_HORN",
+      "name": "โทรโข่งแห่งชัยชนะ",
+      "nameEn": "Victory Megaphone",
+      "iconEmoji": "📢",
+      "mainSkill": { "skillId": "M09_VICTORY_HORN", "procPct": 39, "maxUses": 1 },
+      "subSkill": { "skillId": "S01_PERFUME_STEAL", "procPct": 30 }
+    },
+    {
+      "id": "TR_10_ORB",
+      "name": "ลูกแก้ววาร์ปแถวแลนด์มาร์ก",
+      "nameEn": "Row Teleport Orb",
+      "iconEmoji": "🔮",
+      "mainSkill": { "skillId": "M10_DISRUPT_CITY", "procPct": 23 },
+      "subSkill": { "skillId": "S09_COIN_MASTER", "procPct": 27, "maxUses": 1 }
+    }
+  ],
+  "skills": [
+    {
+      "id": "M01_MAGNET",
+      "code": "M01",
+      "slotCategory": "MAIN",
+      "name": "แกนแม่เหล็ก",
+      "nameEn": "Magnetic Pull (±2 Tiles)",
+      "trigger": "ON_LANDMARK_BUILD_OR_VISIT",
+      "effectDesc": "เมื่อสร้างหรือตกแลนด์มาร์กตัวเอง ดึงศัตรูในระยะ ±2 ช่องมาจ่ายค่าผ่านทางทันที",
+      "charPct": 32,
+      "treasurePct": 18,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M02_BLACK_HOLE",
+      "code": "M02",
+      "slotCategory": "MAIN",
+      "name": "สร้างหลุมดำเดี่ยว",
+      "nameEn": "Single Black Hole",
+      "trigger": "ON_LANDMARK_BUILD_OR_VISIT",
+      "effectDesc": "วางหลุมดำ 1 จุดบนกระดานเชื่อมมายังแลนด์มาร์กนี้ (ทับหลุมดำเก่าทันที)",
+      "charPct": 41,
+      "treasurePct": 23,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M03_BUILD_TO_START",
+      "code": "M03",
+      "slotCategory": "MAIN",
+      "name": "นายช่างใหญ่",
+      "nameEn": "Build 3 -> Warp START",
+      "trigger": "ON_BUILD_3_BUILDINGS",
+      "effectDesc": "เมื่อสร้างตึกครบ 3 หลัง (Hotel) วาร์ปกลับจุด START รับเงินเดือนและอัปเกรดตึกทันที",
+      "charPct": 26,
+      "treasurePct": 17,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M04_BUILD_TO_TRAVEL",
+      "code": "M04",
+      "slotCategory": "MAIN",
+      "name": "สร้างแล้วไปสนามบิน",
+      "nameEn": "Build -> Sky Terminal",
+      "trigger": "ON_BUILD_3_OR_LANDMARK",
+      "effectDesc": "เมื่อสร้างตึก 3 หลังหรือแลนด์มาร์ก วาร์ปไปรอที่ช่องสนามบินรอบโลกฟรีทันที",
+      "charPct": 23,
+      "treasurePct": 15,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M05_HEALING_TRAVEL",
+      "code": "M05",
+      "slotCategory": "MAIN",
+      "name": "ตั๋วบินฟื้นฟู",
+      "nameEn": "Healing Travel",
+      "trigger": "ON_AFTER_PAY_TOLL",
+      "effectDesc": "หลังจากจ่ายค่าผ่านทางให้ศัตรู วาร์ปไปรอที่สนามบินรอบโลกฟรีทันที",
+      "charPct": 24,
+      "treasurePct": 15,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M06_SUPER_PERFUME",
+      "code": "M06",
+      "slotCategory": "MAIN",
+      "name": "น้ำหอมมหาเสน่ห์",
+      "nameEn": "Super Perfume (12% Char / 7% Treasure)",
+      "trigger": "ON_PASS_OR_LAND_OPPONENT",
+      "effectDesc": "เมื่อเดินก้าวผ่านหรือตกทับช่องที่มีศัตรู ดูดเงินสดศัตรู 12% (ตลค) / 7% (สมบัติ) ทันที (หากใส่ซ้อนกันจะรวมเป็น 19% อัตราออกเท่าเดิม)",
+      "charPct": 30,
+      "treasurePct": 23,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M06_INSTANT_LANDMARK",
+      "code": "M06",
+      "slotCategory": "MAIN",
+      "name": "น้ำหอมมหาเสน่ห์",
+      "nameEn": "Super Perfume (7% Steal)",
+      "trigger": "ON_PASS_OR_LAND_OPPONENT",
+      "effectDesc": "เมื่อเดินก้าวผ่านหรือตกทับช่องที่มีศัตรู ดูดเงินสดศัตรูมา 7% ทันที (ซ้อนทับกับน้ำหอมอื่นได้)",
+      "charPct": 30,
+      "treasurePct": 23,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M07_WRONG_GUIDEBOOK",
+      "code": "M07",
+      "slotCategory": "MAIN",
+      "name": "ไกด์บุ๊กผิดพลาด",
+      "nameEn": "Wrong Guidebook",
+      "trigger": "ON_OPPONENT_LAND_ON_ME",
+      "effectDesc": "เมื่อศัตรูเดินมาตกทับเรา ส่งศัตรูไปแลนด์มาร์กที่แพงที่สุดของเราทันที (1 ครั้ง/เกม)",
+      "charPct": 24,
+      "treasurePct": 15,
+      "maxUsesPerMatch": 1
+    },
+    {
+      "id": "M08_AIRPORT_RECALL",
+      "code": "M08",
+      "slotCategory": "MAIN",
+      "name": "เรียกด่วนประธาน",
+      "nameEn": "Airport Recall",
+      "trigger": "ON_VISIT_OWN_LANDMARK",
+      "effectDesc": "เมื่อสร้างหรือเหยียบแลนด์มาร์กตัวเอง กระชากศัตรูที่รออยู่สนามบินมาจ่ายค่าผ่านทางทันที",
+      "charPct": 39,
+      "treasurePct": 23,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "M09_VICTORY_HORN",
+      "code": "M09",
+      "slotCategory": "MAIN",
+      "name": "โทรโข่งชัยชนะ",
+      "nameEn": "Victory Horn",
+      "trigger": "ON_MONOPOLY_ALERT",
+      "effectDesc": "เมื่อขาดอีก 1 ช่องจะชนะ Monopoly ได้สิทธิ์ทอยเต๋าต่อทันที (1 ครั้ง/เกม)",
+      "charPct": 68,
+      "treasurePct": 39,
+      "maxUsesPerMatch": 1
+    },
+    {
+      "id": "M10_DISRUPT_CITY",
+      "code": "M10",
+      "slotCategory": "MAIN",
+      "name": "วาร์ปแถวแลนด์มาร์ก",
+      "nameEn": "Landmark Row Teleport",
+      "trigger": "ON_LANDMARK_BUILD",
+      "effectDesc": "เมื่อสร้างแลนด์มาร์กสำเร็จ มีโอกาสเลือกวาร์ปไปช่องใดก็ได้ในแถวเดียวกันทันที (ไม่รวมช่องมุม)",
+      "charPct": 33,
+      "treasurePct": 23,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "S01_PERFUME_STEAL",
+      "code": "S01",
+      "slotCategory": "SUB",
+      "name": "น้ำหอมหลากสี",
+      "nameEn": "Perfume Steal (3% on Pass/Land)",
+      "trigger": "ON_PASS_OR_LAND_OPPONENT",
+      "effectDesc": "เมื่อเดินก้าวผ่านหรือตกทับช่องที่มีศัตรู ดูดเงินสดศัตรูมา 3% ทันที (ซ้อนทับกับน้ำหอมอื่นได้)",
+      "charPct": 30,
+      "treasurePct": 30,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "S02_SHERIFF_TAX",
+      "code": "S02",
+      "slotCategory": "SUB",
+      "name": "ตรานายอำเภอ",
+      "nameEn": "Sheriff Tax (20% on Defend)",
+      "trigger": "ON_OPPONENT_LAND_ON_ME",
+      "effectDesc": "เมื่อศัตรูเดินมาหยุดทับช่องเดียวกับเรา ดูดเงินสดของศัตรูมา 20% ทันที",
+      "charPct": 27,
+      "treasurePct": 18,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "S03_ISLAND_ESCAPE",
+      "code": "S03",
+      "slotCategory": "SUB",
+      "name": "หนีเกาะร้างทันที",
+      "nameEn": "Instant Island Escape",
+      "trigger": "ON_ENTER_DESERT_ISLAND",
+      "effectDesc": "เมื่อตกเกาะร้าง ได้สิทธิ์ทอยเต๋าออกจากเกาะร้างฟรีทันทีในเทิร์นเดียวกัน",
+      "charPct": 83,
+      "treasurePct": 53,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "S04_TRIPLE_DBL_FLY",
+      "code": "S04",
+      "slotCategory": "SUB",
+      "name": "บัตรเชิญไม่คาดฝัน",
+      "nameEn": "3x Double -> Sky Terminal",
+      "trigger": "ON_THIRD_CONSECUTIVE_DOUBLE",
+      "effectDesc": "เมื่อทอยเบิ้ลครบ 3 ครั้งติด เปลี่ยนจากเข้าเกาะร้างเป็นวาร์ปไปสนามบินทันที (1 ครั้ง/เกม)",
+      "charPct": 45,
+      "treasurePct": 30,
+      "maxUsesPerMatch": 1
+    },
+    {
+      "id": "S05_STEP_TOLL_X2",
+      "code": "S05",
+      "slotCategory": "SUB",
+      "name": "เหยียบบ้านคูณสอง",
+      "nameEn": "Step Toll x2",
+      "trigger": "ON_VISIT_OWN_LANDMARK",
+      "effectDesc": "เมื่อเดินตกแลนด์มาร์กตัวเอง เพิ่มค่าผ่านทางเป็น x2 (สะสมสูงสุด x8)",
+      "charPct": 45,
+      "treasurePct": 27,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "S06_AUTO_EXPO",
+      "code": "S06",
+      "slotCategory": "SUB",
+      "name": "ดึงโอลิมปิกเข้าบ้าน",
+      "nameEn": "Auto Olympic Expo",
+      "trigger": "ON_LANDMARK_BUILD",
+      "effectDesc": "เมื่อสร้างแลนด์มาร์กสำเร็จ ดึงโอลิมปิกมาจัดที่แลนด์มาร์กนั้นฟรีทันที",
+      "charPct": 35,
+      "treasurePct": 20,
+      "maxUsesPerMatch": null
+    },
+    {
+      "id": "S07_BLACK_CARD",
+      "code": "S07",
+      "slotCategory": "SUB",
+      "name": "บัตรเครดิตดำ",
+      "nameEn": "Black Card (100% Toll Exempt)",
+      "trigger": "ON_BEFORE_PAY_TOLL",
+      "effectDesc": "เมื่อตกเมืองศัตรู ยกเว้นค่าผ่านทาง 100% ทันที (1 ครั้ง/เกม)",
+      "charPct": 50,
+      "treasurePct": 30,
+      "maxUsesPerMatch": 1
+    },
+    {
+      "id": "S08_TAKEOVER_SHIELD",
+      "code": "S08",
+      "slotCategory": "SUB",
+      "name": "โล่กันซื้อต่อ",
+      "nameEn": "Takeover Shield",
+      "trigger": "ON_OPPONENT_ATTEMPT_TAKEOVER",
+      "effectDesc": "ป้องกันไม่ให้ศัตรูซื้อต่อ (Takeover) เมืองของเรา (1 ครั้ง/เกม)",
+      "charPct": 38,
+      "treasurePct": 24,
+      "maxUsesPerMatch": 1
+    },
+    {
+      "id": "S09_COIN_MASTER",
+      "code": "S09",
+      "slotCategory": "SUB",
+      "name": "เซียนมินิเกม",
+      "nameEn": "Coin Master",
+      "trigger": "ON_BONUS_GAME_START",
+      "effectDesc": "เมื่อเข้าช่องโยนเหรียญ ชนะตาแรก 100% และได้สิทธิ์ทายผิดแก้ตัวฟรี 1 ครั้ง (1 ครั้ง/เกม)",
+      "charPct": 38,
+      "treasurePct": 27,
+      "maxUsesPerMatch": 1
+    },
+    {
+      "id": "S10_DOUBLE_BOOST",
+      "code": "S10",
+      "slotCategory": "SUB",
+      "name": "ลูกเต๋าคู่ใจ",
+      "nameEn": "Double Boost",
+      "trigger": "PASSIVE_ON_EVEN_SUM_ROLL",
+      "effectDesc": "เพิ่มโอกาสออกหน้าเบิ้ลเมื่อทอยได้แต้มคู่ (4, 6, 8, 10) ติดตัวตลอดทั้งเกม",
+      "charPct": 11,
+      "treasurePct": 9,
+      "maxUsesPerMatch": null
+    }
+  ]
+}

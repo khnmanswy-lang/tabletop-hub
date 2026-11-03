@@ -1,0 +1,173 @@
+{
+  "characters": [
+    {
+      "id": "CHAR_COSMO",
+      "name": "Cosmo",
+      "title": "(Void Architect)",
+      "rank": "S+",
+      "avatarEmoji": "🧞‍♂️",
+      "accentColor": "#7C3AED",
+      "stats": { "dc": 4, "constDc": 2, "acqDc": 2, "tollDc": 2, "salLuck": 2 },
+      "mainSkill": { "skillId": "M02_BLACK_HOLE", "procPct": 41 },
+      "subSkills": [
+        { "skillId": "S05_STEP_TOLL_X2", "procPct": 45 },
+        { "skillId": "S03_ISLAND_ESCAPE", "procPct": 83 }
+      ]
+    },
+    {
+      "id": "CHAR_CLEO",
+      "name": "Cleo",
+      "title": "(Trap Master)",
+      "rank": "S+",
+      "avatarEmoji": "👩‍🎤",
+      "accentColor": "#E11D48",
+      "stats": { "dc": 3, "constDc": 2, "acqDc": 1, "tollDc": 3, "salLuck": 2 },
+      "mainSkill": { "skillId": "M01_MAGNET", "procPct": 32 },
+      "subSkills": [
+        { "skillId": "S02_SHERIFF_TAX", "procPct": 27 },
+        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 38 }
+      ]
+    },
+    {
+      "id": "CHAR_ARIA",
+      "name": "Aria",
+      "title": "(Skyline Heiress)",
+      "rank": "S+",
+      "avatarEmoji": "👸",
+      "accentColor": "#0284C7",
+      "stats": { "dc": 3, "constDc": 4, "acqDc": 1, "tollDc": 2, "salLuck": 2 },
+      "mainSkill": { "skillId": "M06_SUPER_PERFUME", "procPct": 30 },
+      "subSkills": [
+        { "skillId": "S04_TRIPLE_DBL_FLY", "procPct": 45 },
+        { "skillId": "S10_DOUBLE_BOOST", "procPct": 11 }
+      ]
+    },
+    {
+      "id": "CHAR_MASON",
+      "name": "Mason",
+      "title": "(Grand Builder)",
+      "rank": "S",
+      "avatarEmoji": "👷",
+      "accentColor": "#D97706",
+      "stats": { "dc": 2, "constDc": 4, "acqDc": 1, "tollDc": 2, "salLuck": 3 },
+      "mainSkill": { "skillId": "M03_BUILD_TO_START", "procPct": 26 },
+      "subSkills": [
+        { "skillId": "S05_STEP_TOLL_X2", "procPct": 45 },
+        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 38 }
+      ]
+    },
+    {
+      "id": "CHAR_KAEL",
+      "name": "Kael",
+      "title": "(Jetstream Ace)",
+      "rank": "S+",
+      "avatarEmoji": "🧑‍✈️",
+      "accentColor": "#0EA5E9",
+      "stats": { "dc": 4, "constDc": 2, "acqDc": 2, "tollDc": 2, "salLuck": 2 },
+      "mainSkill": { "skillId": "M04_BUILD_TO_TRAVEL", "procPct": 23 },
+      "subSkills": [
+        { "skillId": "S03_ISLAND_ESCAPE", "procPct": 83 },
+        { "skillId": "S01_PERFUME_STEAL", "procPct": 30 }
+      ]
+    },
+    {
+      "id": "CHAR_VESPER",
+      "name": "Vesper",
+      "title": "(Hostile Raider)",
+      "rank": "S",
+      "avatarEmoji": "🦹‍♀️",
+      "accentColor": "#DC2626",
+      "stats": { "dc": 3, "constDc": 2, "acqDc": 4, "tollDc": 2, "salLuck": 1 },
+      "mainSkill": { "skillId": "M08_AIRPORT_RECALL", "procPct": 39 },
+      "subSkills": [
+        { "skillId": "S01_PERFUME_STEAL", "procPct": 30 },
+        { "skillId": "S07_BLACK_CARD", "procPct": 50 }
+      ]
+    },
+    {
+      "id": "CHAR_NYX",
+      "name": "Nyx",
+      "title": "(Dimension Weaver)",
+      "rank": "A+",
+      "avatarEmoji": "🧙‍♀️",
+      "accentColor": "#9333EA",
+      "stats": { "dc": 3, "constDc": 2, "acqDc": 2, "tollDc": 2, "salLuck": 3 },
+      "mainSkill": { "skillId": "M10_DISRUPT_CITY", "procPct": 33 },
+      "subSkills": [
+        { "skillId": "S09_COIN_MASTER", "procPct": 38 },
+        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 38 }
+      ]
+    },
+    {
+      "id": "CHAR_CHRONOS",
+      "name": "Chronos",
+      "title": "(Time Tactician)",
+      "rank": "A+",
+      "avatarEmoji": "🕵️‍♂️",
+      "accentColor": "#16A34A",
+      "stats": { "dc": 4, "constDc": 3, "acqDc": 2, "tollDc": 3, "salLuck": 2 },
+      "mainSkill": { "skillId": "M09_VICTORY_HORN", "procPct": 68 },
+      "subSkills": [
+        { "skillId": "S06_AUTO_EXPO", "procPct": 35 },
+        { "skillId": "S07_BLACK_CARD", "procPct": 50 }
+      ]
+    }
+  ],
+  "statScaling": {
+    "dcProcPct": [10, 12, 14, 16, 18, 20],
+    "constDiscountPct": [0, 4, 8, 12, 16, 20],
+    "acqDiscountPct": [0, 5, 10, 15, 20, 25],
+    "tollDiscountPct": [0, 4, 8, 12, 16, 20],
+    "salLuckBonusPct": [0, 8, 16, 24, 32, 40]
+  },
+  "synergies": {
+    "CHAR_COSMO": {
+      "archetype": "Toll Trap & Board Control",
+      "archetypeTh": "กับดักค่าผ่านทาง & คุมกระดาน",
+      "descriptionTh": "หลุมดำดูดศัตรูเข้าแลนด์มาร์ก ผสานแม่เหล็กและวิทยุเรียกด่วน",
+      "coreTreasures": ["TR_01_MAGNET", "TR_08_RADIO", "TR_06_BLUEPRINT", "TR_05_TICKET"]
+    },
+    "CHAR_CLEO": {
+      "archetype": "Landmark Magnet Trap",
+      "archetypeTh": "แม่เหล็กแลนด์มาร์กดักจับ",
+      "descriptionTh": "แม่เหล็กดูด 4 ช่องเข้าแลนด์มาร์ก คอมโบหลุมดำและวิทยุเรียกด่วน",
+      "coreTreasures": ["TR_02_BLACKHOLE", "TR_08_RADIO", "TR_06_BLUEPRINT", "TR_05_TICKET"]
+    },
+    "CHAR_ARIA": {
+      "archetype": "Fast Travel & Double Rush",
+      "archetypeTh": "บินเร็ว & ทอยเบิ้ลสร้างไว",
+      "descriptionTh": "เบิ้ล 3 ครั้งบิน คอมโบเข็มทิศตั๋วบิน และค้อนทองเบิ้ลรัว",
+      "coreTreasures": ["TR_04_COMPASS", "TR_05_TICKET", "TR_03_HAMMER", "TR_09_HORN"]
+    },
+    "CHAR_MASON": {
+      "archetype": "Rapid Landmark Spammer",
+      "archetypeTh": "สร้าง 3 หลังวาร์ปสตาร์ทปั๊มแลนด์มาร์ก",
+      "descriptionTh": "กลับจุด START รับเงินเดือนอัปเกรดแลนด์มาร์ก คอมโบโทรโข่งและแม่เหล็ก",
+      "coreTreasures": ["TR_04_COMPASS", "TR_09_HORN", "TR_01_MAGNET", "TR_02_BLACKHOLE"]
+    },
+    "CHAR_KAEL": {
+      "archetype": "Airport Flight Rusher",
+      "archetypeTh": "เจ้าเวหาบินรอบโลกป่วนเมือง",
+      "descriptionTh": "สร้าง 3 หลังบินไปสนามบิน คอมโบวิทยุเรียกด่วนและตั๋วบินฟรี",
+      "coreTreasures": ["TR_08_RADIO", "TR_05_TICKET", "TR_09_HORN", "TR_06_BLUEPRINT"]
+    },
+    "CHAR_VESPER": {
+      "archetype": "Hostile Raider & Toll Drain",
+      "archetypeTh": "จอมสกัดสนามบิน & ดูดเงินโหด",
+      "descriptionTh": "ดึงศัตรูที่เข้าสนามบินมาลงแลนด์มาร์ก ผสานแม่เหล็กและน้ำหอมมหาเสน่ห์",
+      "coreTreasures": ["TR_01_MAGNET", "TR_02_BLACKHOLE", "TR_06_BLUEPRINT", "TR_10_ORB"]
+    },
+    "CHAR_NYX": {
+      "archetype": "Dimension Chaos & City Disruptor",
+      "archetypeTh": "มิติป่วนแลกเมือง & ทำลายผัง",
+      "descriptionTh": "สลับ/บังคับขายเมืองศัตรู คอมโบหลุมดำและตั๋วบินเฟิร์สคลาส",
+      "coreTreasures": ["TR_02_BLACKHOLE", "TR_05_TICKET", "TR_07_GUIDEBOOK", "TR_04_COMPASS"]
+    },
+    "CHAR_CHRONOS": {
+      "archetype": "Extra-Turn Chain Dominator",
+      "archetypeTh": "ผู้ควบคุมเวลาตาเดินซ้อน",
+      "descriptionTh": "สร้างแลนด์มาร์กได้เดินต่อ 45% คอมโบค้อนทองและเข็มทิศเจ็ตสตรีม",
+      "coreTreasures": ["TR_03_HAMMER", "TR_04_COMPASS", "TR_01_MAGNET", "TR_06_BLUEPRINT"]
+    }
+  }
+}
