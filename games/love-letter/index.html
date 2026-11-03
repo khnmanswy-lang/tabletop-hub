@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Love Letter — Royal Court Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #FAF9F5;
+      --bg-secondary: #F4F1EA;
+      --bg-surface: #FFFFFF;
+      --bg-elevated: #FCFBF8;
+      --text-primary: #141413;
+      --text-secondary: #666560;
+      --text-muted: #8E8C84;
+      --accent: #D97757;
+      --accent-hover: #C26141;
+      --accent-soft: rgba(217, 119, 87, 0.11);
+      --border: #E5E2DC;
+      --border-strong: #CECAC0;
+      --sage: #3B6E52;
+      --sage-soft: rgba(59, 110, 82, 0.10);
+      --crimson: #9E3333;
+      --crimson-soft: rgba(158, 51, 51, 0.09);
+      --shadow-sm: 0 1px 2px rgba(20, 20, 19, 0.04), 0 2px 6px rgba(20, 20, 19, 0.03);
+      --shadow-md: 0 4px 12px rgba(20, 20, 19, 0.06), 0 1px 3px rgba(20, 20, 19, 0.04);
+      --shadow-lg: 0 12px 32px rgba(20, 20, 19, 0.10), 0 2px 6px rgba(20, 20, 19, 0.05);
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand h1 {
+      font-family: var(--font-serif);
+      font-weight: 500;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .brand .subtitle {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge.stage-active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+    }
+
+    .badge.immune {
+      background: var(--sage-soft);
+      border-color: var(--sage);
+      color: var(--sage);
+    }
+
+    .badge.elim {
+      background: var(--crimson-soft);
+      border-color: var(--crimson);
+      color: var(--crimson);
+    }
+
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.14s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #FFFFFF;
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+
+    .kick-btn {
+      background: rgba(185, 56, 41, 0.06);
+      border: 1px solid rgba(185, 56, 41, 0.22);
+      color: var(--crimson);
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.12s ease;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .kick-btn:hover {
+      background: var(--crimson);
+      color: #FFFFFF;
+      border-color: var(--crimson);
+      box-shadow: 0 1px 4px rgba(185, 56, 41, 0.25);
+    }
+
+    /* CENTERED MAIN WORKSPACE */
+    .workspace {
+      flex: 1;
+      max-width: 980px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* TURN BANNER */
+    .turn-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .turn-banner.my-turn {
+      background: #FFFDFB;
+      border-color: var(--accent);
+      border-left-width: 4px;
+      animation: turnPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes turnPulse {
+      0% { box-shadow: 0 0 0 0 rgba(217, 119, 87, 0.4), var(--shadow-sm); }
+      70% { box-shadow: 0 0 0 6px rgba(217, 119, 87, 0), var(--shadow-sm); }
+      100% { box-shadow: 0 0 0 0 rgba(217, 119, 87, 0), var(--shadow-sm); }
+    }
+
+    .turn-headline {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .turn-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* COURT CENTER: DECK & SINGLE DISCARD TRAY */
+    .court-center {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .pile-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pile-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+
+    /* CARD SURFACES */
+    .card-surface {
+      width: 110px;
+      height: 154px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .card-surface.deck-back {
+      background: #EAE6DC;
+      border: 1px solid var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      font-family: var(--font-serif);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .card-surface.empty-tray {
+      background: transparent;
+      border: 1px dashed var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .card-surface.recent-discard {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--text-primary);
+    }
+
+    .card-surface.recent-discard.clickable {
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .card-surface.recent-discard.clickable:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent);
+    }
+
+    .card-surface.recent-discard.expert-locked {
+      cursor: default;
+    }
+
+    .tray-sub-badge {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-align: center;
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    .tray-sub-badge.expert {
+      color: var(--text-muted);
+    }
+
+    .badge-expert {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+      font-weight: 600;
+    }
+
+    .rule-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .reference-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .reference-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .ref-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 52px;
+      flex-shrink: 0;
+    }
+
+    .ref-val {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      width: 14px;
+    }
+
+    .ref-svg {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ref-svg svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .ref-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ref-name {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .ref-count-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .ref-count-badge.zero {
+      opacity: 0.45;
+      text-decoration: line-through;
+    }
+
+    .ref-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    .discard-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 55vh;
+      overflow-y: auto;
+      margin-top: 12px;
+      padding-right: 4px;
+    }
+
+    .discard-history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      gap: 12px;
+    }
+
+    .card-art {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto;
+      display: block;
+      color: var(--text-primary);
+    }
+
+    .card-art.art-lg {
+      width: 48px;
+      height: 48px;
+    }
+
+    /* PLAYERS BOARD */
+    .seats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .seat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.15s ease;
+    }
+
+    .seat-card.active-turn {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+    }
+
+    .seat-card.eliminated {
+      background: var(--bg-secondary);
+      opacity: 0.65;
+    }
+
+    .seat-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .seat-identity {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .seat-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .seat-number {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    .seat-name {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--sage);
+      display: inline-block;
+    }
+
+    .status-dot.offline {
+      background: var(--crimson);
+    }
+
+    .favor-track {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .favor-pip {
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      display: inline-block;
+    }
+
+    .favor-pip.filled {
+      background: var(--accent);
+    }
+
+    .seat-hand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .masked-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 3px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-strong);
+      color: var(--text-secondary);
+    }
+
+    .revealed-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 3px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      color: var(--text-primary);
+    }
+
+    /* ACTIVE PLAYER HAND PANEL */
+    .hand-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .panel-title {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .hand-cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+    }
+
+    .playing-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s ease;
+      position: relative;
+      min-height: 200px;
+    }
+
+    .playing-card.playable {
+      cursor: pointer;
+      border-color: var(--text-primary);
+      background: var(--bg-surface);
+    }
+
+    .playing-card.playable:hover {
+      transform: translateY(-6px) scale(1.02);
+      border-color: var(--accent);
+      box-shadow: 0 8px 18px -3px rgba(217, 119, 87, 0.35);
+    }
+
+    .playing-card.locked {
+      opacity: 0.55;
+      cursor: not-allowed;
+      background: var(--bg-secondary);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .card-val {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .card-title {
+      font-family: var(--font-serif);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .card-art-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 6px 0;
+    }
+
+    .card-body {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* INLINE CHOICE OVERLAY / MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 20, 19, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 60;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      max-width: 520px;
+      width: 100%;
+      padding: 22px 24px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-title {
+      font-family: var(--font-serif);
+      font-size: 21px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: -10px;
+    }
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    .option-btn {
+      padding: 9px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: var(--bg-surface);
+    }
+
+    .option-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .option-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .option-btn .opt-main {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .option-btn .opt-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* LOBBY VIEW */
+    .lobby-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      max-width: 400px;
+    }
+
+    .text-input {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-width: 220px;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg-surface);
+    }
+
+    @media (hover: none) {
+      .playing-card.playable:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+      }
+      .btn:hover:not(:disabled) {
+        transform: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar {
+        padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+        gap: 8px;
+      }
+      .brand-title {
+        font-size: 18px;
+      }
+      .brand-subtitle {
+        font-size: 10px;
+      }
+      .workspace {
+        padding: 12px max(10px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        gap: 12px;
+      }
+      .turn-banner {
+        padding: 10px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .turn-banner-text {
+        font-size: 15px;
+      }
+      .court-center {
+        padding: 12px;
+        gap: 14px;
+      }
+      .seats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .seat-card {
+        padding: 10px 12px !important;
+        min-width: 0;
+        gap: 8px;
+      }
+      .seat-name {
+        font-size: 14px;
+      }
+      .hand-section {
+        padding: 12px;
+      }
+      .hand-cards-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+      }
+      .playing-card {
+        padding: 12px 10px !important;
+        min-height: 165px !important;
+        gap: 8px !important;
+      }
+      .card-value {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+      }
+      .card-title {
+        font-size: 16px;
+      }
+      .card-body {
+        font-size: 11.5px;
+        line-height: 1.35;
+      }
+      .option-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+      }
+      .option-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+      .btn {
+        min-height: 38px;
+        padding: 7px 12px;
+      }
+      .modal-card {
+        padding: 16px !important;
+        max-height: 90dvh;
+        overflow-y: auto;
+      }
+      .text-input {
+        min-width: 140px;
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .seats-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      .topbar {
+        padding: 6px max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));
+      }
+      .brand-title {
+        font-size: 16px;
+      }
+      .workspace {
+        padding: 8px max(14px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+        gap: 8px;
+      }
+      .turn-banner {
+        padding: 8px 12px;
+      }
+      .turn-banner-text {
+        font-size: 14px;
+      }
+      .court-center {
+        padding: 8px 12px;
+        gap: 12px;
+      }
+      .seats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .seat-card {
+        padding: 8px 10px !important;
+        gap: 6px;
+      }
+      .hand-section {
+        padding: 10px 12px;
+      }
+      .hand-cards-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+      }
+      .playing-card {
+        padding: 10px 12px !important;
+        min-height: 125px !important;
+        gap: 6px !important;
+      }
+      .card-title {
+        font-size: 15px;
+      }
+      .card-body {
+        font-size: 11px;
+      }
+      .modal-card {
+        padding: 14px !important;
+        max-height: 92dvh;
+        overflow-y: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <a href="/" style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);text-decoration:none;border:1px solid var(--border);padding:3px 8px;border-radius:4px;">← Lounge</a>
+        <h1>Love Letter</h1>
+      </div>
+      <span class="subtitle">2019 Royal Court Edition · 21 Cards</span>
+    </div>
+    <div class="topbar-meta" id="topbarMeta">
+      <span class="badge">Connecting...</span>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="workspace" id="mainContainer"></main>
+
+  <!-- MODALS -->
+  <div id="modalContainer"></div>
+
+  <script>
+    // ========================================================================
+    // CARD SVGS (Clean, minimal illustrations matching Anthropic Editorial palette)
+    // ========================================================================
+    function getCardSvg(value) {
+      switch (Number(value)) {
+        case 9: // Princess: Tiara & jewels
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M12 36h24v3H12z M10 32l4-15 8 9 2-13 2 13 8-9 4 15z" fill="currentColor"/><circle cx="24" cy="11" r="2.5" fill="var(--accent)"/><circle cx="14" cy="15" r="2" fill="var(--accent)"/><circle cx="34" cy="15" r="2" fill="var(--accent)"/></svg>`;
+        case 8: // Countess: Masquerade folding fan
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M24 38c0 0-16-10-18-20 6-4 12-4 18-4s12 0 18 4c-2 10-18 20-18 20z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 38L12 18 M24 38L18 16 M24 38L24 14 M24 38L30 16 M24 38L36 18" stroke="currentColor" stroke-width="1.5"/><circle cx="24" cy="38" r="3" fill="var(--accent)"/></svg>`;
+        case 7: // King: Monarch Crown & cross
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M24 7v6 M21 10h6" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/><path d="M10 36h28v4H10z M9 32l5-13 10 7 10-7 5 13z" fill="currentColor"/><circle cx="24" cy="24" r="3" fill="var(--accent)"/></svg>`;
+        case 6: // Chancellor: Legal Scroll with royal wax seal
+          return `<svg viewBox="0 0 48 48" class="card-art"><rect x="14" y="10" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="18" y1="16" x2="30" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="22" x2="30" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="28" x2="26" y2="28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="32" r="4.5" fill="var(--accent)"/><path d="M28 36.5l2 5-2-1-2 1z" fill="var(--accent)"/></svg>`;
+        case 5: // Prince: Cavalier feathered cap & rapier
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M8 28c4-4 10-4 16-4s12 0 16 4-6 6-16 6-12-2-16-6z" fill="currentColor"/><path d="M14 26c2-12 12-16 18-18-2 6-4 12-6 18" fill="var(--accent)"/><path d="M34 36l8 8 M32 40l8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+        case 4: // Handmaid: Aegis protective shield
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M24 8l14 5v11c0 10-8 17-14 20-6-3-14-10-14-20V13z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 16v18 M18 24h12" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>`;
+        case 3: // Baron: Crossed dueling rapiers
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M12 36L34 14 M10 34l4 4 M14 30l-4 4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M36 36L14 14 M38 34l-4 4 M34 30l4 4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="24" r="3.5" fill="var(--accent)"/></svg>`;
+        case 2: // Priest: Sacred holy mitre & relic cross
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M24 8c-6 8-8 16-8 26h16c0-10-2-18-8-26z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 16v12 M20 20h8" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>`;
+        case 1: // Guard: Knight visor helm & spear
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M16 14h16v14c0 6-4 10-8 12-4-2-8-6-8-12z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M18 22h12v4H18z" fill="var(--accent)"/><path d="M24 8v6" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="8" r="2" fill="var(--accent)"/></svg>`;
+        case 0: // Spy: Phantom masquerade eye & mask
+          return `<svg viewBox="0 0 48 48" class="card-art"><path d="M10 24c4-7 10-10 14-10s10 3 14 10-10 10-14 10-10-3-14-10z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="4.5" fill="var(--accent)"/><circle cx="24" cy="24" r="1.5" fill="var(--bg-surface)"/></svg>`;
+        default:
+          return `<svg viewBox="0 0 48 48" class="card-art"><circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+      }
+    }
+
+    const CARD_REFERENCE = [
+      { value: 9, name: 'Princess', count: 1, short: 'Out of the round if you play/discard.' },
+      { value: 8, name: 'Countess', count: 1, short: 'Must play if you have King or Prince.' },
+      { value: 7, name: 'King', count: 1, short: 'Trade hands.' },
+      { value: 6, name: 'Chancellor', count: 2, short: 'Draw & return 2 cards.' },
+      { value: 5, name: 'Prince', count: 2, short: 'Discard a hand & redraw.' },
+      { value: 4, name: 'Handmaid', count: 2, short: 'Immune to other cards until your next turn.' },
+      { value: 3, name: 'Baron', count: 2, short: 'Compare hands.' },
+      { value: 2, name: 'Priest', count: 2, short: 'Look at a hand.' },
+      { value: 1, name: 'Guard', count: 6, short: 'Guess a hand.' },
+      { value: 0, name: 'Spy', count: 2, short: 'Gain favor if no one else plays/discards a Spy.' }
+    ];
+
+    let sessionToken = localStorage.getItem('ll_suitor_token');
+    if (!sessionToken) {
+      sessionToken = 'st_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('ll_suitor_token', sessionToken);
+    }
+
+    let savedName = localStorage.getItem('ll_suitor_name') || '';
+    let ws = null;
+    let gameState = null;
+    let lastTurnPlayerId = null;
+
+    let activePlayModal = null;
+    let chancellorDraft = null;
+    let privateRevealModal = null; // { title, message }
+    let activeReferenceModal = false;
+    let activeDiscardModal = false;
+
+    function getCardCountInfo(value) {
+      const def = CARD_REFERENCE.find(c => c.value === Number(value));
+      if (!def) return { value, count: 0, remaining: 0, text: '?' };
+
+      if (gameState && gameState.expertMode) {
+        return {
+          value: def.value,
+          count: def.count,
+          remaining: null,
+          text: `${def.count}`
+        };
+      }
+
+      let seen = 0;
+      if (gameState && Array.isArray(gameState.discardHistory)) {
+        for (const d of gameState.discardHistory) {
+          if (Number(d.value) === Number(value)) seen++;
+        }
+      }
+
+      const me = gameState && gameState.players ? gameState.players.find(p => p.id === gameState.youId) : null;
+      if (me && Array.isArray(me.hand)) {
+        for (const c of me.hand) {
+          if (typeof c === 'object' && Number(c.value) === Number(value)) seen++;
+        }
+      }
+
+      const remaining = Math.max(0, def.count - seen);
+      return {
+        value: def.value,
+        count: def.count,
+        remaining,
+        text: `${remaining}/${def.count}`
+      };
+    }
+
+    function openReferenceModal() {
+      activeReferenceModal = true;
+      renderModal();
+    }
+    function closeReferenceModal() {
+      activeReferenceModal = false;
+      renderModal();
+    }
+    function openDiscardModal() {
+      if (gameState && gameState.expertMode) return;
+      activeDiscardModal = true;
+      renderModal();
+    }
+    function closeDiscardModal() {
+      activeDiscardModal = false;
+      renderModal();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (activeReferenceModal) closeReferenceModal();
+        else if (activeDiscardModal) closeDiscardModal();
+      }
+    });
+
+    function playTurnChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.45);
+      } catch (e) {}
+    }
+
+    function checkTurnNotification() {
+      if (!gameState) return;
+      const myTurnNow = gameState.turnPlayerId === gameState.youId && (gameState.stage === 'TURN_PLAY' || gameState.stage === 'CHANCELLOR_RETURN');
+      const wasMyTurn = lastTurnPlayerId === gameState.youId;
+      if (myTurnNow && !wasMyTurn) {
+        playTurnChime();
+      }
+      lastTurnPlayerId = gameState.turnPlayerId;
+    }
+
+    function connectWebSocket() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const isHub = location.pathname.startsWith('/love-letter');
+      const wsPath = isHub ? '/love-letter/ws' : '';
+      ws = new WebSocket(`${proto}//${location.host}${wsPath}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'AUTH',
+          token: sessionToken,
+          name: savedName
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'STATE') {
+          gameState = msg.state;
+          const me = gameState.players.find(p => p.id === gameState.youId);
+          if (me) {
+            savedName = me.name;
+            localStorage.setItem('ll_suitor_name', savedName);
+          }
+          if (
+            gameState.stage === 'CHANCELLOR_RETURN' &&
+            gameState.turnPlayerId === gameState.youId &&
+            me &&
+            me.hand.length > 1 &&
+            typeof me.hand[0] === 'object'
+          ) {
+            const handIds = me.hand.map(c => c.id);
+            if (!chancellorDraft || !handIds.includes(chancellorDraft.keepCardId)) {
+              chancellorDraft = {
+                keepCardId: handIds[0],
+                bottomOrderIds: handIds.slice(1)
+              };
+            }
+          } else {
+            chancellorDraft = null;
+          }
+          checkTurnNotification();
+          renderAll();
+        } else if (msg.type === 'PRIVATE_REVEAL') {
+          privateRevealModal = { title: msg.title, message: msg.message };
+          renderModal();
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(connectWebSocket, 1500);
+      };
+    }
+
+    function sendAction(type, payload = {}) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type, ...payload }));
+      }
+    }
+
+    function cleanName(name) {
+      if (!name) return 'Suitor';
+      return String(name).replace(/\s*(\(You\)|\(คุณ\))/gi, '').trim();
+    }
+
+    // ========================================================================
+    // RENDER FUNCTIONS
+    // ========================================================================
+    function renderAll() {
+      if (!gameState) return;
+      renderTopbar();
+      renderMain();
+      renderModal();
+    }
+
+    function renderTopbar() {
+      const meta = document.getElementById('topbarMeta');
+      const stageLabels = {
+        LOBBY: 'LOBBY',
+        TURN_PLAY: `ROUND ${gameState.roundNumber}`,
+        CHANCELLOR_RETURN: `ROUND ${gameState.roundNumber} · CHANCELLOR`,
+        ROUND_OVER: `ROUND ${gameState.roundNumber} COMPLETE`,
+        GAME_OVER: 'MATCH OVER'
+      };
+      const isLobby = gameState.stage === 'LOBBY';
+      meta.innerHTML = `
+        <button class="btn btn-sm" onclick="openReferenceModal()" style="display:inline-flex;align-items:center;gap:4px;">
+          <span>📜</span> <span>Reference Card</span>
+        </button>
+        <span class="badge ${gameState.expertMode ? 'badge-expert' : ''}">${gameState.expertMode ? '🧠 EXPERT MODE' : 'NORMAL MODE'}</span>
+        <span class="badge stage-active">${stageLabels[gameState.stage] || gameState.stage}</span>
+        <span class="badge">GOAL: ${gameState.targetTokens} FAVOR</span>
+        ${isLobby ? '' : `
+          <button class="btn btn-sm" onclick="sendAction('RETURN_LOBBY')">Lobby</button>
+          <button class="btn btn-sm" onclick="sendAction('RESET_MATCH')">Reset Match</button>
+        `}
+      `;
+    }
+
+    function renderMain() {
+      const main = document.getElementById('mainContainer');
+
+      if (gameState.stage === 'LOBBY') {
+        const me = gameState.players.find(p => p.id === gameState.youId);
+        const canStart = gameState.players.length >= 3 && gameState.players.length <= 5;
+
+        main.innerHTML = `
+          <div class="lobby-card">
+            <div>
+              <h2 style="font-family:var(--font-serif);font-size:24px;font-weight:500;">Gather the Royal Suitors (3–5 Players)</h2>
+              <p style="color:var(--text-secondary);font-size:13px;margin-top:4px;">
+                Share this link with your friends to play together. Your seat is saved automatically in <code>localStorage</code>.
+              </p>
+            </div>
+
+            <div class="input-row">
+              <input id="nameInput" class="text-input" type="text" maxlength="22" placeholder="Your Suitor Title / Name" value="${escapeHtml(me ? cleanName(me.name) : cleanName(savedName))}" />
+              <button class="btn" onclick="updateName()">Update Name</button>
+            </div>
+
+            <div class="seats-grid">
+              ${gameState.players.map(p => `
+                <div class="seat-card">
+                  <div class="seat-header">
+                    <div class="seat-name-row">
+                      <span class="seat-number">SEAT ${p.seat}</span>
+                      <span class="seat-name">${escapeHtml(cleanName(p.name))}</span>
+                      ${p.id === gameState.youId ? '<span class="badge stage-active">YOU</span>' : `<button class="kick-btn" onclick="sendAction('KICK', { targetPlayerId: '${p.id}' })">✕ kick</button>`}
+                    </div>
+                    <span class="status-dot ${p.connected ? '' : 'offline'}" title="${p.connected ? 'Connected' : 'Disconnected'}"></span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="rule-toggle-row">
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-family:var(--font-serif);font-size:16px;font-weight:600;">Expert Mode (Card Counting)</span>
+                  <span class="badge ${gameState.expertMode ? 'badge-expert' : ''}">${gameState.expertMode ? 'EXPERT ON' : 'NORMAL'}</span>
+                </div>
+                <span style="font-size:12px;color:var(--text-secondary);">
+                  ${gameState.expertMode 
+                    ? 'Active: Cards show static totals (e.g. 6 for Guard), discard tray peeking is disabled. Pure memory!' 
+                    : 'Casual: Cards show live remaining counts (e.g. 5/6), discard tray can be clicked to view history.'}
+                </span>
+              </div>
+              <button class="btn ${gameState.expertMode ? 'btn-primary' : ''}" onclick="sendAction('TOGGLE_EXPERT_MODE')">
+                ${gameState.expertMode ? '✓ Expert Mode Enabled' : 'Enable Expert Mode'}
+              </button>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:8px;border-top:1px solid var(--border);">
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+                Seated: ${gameState.players.length} / 5 (3 players required to start)
+              </span>
+              <button class="btn btn-primary" ${canStart ? '' : 'disabled'} onclick="sendAction('START_MATCH')">
+                Commence Match (${gameState.players.length} Players)
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // ACTIVE COURT
+      const turnPlayer = gameState.players.find(p => p.id === gameState.turnPlayerId);
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      const isMyTurn = turnPlayer && me && turnPlayer.id === me.id;
+
+      let bannerHtml = '';
+      if (gameState.stage === 'TURN_PLAY') {
+        bannerHtml = `
+          <div class="turn-banner ${isMyTurn ? 'my-turn' : ''}">
+            <div>
+              <div class="turn-headline">
+                ${isMyTurn ? 'Your Turn — Choose a Card to Play' : `Awaiting ${escapeHtml(turnPlayer ? turnPlayer.name : '')}’s Move`}
+              </div>
+              <div class="turn-sub">
+                ${isMyTurn ? 'Pick one of the cards below to resolve its effect.' : 'Waiting for the suitor to play their card.'}
+              </div>
+            </div>
+            <span class="badge stage-active">SEAT ${turnPlayer ? turnPlayer.seat : '-'} TURN</span>
+          </div>
+        `;
+      } else if (gameState.stage === 'CHANCELLOR_RETURN') {
+        bannerHtml = `
+          <div class="turn-banner ${isMyTurn ? 'my-turn' : ''}">
+            <div>
+              <div class="turn-headline">
+                ${isMyTurn ? 'Chancellor Decree — Choose which card stays in your hand' : `${escapeHtml(turnPlayer ? turnPlayer.name : '')} is resolving 6–Chancellor...`}
+              </div>
+              <div class="turn-sub">
+                ${isMyTurn ? 'Select 1 card to keep; the other 2 will go on the bottom of the deck.' : 'Waiting for card return.'}
+              </div>
+            </div>
+            <span class="badge stage-active">CHANCELLOR</span>
+          </div>
+        `;
+      } else if (gameState.stage === 'ROUND_OVER' || gameState.stage === 'GAME_OVER') {
+        const summary = gameState.roundSummary;
+        const winners = gameState.players.filter(p => summary?.roundWinnerIds?.includes(p.id));
+        const spyHolder = gameState.players.find(p => p.id === summary?.spyWinnerId);
+
+        bannerHtml = `
+          <div class="turn-banner my-turn">
+            <div>
+              <div class="turn-headline">
+                ${gameState.stage === 'GAME_OVER'
+                  ? `Match Victory — ${gameState.players.filter(p => summary?.matchWinnerIds?.includes(p.id)).map(p => escapeHtml(p.name)).join(' & ')} Wins the Princess's Favor!`
+                  : `Round ${gameState.roundNumber} Won by ${winners.map(w => escapeHtml(w.name)).join(' & ')}`}
+              </div>
+              <div class="turn-sub">
+                ${spyHolder ? `Sole surviving Spy bonus (+1 Favor Token) awarded to ${escapeHtml(spyHolder.name)}.` : 'Hands revealed below.'}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              ${gameState.stage === 'ROUND_OVER'
+                ? `<button class="btn btn-primary" onclick="sendAction('NEXT_ROUND')">Next Round (${gameState.roundNumber + 1})</button>`
+                : `<button class="btn btn-primary" onclick="sendAction('START_MATCH')">New Match</button>
+                   <button class="btn" onclick="sendAction('RETURN_LOBBY')">Return to Lobby</button>`}
+            </div>
+          </div>
+        `;
+      }
+
+      // CENTER COURT AREA: DRAW DECK, SET ASIDE, AND SINGLE DISCARD TRAY
+      const recent = gameState.recentDiscard;
+      const courtCenterHtml = `
+        <div class="court-center">
+          <!-- DRAW DECK -->
+          <div class="pile-box">
+            <span class="pile-label">Draw Deck (${gameState.deckCount})</span>
+            <div class="card-surface deck-back">
+              <span style="font-size:20px;font-family:var(--font-mono);font-weight:700;color:var(--text-primary);">${gameState.deckCount}</span>
+              <span>Cards</span>
+            </div>
+          </div>
+
+          <!-- SET-ASIDE CARD -->
+          <div class="pile-box">
+            <span class="pile-label">Set Aside</span>
+            <div class="card-surface deck-back" title="1 card set aside face-down at round start">
+              <span style="font-size:16px;">🂠</span>
+              <span>Face Down</span>
+            </div>
+          </div>
+
+          <!-- SINGLE DISCARD TRAY -->
+          <div class="pile-box">
+            <span class="pile-label">Discard Tray (${gameState.discardCount})</span>
+            ${recent ? `
+              <div class="card-surface recent-discard ${gameState.expertMode ? 'expert-locked' : 'clickable'}"
+                   title="${gameState.expertMode ? 'Expert Mode: Discard history peeking disabled' : (recent.discardedBy ? 'Discarded by ' + recent.discardedBy + ' (Click to inspect history)' : 'Click to inspect history')}"
+                   ${gameState.expertMode ? '' : 'onclick="openDiscardModal()"'}>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                  <span style="font-family:var(--font-serif);font-size:13px;font-weight:600;">${recent.name}</span>
+                  <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--accent);">${recent.value}</span>
+                </div>
+                <div class="card-art-wrap">
+                  ${getCardSvg(recent.value)}
+                </div>
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-secondary);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  ${recent.discardedBy || 'Discard'}
+                </div>
+                ${!gameState.expertMode ? `
+                  <div class="tray-sub-badge">Click to inspect</div>
+                ` : `
+                  <div class="tray-sub-badge expert">🔒 Top only</div>
+                `}
+              </div>
+            ` : `
+              <div class="card-surface empty-tray">
+                <span>Empty</span>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+
+      // SEATS GRID
+      const seatsHtml = `
+        <div class="seats-grid">
+          ${gameState.players.map(p => renderSeatCard(p)).join('')}
+        </div>
+      `;
+
+      // MY HAND SECTION
+      let handHtml = '';
+      if (me) {
+        const myCards = me.hand.filter(c => typeof c === 'object');
+        const countessLocked = myCards.some(c => c.value === 8) && myCards.some(c => c.value === 7 || c.value === 5);
+
+        handHtml = `
+          <div class="hand-panel">
+            <div class="panel-header">
+              <span class="panel-title">Your Hand (${escapeHtml(cleanName(me.name))})</span>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+                ${me.eliminated ? 'ELIMINATED THIS ROUND' : (isMyTurn ? 'CLICK A CARD TO PLAY' : 'WAITING FOR YOUR TURN')}
+              </span>
+            </div>
+            ${myCards.length === 0 ? `
+              <div style="padding:18px;text-align:center;color:var(--text-secondary);font-size:13px;">
+                You have no cards in hand.
+              </div>
+            ` : `
+              <div class="hand-cards-container">
+                ${myCards.map(card => {
+                  const lockedByCountess = isMyTurn && gameState.stage === 'TURN_PLAY' && countessLocked && card.value !== 8;
+                  const canClick = isMyTurn && gameState.stage === 'TURN_PLAY' && !lockedByCountess;
+                  return `
+                    <div class="playing-card ${canClick ? 'playable' : ''} ${lockedByCountess ? 'locked' : ''}"
+                         ${canClick ? `onclick="initiateCardPlay('${card.id}')"` : ''}>
+                      <div>
+                        <div class="card-top">
+                          <span class="card-title">${card.name}</span>
+                          <span class="card-val">${card.value}</span>
+                        </div>
+                        <div class="card-art-wrap">
+                          ${getCardSvg(card.value)}
+                        </div>
+                        <div class="card-body">${card.short}</div>
+                      </div>
+                      <div class="card-footer">
+                        <span>RANK ${card.value}</span>
+                        <span>${lockedByCountess ? 'LOCKED BY COUNTESS' : (canClick ? 'PLAY CARD →' : 'IN HAND')}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        `;
+      }
+
+      main.innerHTML = bannerHtml + courtCenterHtml + seatsHtml + handHtml;
+    }
+
+    function renderSeatCard(p) {
+      const isTurn = gameState.turnPlayerId === p.id && (gameState.stage === 'TURN_PLAY' || gameState.stage === 'CHANCELLOR_RETURN');
+      const pips = [];
+      for (let i = 0; i < gameState.targetTokens; i++) {
+        pips.push(`<span class="favor-pip ${i < p.tokens ? 'filled' : ''}"></span>`);
+      }
+
+      const handPills = (p.hand || []).map(c => {
+        if (c === '??') {
+          return '<span class="masked-pill">??</span>';
+        }
+        return `<span class="revealed-pill">${c.value}–${c.name}</span>`;
+      }).join('');
+
+      return `
+        <div class="seat-card ${isTurn ? 'active-turn' : ''} ${p.eliminated ? 'eliminated' : ''}">
+          <div class="seat-header">
+            <div class="seat-identity">
+              <div class="seat-name-row">
+                <span class="seat-number">S${p.seat}</span>
+                <span class="seat-name">${escapeHtml(cleanName(p.name))}</span>
+                ${p.id === gameState.youId ? '<span class="badge stage-active">YOU</span>' : `<button class="kick-btn" onclick="sendAction('KICK', { targetPlayerId: '${p.id}' })">✕ kick</button>`}
+              </div>
+              <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+                ${isTurn ? '<span class="badge stage-active">ACTIVE TURN</span>' : ''}
+                ${p.immune ? '<span class="badge immune">IMMUNE</span>' : ''}
+                ${p.eliminated ? '<span class="badge elim">ELIMINATED</span>' : ''}
+              </div>
+            </div>
+            <div class="favor-track" title="${p.tokens} / ${gameState.targetTokens} Favor Tokens">
+              ${pips.join('')}
+              <span>${p.tokens}</span>
+            </div>
+          </div>
+
+          <div class="seat-hand-row">
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);">HAND</span>
+            <div>${handPills || '<span style="color:var(--text-muted);font-size:11px;">Empty</span>'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ========================================================================
+    // INTERACTIVE MODALS
+    // ========================================================================
+    function getClientValidTargets(cardValue) {
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      if (!me) return [];
+      if (cardValue === 5) {
+        const others = gameState.players.filter(p => p.id !== me.id && !p.eliminated && !p.immune);
+        return [...others, me];
+      }
+      if ([1, 2, 3, 7].includes(cardValue)) {
+        return gameState.players.filter(p => p.id !== me.id && !p.eliminated && !p.immune);
+      }
+      return [];
+    }
+
+    window.initiateCardPlay = function(cardId) {
+      if (!gameState || gameState.stage !== 'TURN_PLAY') return;
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      if (!me) return;
+      const card = me.hand.find(c => c.id === cardId);
+      if (!card) return;
+
+      const validTargets = getClientValidTargets(card.value);
+
+      if (![1, 2, 3, 5, 7].includes(card.value)) {
+        if (card.value === 9) {
+          activePlayModal = { card, validTargets: [], selectedTargetId: null, selectedGuessValue: null };
+          renderModal();
+          return;
+        }
+        sendAction('PLAY_CARD', { cardId: card.id });
+        return;
+      }
+
+      activePlayModal = {
+        card,
+        validTargets,
+        selectedTargetId: validTargets.length === 1 ? validTargets[0].id : null,
+        selectedGuessValue: card.value === 1 ? 2 : null
+      };
+      renderModal();
+    };
+
+    window.selectModalTarget = function(targetId) {
+      if (!activePlayModal) return;
+      activePlayModal.selectedTargetId = targetId;
+      renderModal();
+    };
+
+    window.selectModalGuess = function(val) {
+      if (!activePlayModal) return;
+      activePlayModal.selectedGuessValue = val;
+      renderModal();
+    };
+
+    window.confirmModalPlay = function() {
+      if (!activePlayModal) return;
+      const { card, validTargets, selectedTargetId, selectedGuessValue } = activePlayModal;
+      if (validTargets.length > 0 && !selectedTargetId) return;
+      if (card.value === 1 && validTargets.length > 0 && selectedGuessValue === null) return;
+
+      sendAction('PLAY_CARD', {
+        cardId: card.id,
+        targetId: selectedTargetId,
+        guessValue: selectedGuessValue
+      });
+      activePlayModal = null;
+      renderModal();
+    };
+
+    window.closePlayModal = function() {
+      activePlayModal = null;
+      renderModal();
+    };
+
+    window.closePrivateRevealModal = function() {
+      privateRevealModal = null;
+      renderModal();
+    };
+
+    window.selectChancellorKeep = function(cardId) {
+      if (!chancellorDraft || !gameState) return;
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      if (!me) return;
+      const allIds = me.hand.map(c => c.id);
+      chancellorDraft.keepCardId = cardId;
+      chancellorDraft.bottomOrderIds = allIds.filter(id => id !== cardId);
+      renderModal();
+    };
+
+    window.swapChancellorBottomOrder = function() {
+      if (!chancellorDraft || chancellorDraft.bottomOrderIds.length < 2) return;
+      chancellorDraft.bottomOrderIds.reverse();
+      renderModal();
+    };
+
+    window.confirmChancellorReturn = function() {
+      if (!chancellorDraft) return;
+      sendAction('CHANCELLOR_RETURN', {
+        keepCardId: chancellorDraft.keepCardId,
+        bottomOrderIds: chancellorDraft.bottomOrderIds
+      });
+      chancellorDraft = null;
+      renderModal();
+    };
+
+    function renderModal() {
+      const container = document.getElementById('modalContainer');
+
+      if (activeReferenceModal) {
+        container.innerHTML = `
+          <div class="modal-backdrop" onclick="closeReferenceModal()">
+            <div class="modal-card" style="max-width:620px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <div class="badge ${gameState && gameState.expertMode ? 'badge-expert' : 'stage-active'}">
+                      ${gameState && gameState.expertMode ? 'EXPERT: TOTALS ONLY' : 'NORMAL: REMAINING / TOTAL'}
+                    </div>
+                  </div>
+                  <div class="modal-title">Court Reference Card</div>
+                  <div class="modal-subtitle">
+                    ${gameState && gameState.expertMode 
+                      ? 'Expert Mode Active: Showing static deck totals (e.g. 6 for Guard). Card counting required!' 
+                      : 'Normal Mode: Showing unseen remaining cards out of total (e.g. 5/6 remaining).'}
+                  </div>
+                </div>
+                <button class="btn btn-sm" onclick="closeReferenceModal()">✕</button>
+              </div>
+
+              <div class="reference-grid">
+                ${CARD_REFERENCE.map(card => {
+                  const info = getCardCountInfo(card.value);
+                  return `
+                    <div class="reference-item">
+                      <div class="ref-left">
+                        <span class="ref-val">${card.value}</span>
+                        <div class="ref-svg">${getCardSvg(card.value)}</div>
+                      </div>
+                      <div class="ref-center">
+                        <div style="display:flex;align-items:baseline;gap:8px;">
+                          <span class="ref-name">${card.name}</span>
+                          <span class="ref-count-badge ${info.remaining === 0 ? 'zero' : ''}">${info.text}</span>
+                        </div>
+                        <div class="ref-desc">${card.short}</div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:12px;border-top:1px solid var(--border);">
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+                  Draw Deck: ${gameState ? gameState.deckCount : 0} cards left
+                </span>
+                <button class="btn" onclick="closeReferenceModal()">Close Reference</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (activeDiscardModal && gameState && !gameState.expertMode) {
+        const history = Array.isArray(gameState.discardHistory) ? [...gameState.discardHistory].reverse() : [];
+        container.innerHTML = `
+          <div class="modal-backdrop" onclick="closeDiscardModal()">
+            <div class="modal-card" style="max-width:540px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                <div>
+                  <div class="badge stage-active" style="align-self:flex-start;margin-bottom:4px;">DISCARD TRAY HISTORY</div>
+                  <div class="modal-title">Discard History (${history.length} Cards)</div>
+                  <div class="modal-subtitle">All cards discarded in Round ${gameState.roundNumber} (most recent on top)</div>
+                </div>
+                <button class="btn btn-sm" onclick="closeDiscardModal()">✕</button>
+              </div>
+
+              ${history.length === 0 ? `
+                <div style="padding:24px;text-align:center;color:var(--text-secondary);font-size:13px;">
+                  No cards have been discarded yet this round.
+                </div>
+              ` : `
+                <div class="discard-history-list">
+                  ${history.map((d, i) => `
+                    <div class="discard-history-item">
+                      <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:30px;height:40px;background:var(--bg-secondary);border:1px solid var(--border-strong);border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono);font-size:15px;color:var(--accent);">
+                          ${d.value}
+                        </div>
+                        <div>
+                          <div style="font-family:var(--font-serif);font-size:14px;font-weight:600;">${escapeHtml(d.name)}</div>
+                          <div style="font-size:11px;color:var(--text-secondary);">
+                            ${d.discardedBy ? 'By ' + escapeHtml(d.discardedBy) : ''}
+                            ${d.reason ? '· ' + escapeHtml(d.reason) : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);">#${history.length - i}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+
+              <div style="display:flex;justify-content:flex-end;padding-top:14px;margin-top:12px;border-top:1px solid var(--border);">
+                <button class="btn" onclick="closeDiscardModal()">Close</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Private Reveal Popup (Priest / Baron / King)
+      if (privateRevealModal) {
+        container.innerHTML = `
+          <div class="modal-backdrop" onclick="closePrivateRevealModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+              <div class="badge stage-active" style="align-self:flex-start;">CONFIDENTIAL REVEAL</div>
+              <div class="modal-title">${escapeHtml(privateRevealModal.title)}</div>
+              <div style="font-size:15px;color:var(--text-primary);padding:8px 0;">${escapeHtml(privateRevealModal.message)}</div>
+              <div style="display:flex;justify-content:flex-end;padding-top:8px;">
+                <button class="btn btn-primary" onclick="closePrivateRevealModal()">Acknowledge</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 2. Chancellor Return Modal
+      if (gameState && gameState.stage === 'CHANCELLOR_RETURN' && gameState.turnPlayerId === gameState.youId && chancellorDraft) {
+        const me = gameState.players.find(p => p.id === gameState.youId);
+        const handMap = new Map(me.hand.map(c => [c.id, c]));
+        const bottomCards = chancellorDraft.bottomOrderIds.map(id => handMap.get(id)).filter(Boolean);
+
+        container.innerHTML = `
+          <div class="modal-backdrop">
+            <div class="modal-card">
+              <div class="badge stage-active" style="align-self:flex-start;">6–CHANCELLOR DECREE</div>
+              <div class="modal-title">Keep 1 Card in Hand</div>
+              <div class="modal-subtitle">Select which card to keep. The other 2 go on the bottom of the deck.</div>
+              <div class="option-grid">
+                ${me.hand.map(c => `
+                  <button class="option-btn ${chancellorDraft.keepCardId === c.id ? 'selected' : ''}"
+                          onclick="selectChancellorKeep('${c.id}')">
+                    <div style="display:flex;justify-content:center;margin-bottom:4px;">${getCardSvg(c.value)}</div>
+                    <span class="opt-main">${c.value} – ${c.name}</span>
+                    <span class="opt-sub">${chancellorDraft.keepCardId === c.id ? 'KEEP IN HAND' : 'Click to keep'}</span>
+                  </button>
+                `).join('')}
+              </div>
+
+              <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-size:13px;font-weight:500;">Order on bottom of deck:</span>
+                  ${bottomCards.length === 2 ? `<button class="btn btn-sm" onclick="swapChancellorBottomOrder()">↕ Swap Order</button>` : ''}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  ${bottomCards.map((c, idx) => `
+                    <div style="padding:6px 12px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:12px;">
+                      <span>${idx === bottomCards.length - 1 ? 'VERY BOTTOM' : '2ND FROM BOTTOM'}</span>
+                      <strong>${c.value} – ${c.name}</strong>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;padding-top:6px;">
+                <button class="btn btn-primary" onclick="confirmChancellorReturn()">Confirm Selection</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 3. Target & Guess Modal
+      if (activePlayModal) {
+        const { card, validTargets, selectedTargetId, selectedGuessValue } = activePlayModal;
+        const guessOptions = CARD_REFERENCE.filter(c => c.value !== 1);
+        const canConfirm = (validTargets.length === 0) || (selectedTargetId && (card.value !== 1 || selectedGuessValue !== null));
+
+        container.innerHTML = `
+          <div class="modal-backdrop" onclick="closePlayModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+              <div class="badge stage-active" style="align-self:flex-start;">PLAYING ${card.value}–${card.name.toUpperCase()}</div>
+              <div class="modal-title">${card.value} – ${card.name}</div>
+              <div class="modal-subtitle">${escapeHtml(card.short)}</div>
+
+              ${card.value === 9 ? `
+                <div style="padding:12px;border-radius:5px;background:var(--crimson-soft);border:1px solid var(--crimson);color:var(--crimson);font-size:13px;">
+                  Warning: Playing the Princess eliminates you from this round immediately!
+                </div>
+              ` : validTargets.length === 0 ? `
+                <div style="padding:12px;border-radius:5px;background:var(--bg-secondary);border:1px solid var(--border);font-size:13px;color:var(--text-secondary);">
+                  All other active suitors are currently protected by <strong>4–Handmaid</strong>. This card plays with no effect.
+                </div>
+              ` : `
+                <div>
+                  <div style="font-size:12px;font-family:var(--font-mono);text-transform:uppercase;color:var(--text-secondary);margin-bottom:8px;">
+                    Select Target Suitor
+                  </div>
+                  <div class="option-grid">
+                    ${validTargets.map(t => `
+                      <button class="option-btn ${selectedTargetId === t.id ? 'selected' : ''}"
+                              onclick="selectModalTarget('${t.id}')">
+                        <span class="opt-main">${escapeHtml(t.name)} ${t.id === gameState.youId ? '(You)' : ''}</span>
+                        <span class="opt-sub">Seat ${t.seat}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              `}
+
+              ${card.value === 1 && validTargets.length > 0 ? `
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                    <span style="font-size:12px;font-family:var(--font-mono);text-transform:uppercase;color:var(--text-secondary);">
+                      Name a Card Value (Cannot guess Guard)
+                    </span>
+                    <span style="font-size:11px;font-family:var(--font-mono);color:var(--text-secondary);">
+                      ${gameState.expertMode ? 'Expert: Totals Only' : 'Remaining / Total'}
+                    </span>
+                  </div>
+                  <div class="option-grid">
+                    ${guessOptions.map(g => {
+                      const info = getCardCountInfo(g.value);
+                      return `
+                        <button class="option-btn ${selectedGuessValue === g.value ? 'selected' : ''}"
+                                onclick="selectModalGuess(${g.value})">
+                          <div style="display:flex;justify-content:center;margin-bottom:2px;">${getCardSvg(g.value)}</div>
+                          <span class="opt-main">${g.value} – ${g.name}</span>
+                          <span class="opt-sub">${gameState.expertMode ? `Total: ${info.text}` : `Left: ${info.text}`}</span>
+                        </button>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:8px;border-top:1px solid var(--border);">
+                <button class="btn" onclick="closePlayModal()">Cancel</button>
+                <button class="btn btn-primary" ${canConfirm ? '' : 'disabled'} onclick="confirmModalPlay()">
+                  Confirm Play
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+    }
+
+    window.updateName = function() {
+      const input = document.getElementById('nameInput');
+      if (!input) return;
+      const val = input.value.trim();
+      if (val) {
+        savedName = val;
+        localStorage.setItem('ll_suitor_name', val);
+        sendAction('SET_NAME', { name: val });
+      }
+    };
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    connectWebSocket();
+  </script>
+</body>
+</html>
