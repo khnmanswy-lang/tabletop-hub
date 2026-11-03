@@ -9,7 +9,10 @@ fs.mkdirSync(distAssets, { recursive: true });
 // 0. Reassemble uiManager.ts if split into chunks
 const uiDir = path.join(richDir, 'src', 'ui');
 if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
-  const combined = ['uiManager.p1', 'uiManager.p2', 'uiManager.p3']
+  const parts = fs.existsSync(path.join(uiDir, 'uiManager.p2a'))
+    ? ['uiManager.p1', 'uiManager.p2a', 'uiManager.p2b', 'uiManager.p3']
+    : ['uiManager.p1', 'uiManager.p2', 'uiManager.p3'];
+  const combined = parts
     .map(f => fs.readFileSync(path.join(uiDir, f), 'utf8'))
     .join('');
   fs.writeFileSync(path.join(uiDir, 'uiManager.ts'), combined, 'utf8');
