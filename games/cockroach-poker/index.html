@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Cockroach Poker (Kakerlakenpoker) — Editorial Bluffing Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #FAF9F5;
+      --bg-secondary: #F4F1EA;
+      --bg-surface: #FFFFFF;
+      --text-primary: #141413;
+      --text-secondary: #666560;
+      --text-muted: #8E8C84;
+      --accent: #D97757;
+      --accent-hover: #C26141;
+      --accent-soft: rgba(217, 119, 87, 0.12);
+      --border: #E5E2DC;
+      --border-strong: #CECAC0;
+      --sage: #2E6B4E;
+      --sage-soft: rgba(46, 107, 78, 0.12);
+      --crimson: #9E3333;
+      --crimson-soft: rgba(158, 51, 51, 0.12);
+      --gold: #9A6B26;
+      --gold-soft: rgba(154, 107, 38, 0.14);
+      --shadow-sm: 0 1px 3px rgba(20, 20, 19, 0.05);
+      --shadow-md: 0 4px 14px rgba(20, 20, 19, 0.07);
+      --shadow-lg: 0 14px 34px rgba(20, 20, 19, 0.12);
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand h1 {
+      font-family: var(--font-serif);
+      font-weight: 600;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand .subtitle {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge.accent { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-hover); }
+    .badge.sage { background: var(--sage-soft); border-color: var(--sage); color: var(--sage); }
+    .badge.crimson { background: var(--crimson-soft); border-color: var(--crimson); color: var(--crimson); }
+    .badge.gold { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
+    .badge.stage-active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.14s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .btn:disabled { opacity: 0.42; cursor: not-allowed; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #FFF; font-weight: 600; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #FFF; }
+    .btn-sage { background: var(--sage); border-color: var(--sage); color: #FFF; font-weight: 600; }
+    .btn-crimson { background: var(--crimson); border-color: var(--crimson); color: #FFF; font-weight: 600; }
+
+    .kick-btn {
+      background: rgba(185, 56, 41, 0.06);
+      border: 1px solid rgba(185, 56, 41, 0.22);
+      color: var(--crimson);
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.12s ease;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .kick-btn:hover {
+      background: var(--crimson);
+      color: #FFFFFF;
+      border-color: var(--crimson);
+      box-shadow: 0 1px 4px rgba(185, 56, 41, 0.25);
+    }
+
+    .rules-nav-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rule-pill {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .rule-pill:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ANNOUNCEMENT BANNER */
+    .announcement-banner {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      font-family: var(--font-serif);
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: inset 0 -1px 0 rgba(0,0,0,0.02);
+    }
+
+    .banner-text {
+      color: var(--text-primary);
+      font-style: italic;
+      line-height: 1.4;
+    }
+
+    /* MAIN STAGE */
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 24px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    /* ACTIVE BLUFF CHAIN STAGE */
+    .bluff-stage {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      text-align: center;
+      position: relative;
+    }
+
+    .stage-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .card-in-transit {
+      width: 130px;
+      height: 180px;
+      border-radius: 8px;
+      border: 2px solid var(--border-strong);
+      background: linear-gradient(145deg, #FAF7F0, #EFECE3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 10px 24px rgba(20,20,19,0.12);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .card-in-transit.royal-card {
+      border-color: var(--gold);
+      box-shadow: 0 0 20px rgba(154,107,38,0.3);
+      background: linear-gradient(145deg, #FFFDF8, #F9F2E2);
+    }
+
+    .transit-glyph {
+      font-size: 52px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    .transit-claim-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .chain-trail {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    /* SEATING TABLEAUS */
+    .seats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .seat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      transition: all 0.16s ease;
+    }
+
+    .seat-card.active-turn {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+    }
+
+    .seat-card.is-you {
+      border-top: 3px solid var(--accent);
+    }
+
+    .seat-card.danger-loss {
+      border-left: 3px solid var(--crimson);
+    }
+
+    .seat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .seat-name {
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .critter-collection {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .critter-cell {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 6px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .critter-cell.danger-3 {
+      background: var(--crimson-soft);
+      border-color: var(--crimson);
+      color: var(--crimson);
+      font-weight: 700;
+      animation: pulseAlert 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseAlert {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(158, 51, 51, 0.4); }
+      50% { box-shadow: 0 0 8px 1px rgba(158, 51, 51, 0.3); }
+    }
+
+    /* HAND DRAWER */
+    .hand-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hand-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+    }
+
+    .hand-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+      position: relative;
+    }
+
+    .hand-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--text-primary);
+      box-shadow: var(--shadow-md);
+      background: #FFFFFF;
+    }
+
+    .hand-card.royal {
+      border-color: var(--gold);
+      background: #FFFDF7;
+    }
+
+    .hand-card.selected {
+      transform: translateY(-12px) scale(1.04);
+      border-color: var(--accent);
+      box-shadow: 0 8px 18px -3px rgba(217, 119, 87, 0.38), 0 0 0 2px var(--accent);
+      background: #FFFFFF;
+      z-index: 2;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 20, 19, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 60;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      max-width: 520px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .claim-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .claim-btn {
+      padding: 8px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      text-align: left;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.12s ease;
+    }
+
+    .claim-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 600;
+    }
+
+    .target-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .target-btn {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.12s ease;
+    }
+
+    .target-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .text-input {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      padding: 7px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    @media (hover: none) {
+      .hand-card:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: var(--border-strong);
+      }
+      .hand-card.selected:hover {
+        transform: translateY(-8px) scale(1.03);
+        border-color: var(--accent);
+      }
+    }
+
+    @media (max-width: 680px) {
+      header.topbar {
+        padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+        height: auto;
+        min-height: 50px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      main.workspace {
+        padding: 12px max(10px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        gap: 12px;
+      }
+      .seats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+      .seat-card {
+        padding: 10px 12px !important;
+      }
+      .critter-collection {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 4px !important;
+      }
+      .hand-section {
+        padding: 12px !important;
+      }
+      .hand-grid {
+        grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)) !important;
+        gap: 8px 6px !important;
+      }
+      .hand-card {
+        padding: 8px 4px !important;
+      }
+      .claim-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+      }
+      .target-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+      }
+      .modal-card {
+        padding: 16px !important;
+        max-height: 90dvh;
+        overflow-y: auto;
+      }
+      .btn {
+        min-height: 42px;
+        padding: 8px 12px;
+      }
+    }
+
+    @media (min-width: 481px) and (max-width: 680px) {
+      .seats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      header.topbar {
+        padding: max(6px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));
+        height: auto;
+        min-height: 42px;
+      }
+      main.workspace {
+        padding: 8px max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+        gap: 10px;
+      }
+      .center-arena {
+        padding: 12px 16px;
+        min-height: 90px;
+      }
+      .seats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .seat-card {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+      }
+      .hand-section {
+        padding: 10px 12px !important;
+        gap: 8px !important;
+      }
+      .hand-grid {
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+        gap: 6px !important;
+      }
+      .hand-card {
+        padding: 6px 4px !important;
+        gap: 4px !important;
+      }
+      .modal-card {
+        padding: 14px !important;
+        max-height: 92dvh;
+        overflow-y: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <h1>Cockroach Poker</h1>
+      <span class="subtitle">Kakerlakenpoker · Bluff & Deceit</span>
+    </div>
+    <div class="topbar-meta" id="topbarMeta">
+      <span class="badge">Connecting...</span>
+    </div>
+  </header>
+
+  <!-- 1-LINE ANNOUNCEMENT BANNER -->
+  <div class="announcement-banner">
+    <div class="banner-text" id="bannerAnnouncement">
+      Welcome to Cockroach Poker! 3–5 players required to start.
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn" id="btnChimeMute" title="Toggle turn alert chime" style="padding:4px 8px;font-size:12px;">🔔 Chime: ON</button>
+      <a href="/" class="btn" style="padding:4px 10px;font-size:12px;">⬅ Lounge</a>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="container" id="appContainer">
+    <!-- Rendered dynamically via state -->
+  </main>
+
+  <!-- MODAL CONTAINER -->
+  <div id="modalHost"></div>
+
+  <script>
+    // ========================================================================
+    // SOUND MANAGER (Web Audio Synthesizer)
+    // ========================================================================
+    class AudioAlert {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTurnChime() {
+        if (this.muted) return;
+        this.ensureContext();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.12); // A5
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.36);
+      }
+      playBluffRevealed(isTrue) {
+        if (this.muted) return;
+        this.ensureContext();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = isTrue ? 'triangle' : 'sawtooth';
+        osc.frequency.setValueAtTime(isTrue ? 659.25 : 329.63, now);
+        osc.frequency.linearRampToValueAtTime(isTrue ? 783.99 : 220, now + 0.18);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.29);
+      }
+    }
+
+    const sound = new AudioAlert();
+    document.getElementById('btnChimeMute').addEventListener('click', () => {
+      sound.muted = !sound.muted;
+      document.getElementById('btnChimeMute').textContent = sound.muted ? '🔕 Chime: OFF' : '🔔 Chime: ON';
+    });
+
+    // ========================================================================
+    // STATE & WEBSOCKET ENGINE
+    // ========================================================================
+    let state = null;
+    let ws = null;
+    let token = localStorage.getItem('cockroach_token');
+    if (!token) {
+      token = 'ckr_' + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('cockroach_token', token);
+    }
+    let mySavedName = localStorage.getItem('cockroach_name') || '';
+
+    // Modal selection states
+    let selectedHandCardId = null;
+    let selectedTargetId = null;
+    let selectedClaimId = null;
+    let lastTurnPlayer = null;
+    let lastActiveReceiver = null;
+
+    function connectWs() {
+      const loc = window.location;
+      const isHub = loc.pathname.startsWith('/cockroach');
+      const wsPath = isHub ? '/cockroach/ws' : '/ws';
+      const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProto}//${loc.host}${wsPath}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'AUTH',
+          token,
+          name: mySavedName
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        let msg;
+        try {
+          msg = JSON.parse(event.data);
+        } catch { return; }
+
+        if (msg.type === 'STATE') {
+          handleStateUpdate(msg.state);
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('topbarMeta').innerHTML = '<span class="badge crimson">● Reconnecting...</span>';
+        setTimeout(connectWs, 2500);
+      };
+    }
+
+    function cleanName(name) {
+      if (!name) return 'Player';
+      return String(name).replace(/\s*(\(You\)|\(คุณ\))/gi, '').trim();
+    }
+
+    function openRulesModal() {
+      modalEl.innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target === this) { modalEl.innerHTML = ''; }">
+          <div class="modal-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <h3 class="modal-title">Cockroach Poker (Kakerlakenpoker) Rules</h3>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Classic & Royal Edition Bluffing Guide</div>
+              </div>
+              <button class="btn btn-sm" onclick="modalEl.innerHTML = '';">✕</button>
+            </div>
+
+            <div class="rules-nav-pills">
+              <button class="rule-pill" onclick="document.getElementById('cp-sec-1').scrollIntoView({behavior:'smooth'})">1. Objective</button>
+              <button class="rule-pill" onclick="document.getElementById('cp-sec-2').scrollIntoView({behavior:'smooth'})">2. Passing & Bluffing</button>
+              <button class="rule-pill" onclick="document.getElementById('cp-sec-3').scrollIntoView({behavior:'smooth'})">3. Calling Challenges</button>
+              <button class="rule-pill" onclick="document.getElementById('cp-sec-4').scrollIntoView({behavior:'smooth'})">4. Peek & Pass</button>
+              <button class="rule-pill" onclick="document.getElementById('cp-sec-5').scrollIntoView({behavior:'smooth'})">5. Royal Edition</button>
+            </div>
+
+            <div style="font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px;">
+              <div id="cp-sec-1">
+                <strong>1. Objective & Loss Condition:</strong><br>
+                There are no winners in Cockroach Poker — only ONE loser! A player loses immediately if they collect <strong>4 penalties of the same critter</strong> (e.g. 4 Roaches) or run out of hand cards when required to start a round.
+              </div>
+              <div id="cp-sec-2">
+                <strong>2. Passing & Bluffing:</strong><br>
+                On your turn, slide a card face-down to any opponent and declare what critter it is (e.g., "This is a Bat!"). You may tell the truth or blatantly bluff!
+              </div>
+              <div id="cp-sec-3">
+                <strong>3. Calling Challenges:</strong><br>
+                The recipient can choose:<br>
+                • <strong>"TRUE!"</strong> (Believe claim): If right, sender takes the penalty. If wrong, recipient takes the penalty!<br>
+                • <strong>"LIE!"</strong> (Call bluff): If it was a lie, sender takes the penalty. If it was true, recipient takes it!
+              </div>
+              <div id="cp-sec-4">
+                <strong>4. Peek & Pass:</strong><br>
+                Instead of guessing, the recipient can secretly peek at the card, then slide it to another player with a new claim (truth or bluff). This continues until someone is forced to challenge!
+              </div>
+              <div id="cp-sec-5">
+                <strong>5. Royal Edition (Royals, Wilds & Blanks):</strong><br>
+                • <strong>👑 Royals:</strong> Count as their critter species OR as a "Royal". If you lose a challenge on a Royal, you also take <strong>+1 extra card from the Penalty Deck!</strong><br>
+                • <strong>🎭 All-Species Wild:</strong> Always matches whichever critter is claimed, but is NOT Royal.<br>
+                • <strong>🃏 Blank / Pure Lie:</strong> Matches NOTHING. Any claim on it is a lie!
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px;">
+              <button class="btn btn-primary" onclick="modalEl.innerHTML = '';">Got it</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function send(type, payload = {}) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type, ...payload }));
+      }
+    }
+
+    function handleStateUpdate(next) {
+      const prev = state;
+      state = next;
+
+      // Update Topbar Meta
+      const isHost = state.players[0] && state.players[0].id === state.youId;
+      document.getElementById('topbarMeta').innerHTML = `
+        <button class="btn btn-sm" onclick="openRulesModal()">📜 Cockroach Rules</button>
+        <span class="badge ${state.stage === 'LOBBY' ? 'accent' : 'sage'}">${state.modeName}</span>
+        <span class="badge">${state.players.length}/5 Players</span>
+        ${state.penaltyDeckCount > 0 ? `<span class="badge gold">Penalty Deck: ${state.penaltyDeckCount}</span>` : ''}
+        ${state.stage !== 'LOBBY' && isHost ? `<button class="btn btn-sm" onclick="send('RETURN_LOBBY')">Lobby</button>` : ''}
+      `;
+
+      // Update Announcement
+      if (state.lastAnnouncement) {
+        document.getElementById('bannerAnnouncement').textContent = state.lastAnnouncement;
+      }
+
+      // Check if it became our turn to play
+      const isMyTurn = (state.stage === 'START_CHAIN' && state.turnPlayerId === state.youId) ||
+                       (state.stage === 'RESPOND_PASS' && state.activePass && state.activePass.receiverId === state.youId);
+      if (isMyTurn && (lastTurnPlayer !== state.turnPlayerId || lastActiveReceiver !== state.activePass?.receiverId)) {
+        sound.playTurnChime();
+      }
+      lastTurnPlayer = state.turnPlayerId;
+      lastActiveReceiver = state.activePass ? state.activePass.receiverId : null;
+
+      render();
+    }
+
+    // ========================================================================
+    // UI RENDERERS
+    // ========================================================================
+    const appEl = document.getElementById('appContainer');
+    const modalEl = document.getElementById('modalHost');
+
+    function render() {
+      if (!state) return;
+
+      if (state.stage === 'LOBBY') {
+        renderLobby();
+      } else {
+        renderMatch();
+      }
+    }
+
+    function renderLobby() {
+      const isHost = state.players[0] && state.players[0].id === state.youId;
+      const me = state.players.find(p => p.id === state.youId);
+      const canStart = state.players.length >= 3 && state.players.length <= 5;
+
+      const seatsHtml = state.players.map((p, idx) => `
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge" style="font-weight:700;">Seat ${idx + 1}</span>
+            <span style="font-weight:600;font-size:14px;">${escapeHtml(cleanName(p.name))}</span>
+            ${p.id === state.youId ? '<span class="badge stage-active" style="font-size:10px;padding:1px 5px;">YOU</span>' : ''}
+            ${idx === 0 ? '<span class="badge accent">Host</span>' : ''}
+          </div>
+          ${isHost && idx > 0 ? `<button class="kick-btn" onclick="send('KICK', { targetId: '${p.id}' })">✕ kick</button>` : ''}
+        </div>
+      `).join('');
+
+      appEl.innerHTML = `
+        <div style="max-width:700px;margin:20px auto;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:24px 28px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:12px;">
+            <h2 style="font-family:var(--font-serif);font-size:24px;">Parlor Lobby</h2>
+            <span class="badge">${state.players.length} / 5 Seated (Min 3)</span>
+          </div>
+
+          <!-- Mode Toggle (Host Only) -->
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Game Edition</label>
+            <div style="display:flex;gap:8px;">
+              <button class="btn ${state.mode === 'CLASSIC' ? 'btn-primary' : ''}" ${!isHost ? 'disabled' : ''} onclick="send('SET_MODE', { mode: 'CLASSIC' })" style="flex:1;">
+                Classic (64 Cards · 8 Critters)
+              </button>
+              <button class="btn ${state.mode === 'ROYAL' ? 'btn-primary' : ''}" ${!isHost ? 'disabled' : ''} onclick="send('SET_MODE', { mode: 'ROYAL' })" style="flex:1;">
+                👑 Royal (65 Cards · Royals & Penalty Deck)
+              </button>
+            </div>
+            ${!isHost ? '<span style="font-size:11px;color:var(--text-muted);">Only room host can change the edition.</span>' : ''}
+          </div>
+
+          <!-- Name Customizer -->
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:400px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Your Display Name</label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="inputName" class="text-input" style="flex:1;" value="${escapeHtml(me ? cleanName(me.name) : '')}" maxlength="16" placeholder="Enter your name..." />
+              <button class="btn" onclick="saveName()">Update Name</button>
+            </div>
+          </div>
+
+          <!-- Seated Players -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Seated Suitors</label>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              ${seatsHtml}
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+            ${isHost ? `
+              <button class="btn btn-primary" ${!canStart ? 'disabled' : ''} onclick="send('START_MATCH')" style="padding:10px 24px;font-size:14px;">
+                🎲 Start Match (${state.players.length} Players)
+              </button>
+            ` : `
+              <span style="font-size:13px;color:var(--text-secondary);align-self:center;">
+                Waiting for host to start match (${canStart ? 'Ready' : 'Need 3–5 players'})...
+              </span>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMatch() {
+      const me = state.players.find(p => p.id === state.youId);
+      const isMyTurnToStart = state.stage === 'START_CHAIN' && state.turnPlayerId === state.youId;
+      const isMyTurnToRespond = state.stage === 'RESPOND_PASS' && state.activePass && state.activePass.receiverId === state.youId;
+      const isHost = state.players[0] && state.players[0].id === state.youId;
+
+      // 1. ACTIVE BLUFF STAGE
+      let stageContentHtml = '';
+      if (state.stage === 'START_CHAIN') {
+        const starter = state.players.find(p => p.id === state.turnPlayerId);
+        stageContentHtml = `
+          <span class="stage-pill">Pass Phase</span>
+          <h3 style="font-family:var(--font-serif);font-size:20px;">
+            ${isMyTurnToStart ? '👉 Your turn to slide a card face-down!' : `⏳ Waiting for ${escapeHtml(starter ? starter.name : '')} to slide a card...`}
+          </h3>
+          <p style="color:var(--text-secondary);font-size:13px;max-width:540px;">
+            ${isMyTurnToStart ? 'Select a card from your hand below, then choose a target player and declare a claim (truth or bluff).' : 'Cards are hidden until challenged. Bluffing is 100% encouraged!'}
+          </p>
+        `;
+      } else if (state.stage === 'RESPOND_PASS' && state.activePass) {
+        const pass = state.activePass;
+        const sender = state.players.find(p => p.id === pass.senderId);
+        const receiver = state.players.find(p => p.id === pass.receiverId);
+        const isRevealed = pass.secretCard !== '??';
+        const canPeek = isMyTurnToRespond && !pass.hasPeeked && pass.eligibleTargetIds && pass.eligibleTargetIds.length > 0;
+
+        const chainItems = pass.history.map(h => `<span>${escapeHtml(h.fromName)} ➔ ${escapeHtml(h.toName)} [${escapeHtml(formatClaim(h.claimedType))}]</span>`).join('<span style="color:var(--text-muted);">·</span>');
+
+        stageContentHtml = `
+          <span class="stage-pill">Active Challenge</span>
+
+          <!-- Trail -->
+          <div class="chain-trail">
+            ${chainItems}
+          </div>
+
+          <!-- Card in Transit -->
+          <div class="card-in-transit ${isRevealed && pass.secretCard.isRoyal ? 'royal-card' : ''}">
+            <div class="transit-glyph">${isRevealed ? pass.secretCard.glyph : '❓'}</div>
+            <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;">
+              ${isRevealed ? escapeHtml(pass.secretCard.name) : 'FACE DOWN'}
+            </div>
+          </div>
+
+          <!-- Claim Box -->
+          <div class="transit-claim-box">
+            <span style="font-size:12px;color:var(--text-secondary);font-weight:600;text-transform:uppercase;">Declared Claim</span>
+            <span style="font-size:18px;font-weight:700;color:var(--text-primary);">${escapeHtml(pass.claimedLabel)}</span>
+          </div>
+
+          <!-- Actions -->
+          ${isMyTurnToRespond ? `
+            <div style="margin-top:6px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+              <span style="font-size:13px;font-weight:600;color:var(--accent);">You received this card! Call the challenge or peek & pass:</span>
+              <div class="action-row">
+                <button class="btn btn-sage" onclick="send('CALL_CHALLENGE', { believeClaim: true })" style="padding:10px 20px;font-size:14px;">
+                  ✓ Believe Claim ("TRUE!")
+                </button>
+                <button class="btn btn-crimson" onclick="send('CALL_CHALLENGE', { believeClaim: false })" style="padding:10px 20px;font-size:14px;">
+                  ✕ Call Bluff ("LIE!")
+                </button>
+                ${!pass.hasPeeked ? `
+                  <button class="btn" ${!canPeek ? 'disabled title="All other players have already seen this card!"' : ''} onclick="send('PEEK_CARD')" style="padding:10px 18px;font-size:14px;">
+                    👁 Secretly Peek & Pass
+                  </button>
+                ` : `
+                  <button class="btn btn-primary" onclick="openRelayModal()" style="padding:10px 20px;font-size:14px;">
+                    ↪ Choose Next Target & Claim
+                  </button>
+                `}
+              </div>
+            </div>
+          ` : `
+            <div style="font-size:13px;color:var(--text-secondary);font-style:italic;">
+              Waiting for ${escapeHtml(receiver ? receiver.name : '')} to decide (True, Bluff, or Peek & Pass)...
+            </div>
+          `}
+        `;
+      } else if (state.stage === 'GAME_OVER' && state.loserInfo) {
+        stageContentHtml = `
+          <span class="badge crimson" style="font-size:13px;padding:6px 14px;">💥 Sudden Death Game Over</span>
+          <h2 style="font-family:var(--font-serif);font-size:28px;color:var(--crimson);">${escapeHtml(state.loserInfo.loserName)} Loses!</h2>
+          <p style="font-size:15px;color:var(--text-secondary);max-width:520px;">
+            Reason: <strong>${escapeHtml(state.loserInfo.reason)}</strong>
+          </p>
+          <div style="display:flex;gap:10px;margin-top:10px;">
+            <button class="btn btn-primary" onclick="send('RESET_MATCH')">🔄 Play Again</button>
+            <button class="btn" onclick="send('RETURN_LOBBY')">⬅ Return to Lobby</button>
+          </div>
+        `;
+      }
+
+      // 2. PLAYER TABLEAUS
+      const seatsHtml = state.players.map(p => {
+        const isTurn = (state.stage === 'START_CHAIN' && state.turnPlayerId === p.id) ||
+                       (state.stage === 'RESPOND_PASS' && state.activePass && state.activePass.receiverId === p.id);
+        const isSelf = p.id === state.youId;
+
+        // Group penalties by critter
+        const penCounts = {};
+        for (const meta of state.critterMeta) penCounts[meta.id] = 0;
+        for (const card of p.penalties) {
+          if (card.species && penCounts[card.species] !== undefined) {
+            penCounts[card.species]++;
+          }
+        }
+
+        const hasDanger3 = Object.values(penCounts).some(cnt => cnt >= 3);
+
+        const critterCellsHtml = state.critterMeta.map(meta => {
+          const cnt = penCounts[meta.id] || 0;
+          return `
+            <div class="critter-cell ${cnt >= 3 ? 'danger-3' : ''}" title="${meta.name}: ${cnt}/4">
+              <span>${meta.glyph}</span>
+              <span>${cnt}/4</span>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="seat-card ${isTurn ? 'active-turn' : ''} ${isSelf ? 'is-you' : ''} ${hasDanger3 ? 'danger-loss' : ''}">
+            <div class="seat-header">
+              <span class="seat-name">
+                ${escapeHtml(cleanName(p.name))}
+                ${isSelf ? '<span class="badge stage-active" style="font-size:10px;margin-left:4px;padding:1px 5px;">YOU</span>' : ''}
+                ${isHost && !isSelf ? `<button class="kick-btn" onclick="send('KICK', { targetId: '${p.id}' })">✕ kick</button>` : ''}
+              </span>
+              <span class="badge" title="Hand Cards Left">${p.handCount} 🃏</span>
+            </div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+              Face-Up Penalties (${p.penalties.length} Total)
+            </div>
+            <div class="critter-collection">
+              ${critterCellsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 3. PRIVATE HAND DRAWER
+      let handSectionHtml = '';
+      if (me && me.hand && me.hand.length > 0 && me.hand[0] !== '??') {
+        const handCardsHtml = me.hand.map(card => `
+          <div class="hand-card ${card.isRoyal ? 'royal' : ''} ${selectedHandCardId === card.id ? 'selected' : ''}" onclick="onCardHandClick('${card.id}')">
+            <span style="font-size:32px;line-height:1;">${card.glyph}</span>
+            <span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${card.name}</span>
+            <span style="font-size:10px;color:var(--text-muted);">${card.isRoyal ? '👑 ROYAL' : (card.kind === 'WILD_SPECIES' ? 'WILD' : (card.kind === 'BLANK_LIE' ? 'BLANK' : 'Standard'))}</span>
+          </div>
+        `).join('');
+
+        handSectionHtml = `
+          <section class="hand-section">
+            <div class="hand-header">
+              <div style="display:flex;align-items:baseline;gap:10px;">
+                <h3 style="font-family:var(--font-serif);font-size:18px;">Your Private Hand</h3>
+                <span class="badge">${me.hand.length} Cards Remaining</span>
+              </div>
+              ${isMyTurnToStart ? '<span class="badge accent">Click any card to start sliding!</span>' : ''}
+            </div>
+            <div class="hand-grid">
+              ${handCardsHtml}
+            </div>
+          </section>
+        `;
+      }
+
+      appEl.innerHTML = `
+        <section class="bluff-stage">
+          ${stageContentHtml}
+        </section>
+
+        <section>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h4 style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Table Seating & Penalty Tableaus</h4>
+            ${state.stage !== 'LOBBY' ? `<button class="btn" onclick="send('RETURN_LOBBY')" style="padding:3px 8px;font-size:11px;">Return to Lobby</button>` : ''}
+          </div>
+          <div class="seats-grid">
+            ${seatsHtml}
+          </div>
+        </section>
+
+        ${handSectionHtml}
+      `;
+    }
+
+    // ========================================================================
+    // MODAL DIALOGS
+    // ========================================================================
+    function onCardHandClick(cardId) {
+      if (state.stage !== 'START_CHAIN' || state.turnPlayerId !== state.youId) return;
+      selectedHandCardId = cardId;
+      selectedTargetId = null;
+      selectedClaimId = null;
+      openStartPassModal();
+    }
+
+    function openStartPassModal() {
+      const me = state.players.find(p => p.id === state.youId);
+      const card = me ? me.hand.find(c => c.id === selectedHandCardId) : null;
+      if (!card) return;
+
+      const otherPlayers = state.players.filter(p => p.id !== state.youId);
+      if (!selectedTargetId && otherPlayers.length > 0) selectedTargetId = otherPlayers[0].id;
+      if (!selectedClaimId) selectedClaimId = card.species !== 'WILD' && card.species !== 'NONE' ? card.species : state.validClaims[0].id;
+
+      const targetsHtml = otherPlayers.map(p => `
+        <div class="target-btn ${selectedTargetId === p.id ? 'selected' : ''}" onclick="selectTarget('${p.id}')">
+          ${escapeHtml(p.name)}
+        </div>
+      `).join('');
+
+      const claimsHtml = state.validClaims.map(c => `
+        <div class="claim-btn ${selectedClaimId === c.id ? 'selected' : ''}" onclick="selectClaim('${c.id}')">
+          <span>${c.label}</span>
+        </div>
+      `).join('');
+
+      modalEl.innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target === this) closeModal()">
+          <div class="modal-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;">
+              <h3 style="font-family:var(--font-serif);font-size:20px;">Slide Face-Down Card</h3>
+              <button class="btn" onclick="closeModal()" style="padding:2px 8px;font-size:11px;">✕</button>
+            </div>
+
+            <!-- Card preview -->
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:12px;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:36px;">${card.glyph}</span>
+              <div>
+                <div style="font-weight:700;font-size:14px;">${escapeHtml(card.name)}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${card.short}</div>
+              </div>
+            </div>
+
+            <!-- Target Selection -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">1. Choose Target Player</label>
+              <div class="target-grid">${targetsHtml}</div>
+            </div>
+
+            <!-- Claim Selection -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">2. Declare Your Claim (Truth or Lie!)</label>
+              <div class="claim-grid">${claimsHtml}</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px;">
+              <button class="btn" onclick="closeModal()">Cancel</button>
+              <button class="btn btn-primary" onclick="confirmStartPass()">Slide Face-Down ➔</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openRelayModal() {
+      const pass = state.activePass;
+      if (!pass || !pass.hasPeeked) return;
+
+      const eligiblePlayers = state.players.filter(p => pass.eligibleTargetIds.includes(p.id));
+      if (eligiblePlayers.length === 0) return;
+
+      if (!selectedTargetId || !pass.eligibleTargetIds.includes(selectedTargetId)) {
+        selectedTargetId = eligiblePlayers[0].id;
+      }
+      if (!selectedClaimId) {
+        selectedClaimId = pass.claimedType;
+      }
+
+      const targetsHtml = eligiblePlayers.map(p => `
+        <div class="target-btn ${selectedTargetId === p.id ? 'selected' : ''}" onclick="selectTarget('${p.id}')">
+          ${escapeHtml(p.name)}
+        </div>
+      `).join('');
+
+      const claimsHtml = state.validClaims.map(c => `
+        <div class="claim-btn ${selectedClaimId === c.id ? 'selected' : ''}" onclick="selectClaim('${c.id}')">
+          <span>${c.label}</span>
+        </div>
+      `).join('');
+
+      modalEl.innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target === this) closeModal()">
+          <div class="modal-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;">
+              <h3 style="font-family:var(--font-serif);font-size:20px;">Relay Card to Next Player</h3>
+              <button class="btn" onclick="closeModal()" style="padding:2px 8px;font-size:11px;">✕</button>
+            </div>
+
+            <!-- Secret peeked card info -->
+            <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;padding:12px;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:36px;">${pass.secretCard.glyph}</span>
+              <div>
+                <div style="font-weight:700;font-size:14px;color:var(--accent-hover);">You Peeked: ${escapeHtml(pass.secretCard.name)}</div>
+                <div style="font-size:11px;color:var(--text-secondary);">${pass.secretCard.short}</div>
+              </div>
+            </div>
+
+            <!-- Target Selection -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">1. Pass to Unseen Player</label>
+              <div class="target-grid">${targetsHtml}</div>
+            </div>
+
+            <!-- Claim Selection -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">2. Declare Your Claim (Truth or New Bluff!)</label>
+              <div class="claim-grid">${claimsHtml}</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px;">
+              <button class="btn" onclick="closeModal()">Cancel</button>
+              <button class="btn btn-primary" onclick="confirmRelayPass()">Pass Card ➔</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectTarget(id) {
+      selectedTargetId = id;
+      if (state.stage === 'START_CHAIN') openStartPassModal();
+      else openRelayModal();
+    }
+
+    function selectClaim(id) {
+      selectedClaimId = id;
+      if (state.stage === 'START_CHAIN') openStartPassModal();
+      else openRelayModal();
+    }
+
+    function closeModal() {
+      modalEl.innerHTML = '';
+      selectedHandCardId = null;
+    }
+
+    function confirmStartPass() {
+      if (!selectedHandCardId || !selectedTargetId || !selectedClaimId) return;
+      send('START_PASS', {
+        cardId: selectedHandCardId,
+        targetId: selectedTargetId,
+        claimedType: selectedClaimId
+      });
+      closeModal();
+    }
+
+    function confirmRelayPass() {
+      if (!selectedTargetId || !selectedClaimId) return;
+      send('RELAY_PASS', {
+        targetId: selectedTargetId,
+        claimedType: selectedClaimId
+      });
+      closeModal();
+    }
+
+    function saveName() {
+      const input = document.getElementById('inputName');
+      if (input && input.value.trim()) {
+        const val = input.value.trim().slice(0, 16);
+        mySavedName = val;
+        localStorage.setItem('cockroach_name', val);
+        send('SET_NAME', { name: val });
+      }
+    }
+
+    function formatClaim(claimedType) {
+      if (claimedType === 'ROYAL') return '👑 Royal';
+      return claimedType;
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Start WebSocket
+    connectWs();
+  </script>
+</body>
+</html>
