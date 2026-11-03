@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Blind Heist (3–5 Players)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --surface: #F4F1EA;
+    --surface-elevated: #FFFFFF;
+    --text: #141413;
+    --text-muted: #666560;
+    --border: #E5E2DC;
+    --accent: #D97757;
+    --success: #2E6F40;
+    --danger: #B93829;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  h1 { font-family: 'Newsreader', serif; font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }
+  .subtitle { font-size: 0.8rem; color: var(--text-muted); }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .section-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .cards-row { display: flex; gap: 8px; justify-content: center; min-height: 84px; align-items: center; flex-wrap: wrap; }
+  .card {
+    width: clamp(46px, 14vw, 56px); height: clamp(66px, 20vw, 80px);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.15rem; font-weight: 700;
+    box-shadow: 0 1px 2px rgba(20,20,19,0.04);
+  }
+  .card.empty { background: transparent; border: 1px dashed var(--border); color: var(--text-muted); font-size: 0.8rem; }
+  .card.red { color: #C93B2B; }
+  .card.black { color: var(--text); }
+  .players-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .player-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: all 0.15s ease;
+  }
+  .player-card.me { border-color: var(--accent); border-width: 1.5px; }
+  .player-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .player-name { font-family: 'Newsreader', serif; font-size: 1.15rem; font-weight: 600; }
+  .rank-pills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+  .pill-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 4px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pill-box.active { border-color: var(--accent); background: #FDF6F3; }
+  .pill-stage { font-size: 0.6rem; color: var(--text-muted); display: block; }
+  .pill-val { font-size: 0.95rem; font-weight: 700; }
+  .chip-selector { display: flex; gap: 10px; justify-content: center; margin: 12px 0; flex-wrap: wrap; }
+  .chip-btn {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface-elevated);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem; font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, border-color 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .chip-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  }
+  .chip-btn.mine {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 6px 14px -2px rgba(217,119,87,0.4);
+    transform: translateY(-4px);
+  }
+  .chip-btn.mine.locked { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .chip-btn.taken { background: var(--surface); color: var(--text-muted); border-style: dashed; }
+  .chip-btn.taken.locked { background: var(--surface); color: var(--text); border: 1.5px solid var(--text); }
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem; font-weight: 500;
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface-elevated);
+    color: var(--text);
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.14s ease;
+  }
+  .btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .kick-btn {
+    background: rgba(185, 56, 41, 0.06);
+    border: 1px solid rgba(185, 56, 41, 0.22);
+    color: var(--danger);
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    margin-left: 6px;
+    transition: all 0.12s ease;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+  }
+  .kick-btn:hover {
+    background: var(--danger);
+    color: #FFFFFF;
+    border-color: var(--danger);
+    box-shadow: 0 1px 4px rgba(185, 56, 41, 0.25);
+  }
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(20,20,19,0.5); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px;
+  }
+  .modal-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 22px; max-width: 560px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .rules-nav-pills { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .rule-pill {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .rule-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .banner {
+    padding: 16px; border-radius: 8px; margin-bottom: 16px;
+    font-family: 'Newsreader', serif; font-size: 1.25rem; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .banner.win { background: #EBF5EE; color: var(--success); border-color: #B8DFC4; }
+  .banner.lose { background: #FDECEB; color: var(--danger); border-color: #F5C2BE; }
+  .top-controls { display: flex; gap: 8px; margin-bottom: 16px; max-width: 420px; }
+  input.name-input {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface-elevated); font-family: 'Inter', sans-serif; flex: 1;
+  }
+
+  @media (hover: none) {
+    .chip-btn:hover {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    body {
+      padding: 12px max(10px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    }
+    h1 {
+      font-size: 1.45rem;
+    }
+    .section-box {
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .players-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+    .player-card {
+      padding: 10px !important;
+      min-width: 0;
+    }
+    .btn {
+      min-height: 40px;
+      padding: 8px 12px;
+    }
+    .modal-card {
+      padding: 16px;
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .players-grid {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
+    .chip-btn {
+      width: 46px;
+      height: 46px;
+      font-size: 1rem;
+    }
+    .top-controls {
+      max-width: 100%;
+    }
+  }
+
+  @media (max-height: 520px) and (orientation: landscape) {
+    body {
+      padding: 8px max(14px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    }
+    header {
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 1.35rem;
+    }
+    .section-box {
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .cards-row {
+      min-height: 68px;
+    }
+    .card {
+      width: 46px;
+      height: 64px;
+      font-size: 1rem;
+    }
+    .players-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+      gap: 8px !important;
+      margin-bottom: 10px;
+    }
+    .player-card {
+      padding: 8px 10px !important;
+    }
+    .chip-selector {
+      margin: 8px 0;
+    }
+    .chip-btn {
+      width: 44px;
+      height: 44px;
+      font-size: 0.95rem;
+    }
+    .modal-card {
+      padding: 14px;
+      max-height: 92dvh;
+      overflow-y: auto;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <a href="/" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);padding:2px 8px;border-radius:4px;">← Lounge</a>
+      <h1>Blind Heist</h1>
+    </div>
+    <div class="subtitle">3–5 Players Silent Co-op Poker (★1 = Weakest, ★N = Strongest)</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn" style="width:auto;padding:5px 12px;font-size:12px;" onclick="openRulesModal()">📜 Rules</button>
+    <button id="toggleGuidanceBtn" class="btn" style="width:auto;padding:5px 12px;font-size:12px;" onclick="toggleGuidance()" title="Toggle hand strength evaluation guidance">💡 Guidance: OFF</button>
+    <div class="badge" id="stageBadge">CONNECTING...</div>
+  </div>
+</header>
+
+<div class="top-controls">
+  <input class="name-input" id="nameInput" placeholder="Your Name..." onchange="updateName(this.value)">
+  <button class="btn" style="width:auto" onclick="send({type:'NEW_GAME'})">New Deal</button>
+</div>
+
+<div id="resultBanner"></div>
+
+<div class="section-box">
+  <div class="label">Community Board</div>
+  <div class="cards-row" id="communityRow"></div>
+</div>
+
+<div class="section-box" id="actionPanel">
+  <div class="label">Steal Rank Chip (★1 = Weakest Hand → ★<span id="maxRankLabel">3</span> = Strongest Hand)</div>
+  <div class="chip-selector" id="chipSelector"></div>
+  <button class="btn btn-primary" id="lockBtn" onclick="send({type:'TOGGLE_LOCK'})">Select a Chip to Lock In</button>
+</div>
+
+<div class="players-grid" id="playersGrid"></div>
+<div id="modalHost"></div>
+
+<script>
+  function cleanName(name) {
+    if (!name) return 'Agent';
+    return String(name).replace(/\s*(\(You\)|\(คุณ\))/gi, '').trim();
+  }
+
+  function openRulesModal() {
+    document.getElementById('modalHost').innerHTML = `
+      <div class="modal-backdrop" onclick="if(event.target === this) { document.getElementById('modalHost').innerHTML = ''; }">
+        <div class="modal-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <h3 style="font-family:'Newsreader',serif;font-size:22px;">Blind Heist Protocol Rules</h3>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Silent Deduction & Texas Hold'em Hand Ordering</div>
+            </div>
+            <button class="btn" style="width:auto;padding:2px 8px;font-size:11px;" onclick="document.getElementById('modalHost').innerHTML = '';">✕</button>
+          </div>
+
+          <div class="rules-nav-pills">
+            <button class="rule-pill" onclick="document.getElementById('bh-sec-1').scrollIntoView({behavior:'smooth'})">1. Objective</button>
+            <button class="rule-pill" onclick="document.getElementById('bh-sec-2').scrollIntoView({behavior:'smooth'})">2. Street Phases</button>
+            <button class="rule-pill" onclick="document.getElementById('bh-sec-3').scrollIntoView({behavior:'smooth'})">3. Stealing Chips</button>
+            <button class="rule-pill" onclick="document.getElementById('bh-sec-4').scrollIntoView({behavior:'smooth'})">4. Showdown</button>
+          </div>
+
+          <div style="font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px;">
+            <div id="bh-sec-1">
+              <strong>1. Silent Co-op Objective:</strong><br>
+              Work with your crew to silently escape with the loot! You cannot discuss your hole cards. You must deduce where your 2-card hand ranks among all players: <strong>★1 is the weakest hand, ★N is the strongest hand</strong>.
+            </div>
+            <div id="bh-sec-2">
+              <strong>2. Street Phases:</strong><br>
+              Cards are revealed Texas Hold'em style: Pre-Flop ➔ Flop (3 cards) ➔ Turn (4th card) ➔ River (5th card). In each phase, players must re-evaluate their relative strength.
+            </div>
+            <div id="bh-sec-3">
+              <strong>3. Stealing Rank Chips:</strong><br>
+              Only one agent can hold each rank chip. If another player has the chip you believe is yours, you can "steal" it, forcing them to re-adjust their position.
+            </div>
+            <div id="bh-sec-4">
+              <strong>4. Showdown & Victory:</strong><br>
+              At the final River showdown, all hole cards are flipped. If the entire crew has placed themselves in strictly ascending poker hand order, the heist is a flawless success! If even one rank is out of order, the alarm sounds and the heist fails.
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px;">
+            <button class="btn btn-primary" style="width:auto;padding:8px 18px;" onclick="document.getElementById('modalHost').innerHTML = '';">Understood</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const SUIT_MAP = { s: '♠', h: '♥', d: '♦', c: '♣' };
+  const STAGE_NAMES = ['PRE', 'FLOP', 'TURN', 'RIVER'];
+  let token = localStorage.getItem('bh_token');
+  if (!token) {
+    token = 'p_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('bh_token', token);
+  }
+  let myName = localStorage.getItem('bh_name') || ('Agent ' + Math.floor(Math.random()*90+10));
+  document.getElementById('nameInput').value = myName;
+
+  let lastState = null;
+  let showGuidance = localStorage.getItem('blind_heist_show_guidance') === 'true'; // Default: false (OFF)
+
+  function updateGuidanceBtn() {
+    const btn = document.getElementById('toggleGuidanceBtn');
+    if (!btn) return;
+    if (showGuidance) {
+      btn.textContent = '💡 Guidance: ON';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+      btn.style.background = 'rgba(217, 119, 87, 0.12)';
+    } else {
+      btn.textContent = '💡 Guidance: OFF';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--text-muted)';
+      btn.style.background = 'transparent';
+    }
+  }
+
+  function toggleGuidance() {
+    showGuidance = !showGuidance;
+    localStorage.setItem('blind_heist_show_guidance', String(showGuidance));
+    updateGuidanceBtn();
+    if (lastState) render(lastState);
+  }
+  updateGuidanceBtn();
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  let ws;
+  function connect() {
+    ws = new WebSocket(proto + '//' + location.host + '/heist/ws');
+    ws.onopen = () => send({ type: 'JOIN', token, name: myName });
+    ws.onmessage = (e) => render(JSON.parse(e.data));
+    ws.onclose = () => setTimeout(connect, 1500);
+  }
+  connect();
+
+  function send(payload) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(payload));
+  }
+  function claimRank(r) {
+    send({ type: 'CLAIM_RANK', rank: r });
+  }
+  function kickPlayer(t) {
+    send({ type: 'KICK', targetToken: t });
+  }
+  function updateName(val) {
+    myName = val.trim() || myName;
+    localStorage.setItem('bh_name', myName);
+    send({ type: 'JOIN', token, name: myName });
+  }
+
+  function formatCard(c) {
+    if (!c || c === '??') return '<div class="card empty">??</div>';
+    const r = c[0] === 'T' ? '10' : c[0];
+    const s = c[1];
+    const isRed = s === 'h' || s === 'd';
+    return '<div class="card ' + (isRed ? 'red' : 'black') + '"><span>' + r + '</span><span>' + SUIT_MAP[s] + '</span></div>';
+  }
+
+  function render(state) {
+    lastState = state;
+    updateGuidanceBtn();
+    document.getElementById('stageBadge').textContent = state.stage + ' (' + state.playerCount + '/' + state.maxPlayers + ' Players)';
+    document.getElementById('maxRankLabel').textContent = state.playerCount;
+
+    let commHtml = '';
+    for (let i = 0; i < 5; i++) {
+      commHtml += state.community[i] ? formatCard(state.community[i]) : '<div class="card empty">•</div>';
+    }
+    document.getElementById('communityRow').innerHTML = commHtml;
+
+    const banner = document.getElementById('resultBanner');
+    if (state.stage === 'WAITING') {
+      banner.innerHTML = '<div class="banner">Waiting for crew... (' + state.playerCount + '/' + state.minPlayers + ' minimum to start, up to 5)</div>';
+      document.getElementById('actionPanel').style.display = 'none';
+    } else if (state.result) {
+      banner.innerHTML = '<div class="banner ' + (state.result.isWin ? 'win' : 'lose') + '">' +
+        (state.result.isWin ? 'HEIST SUCCESSFUL — Perfect Silent Order!' : 'HEIST FAILED — Order Broken!') +
+        '</div>';
+      document.getElementById('actionPanel').style.display = 'none';
+    } else {
+      banner.innerHTML = '';
+      document.getElementById('actionPanel').style.display = 'block';
+    }
+
+    const me = state.players.find(p => p.isMe);
+
+    let chipsHtml = '';
+    for (let r = 1; r <= state.playerCount; r++) {
+      const isMine = me && me.currentRank === r;
+      const lockedOther = state.players.find(p => !p.isMe && p.currentRank === r && p.locked);
+      const holdingOther = state.players.find(p => !p.isMe && p.currentRank === r && !p.locked);
+
+      let cls = '';
+      let title = '';
+      if (isMine) {
+        cls = me.locked ? 'mine locked' : 'mine';
+        title = me.locked ? 'Locked in with ★' + r : 'Selected ★' + r;
+      } else if (lockedOther) {
+        cls = 'taken locked';
+        title = lockedOther.name + ' is locked in with ★' + r;
+      } else if (holdingOther) {
+        cls = 'taken';
+        title = holdingOther.name + ' is holding ★' + r;
+      }
+
+      chipsHtml += '<button class="chip-btn ' + cls + '" title="' + title + '" onclick="claimRank(' + r + ')">' +
+        '★' + r + '</button>';
+    }
+    document.getElementById('chipSelector').innerHTML = chipsHtml;
+
+    const lockBtn = document.getElementById('lockBtn');
+    if (me) {
+      if (!me.currentRank) {
+        lockBtn.textContent = 'Pick a ★ Rank Chip Above First';
+        lockBtn.className = 'btn';
+      } else if (me.locked) {
+        lockBtn.textContent = '✓ Locked In (Waiting for Crew...)';
+        lockBtn.className = 'btn btn-accent';
+      } else {
+        const lockedOther = state.players.find(p => !p.isMe && p.currentRank === me.currentRank && p.locked);
+        if (lockedOther) {
+          lockBtn.textContent = 'Steal Rank ★' + me.currentRank + ' from ' + lockedOther.name + ' & Ready Up';
+          lockBtn.className = 'btn btn-accent';
+        } else {
+          lockBtn.textContent = 'Lock In Rank ★' + me.currentRank + ' for ' + state.stage;
+          lockBtn.className = 'btn btn-primary';
+        }
+      }
+    }
+
+    const activeHistIdx = state.stageIdx - 1; // 0=PRE, 1=FLOP, 2=TURN, 3=RIVER
+    let pHtml = '';
+    state.players.forEach(p => {
+      let pills = '';
+      for (let s = 0; s < 4; s++) {
+        const val = (s === activeHistIdx && state.stage !== 'SHOWDOWN') ? p.currentRank : p.ranks[s];
+        const isCurrent = s === activeHistIdx;
+        pills += '<div class="pill-box ' + (isCurrent ? 'active' : '') + '">' +
+          '<span class="pill-stage">' + STAGE_NAMES[s] + '</span>' +
+          '<span class="pill-val">' + (val ? '★' + val : '-') + '</span></div>';
+      }
+
+      pHtml += '<div class="player-card ' + (p.isMe ? 'me' : '') + '">' +
+        '<div class="player-header">' +
+          '<div><span class="player-name">' + cleanName(p.name) + '</span>' +
+          (p.isMe ? ' <span class="badge" style="border-color:var(--accent);color:var(--accent);font-size:10px;padding:1px 5px;margin-left:4px;">YOU</span>' : '<button class="kick-btn" onclick="kickPlayer(\'' + p.token + '\')">✕ kick</button>') +
+          '</div>' +
+          '<span class="badge">' + (!p.connected ? 'OFFLINE' : (p.locked ? '✓ READY (★' + p.currentRank + ')' : (p.currentRank ? 'Holding ★' + p.currentRank : 'Thinking...'))) + '</span>' +
+        '</div>' +
+        '<div class="cards-row" style="min-height:70px; margin: 8px 0;">' +
+          formatCard(p.hand[0]) + formatCard(p.hand[1]) +
+        '</div>' +
+        ((showGuidance && p.myHint) ? '<div style="text-align:center; font-size:0.8rem; color:var(--accent); font-weight:500;">' + p.myHint + '</div>' : '') +
+        '<div class="rank-pills">' + pills + '</div>' +
+      '</div>';
+    });
+    document.getElementById('playersGrid').innerHTML = pHtml;
+  }
+</script>
+</body>
+</html>

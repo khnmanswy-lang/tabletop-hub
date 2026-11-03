@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <title>Tabletop Hub — Unified Parlor Game Lounge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FAF9F5;
+      --surface: #F4F1EA;
+      --surface-elevated: #FFFFFF;
+      --text: #141413;
+      --text-muted: #666560;
+      --border: #E5E2DC;
+      --border-strong: #CECAC0;
+      --accent: #D97757;
+      --accent-hover: #C26141;
+      --accent-soft: rgba(217, 119, 87, 0.10);
+      --shadow-sm: 0 1px 3px rgba(20,20,19,0.04), 0 2px 8px rgba(20,20,19,0.03);
+      --shadow-md: 0 6px 20px rgba(20,20,19,0.06), 0 1px 3px rgba(20,20,19,0.04);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(16px, 4vw, 32px) clamp(14px, 4vw, 24px) clamp(32px, 6vw, 60px);
+      padding-top: max(clamp(16px, 4vw, 32px), env(safe-area-inset-top));
+      padding-bottom: max(clamp(32px, 6vw, 60px), env(safe-area-inset-bottom));
+      -webkit-font-smoothing: antialiased;
+      touch-action: manipulation;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(20px, 3.5vw, 32px);
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-family: 'Newsreader', serif;
+      font-size: clamp(1.75rem, 5vw, 2.35rem);
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+    }
+    .brand .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .status-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 5px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .hero {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .hero-lead {
+      font-family: 'Newsreader', serif;
+      font-size: clamp(1.15rem, 3.2vw, 1.45rem);
+      font-weight: 400;
+      font-style: italic;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: clamp(14px, 2.5vw, 20px);
+    }
+    .game-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: clamp(18px, 3vw, 26px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.16s ease;
+      text-decoration: none;
+      color: inherit;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .game-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      box-shadow: 0 12px 28px rgba(20,20,19,0.08), 0 2px 6px rgba(217,119,87,0.18);
+    }
+    .game-card:active {
+      transform: scale(0.985);
+    }
+    .game-card.highlight {
+      border: 1.5px solid var(--accent);
+      background: linear-gradient(180deg, #FFFFFF 0%, #FDF9F6 100%);
+      box-shadow: 0 4px 18px rgba(217, 119, 87, 0.12);
+      position: relative;
+    }
+    .game-card.highlight:hover {
+      border-color: #C6613F;
+      box-shadow: 0 12px 30px rgba(217, 119, 87, 0.25);
+    }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .live-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2E6F40;
+      margin-right: 5px;
+    }
+    .game-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .players-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .game-title {
+      font-family: 'Newsreader', serif;
+      font-size: clamp(1.45rem, 3.5vw, 1.85rem);
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--text);
+    }
+    .game-desc {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .card-art-preview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .btn-enter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--text);
+      color: var(--bg);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 12px 20px;
+      min-height: 44px;
+      border-radius: 8px;
+      border: 1px solid var(--text);
+      transition: all 0.14s ease;
+      text-align: center;
+      width: 100%;
+    }
+    .game-card:hover .btn-enter,
+    .game-card:active .btn-enter {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Mobile & Tablet Specific Enhancements (Portrait & Landscape) */
+    body {
+      padding-left: max(clamp(14px, 4vw, 24px), env(safe-area-inset-left));
+      padding-right: max(clamp(14px, 4vw, 24px), env(safe-area-inset-right));
+    }
+
+    @media (max-width: 600px) {
+      .games-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .brand {
+        width: 100%;
+      }
+      .status-badge {
+        align-self: flex-start;
+      }
+      .game-card {
+        padding: 16px;
+        gap: 14px;
+      }
+    }
+
+    @media (min-width: 601px) and (max-width: 1024px) {
+      .games-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      body {
+        padding-top: max(10px, env(safe-area-inset-top));
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+      }
+      .container {
+        gap: 12px;
+      }
+      header {
+        padding-bottom: 8px;
+      }
+      .brand h1 {
+        font-size: 1.4rem;
+      }
+      .hero-lead {
+        font-size: 0.95rem;
+      }
+      .games-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .game-card {
+        padding: 14px;
+        gap: 10px;
+      }
+      .game-title {
+        font-size: 1.25rem;
+      }
+      .game-desc {
+        font-size: 0.82rem;
+        line-height: 1.35;
+      }
+      .card-art-preview {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+      }
+      .btn-enter {
+        padding: 8px 14px;
+        min-height: 38px;
+        font-size: 0.88rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <h1>Tabletop Lounge</h1>
+      <div class="subtitle">Multiplayer Parlor Games · Real-Time WebSockets</div>
+    </div>
+    <div class="status-badge">● 6 Games Online</div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-lead">
+      "Silent deduction, royal courtiers, Thai Slave, Flip 7, 3D Let's Get Rich, and Cockroach Poker — in your browser, zero install."
+    </div>
+  </div>
+
+  <div class="games-grid">
+    <!-- LINE LET'S GET RICH -->
+    <a href="/rich" class="game-card highlight">
+      <div>
+        <div class="card-meta">
+          <span class="game-pill" style="background:#D97757; color:#FFFFFF; border:none; font-weight:700;">★ 3D TOY-BOX ERA</span>
+          <span class="players-tag"><span class="live-dot"></span>2–4 Players / 2v2 • Pass 'n Play</span>
+        </div>
+        <h2 class="game-title">LINE Let's Get Rich</h2>
+        <p class="game-desc">
+          The legendary 2014–2016 peak era in tactile Toy-Box 3D! 32-tile isometric board, carnival dice plunger gauge, 8 S+ characters, 10 S+ treasures, triple/line/tourism monopolies, and Pass 'n Play local & real-time online multiplayer.
+        </p>
+      </div>
+      <div>
+        <div class="card-art-wrap" style="margin-bottom: 14px;">
+          <div class="card-art-preview">
+            <span>🎲 3D Isometric Board</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>🧙 S+ Dark Lexy</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>🏰 Landmarks</span>
+          </div>
+        </div>
+        <div class="btn-enter" style="background:var(--accent); border-color:var(--accent); color:#FFFFFF;">Enter 3D Let's Get Rich Room →</div>
+      </div>
+    </a>
+
+    <!-- BLIND HEIST -->
+    <a href="/heist" class="game-card">
+      <div>
+        <div class="card-meta">
+          <span class="game-pill">Co-op Poker</span>
+          <span class="players-tag"><span class="live-dot"></span>3–5 Players</span>
+        </div>
+        <h2 class="game-title">Blind Heist</h2>
+        <p class="game-desc">
+          Work together without speaking. Steal and lock in rank chips from ★1 (weakest hand) to ★N (strongest hand) across Pre-Flop, Flop, Turn, and River. Can your crew pull off the perfect silent order?
+        </p>
+      </div>
+      <div>
+        <div class="card-art-wrap" style="margin-bottom: 14px;">
+          <div class="card-art-preview">
+            <span>🂡 ★1 (Weakest)</span>
+            <span style="color:var(--text-muted);">→</span>
+            <span>🂮 ★N (Strongest)</span>
+          </div>
+        </div>
+        <div class="btn-enter">Enter Blind Heist Room →</div>
+      </div>
+    </a>
+
+    <!-- LOVE LETTER -->
+    <a href="/love-letter" class="game-card">
+      <div>
+        <div class="card-meta">
+          <span class="game-pill">Royal Court</span>
+          <span class="players-tag"><span class="live-dot"></span>3–5 Players</span>
+        </div>
+        <h2 class="game-title">Love Letter</h2>
+        <p class="game-desc">
+          The 2019 Z-Man 21-card edition. Deliver your secret letter to the Princess while eliminating rival suitors. Featuring Princess, Countess, King, Chancellor, Prince, Handmaid, Baron, Priest, Guard, and the bonus-winning Spy. Includes Normal Mode & Expert Mode!
+        </p>
+      </div>
+      <div>
+        <div class="card-art-wrap" style="margin-bottom: 14px;">
+          <div class="card-art-preview">
+            <span>👑 9–Princess</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>📜 6–Chancellor</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>🎭 0–Spy</span>
+          </div>
+        </div>
+        <div class="btn-enter">Enter Love Letter Room →</div>
+      </div>
+    </a>
+
+    <!-- SLAVE CARD GAME -->
+    <a href="/slave" class="game-card">
+      <div>
+        <div class="card-meta">
+          <span class="game-pill" style="color:var(--accent);background:var(--accent-soft);">Thai Classic</span>
+          <span class="players-tag"><span class="live-dot"></span>3–6 Players</span>
+        </div>
+        <h2 class="game-title">ไพ่สลาฟ (Slave)</h2>
+        <p class="game-desc">
+          The legendary Thai card game! Shed all cards in hand to claim the crown. Features 3♣ opening, 2♠ as supreme card, ตองปาดเดี่ยว (Triple cuts Single), โฟร์ปาดคู่ (Quad cuts Pair), Tribute exchanges, and the dramatic ล้มเจ้า (King Overthrow)!
+        </p>
+      </div>
+      <div>
+        <div class="card-art-wrap" style="margin-bottom: 14px;">
+          <div class="card-art-preview">
+            <span>3♣ (Min)</span>
+            <span style="color:var(--text-muted);">→</span>
+            <span>2♠ (Supreme)</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>👑 King ↔ ⛓️ Slave</span>
+          </div>
+        </div>
+        <div class="btn-enter">Enter Slave Room →</div>
+      </div>
+    </a>
+
+    <!-- FLIP 7 -->
+    <a href="/flip-7" class="game-card">
+      <div>
+        <div class="card-meta">
+          <span class="game-pill">Press Your Luck</span>
+          <span class="players-tag"><span class="live-dot"></span>3–6 Players</span>
+        </div>
+        <h2 class="game-title">Flip 7</h2>
+        <p class="game-desc">
+          The hit 94-card press-your-luck game! Hit to flip cards, stay to bank points, but beware of duplicate numbers that bust your hand. Race to collect 7 unique numbers for the +15 Flip 7 glory, or be the first to reach 200 points!
+        </p>
+      </div>
+      <div>
+        <div class="card-art-wrap" style="margin-bottom: 14px;">
+          <div class="card-art-preview">
+            <span>🎲 Hit or Stay</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>🛡 Second Chance</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>🎯 200 Pts Goal</span>
+          </div>
+        </div>
+        <div class="btn-enter">Enter Flip 7 Room →</div>
+      </div>
+    </a>
+
+    <!-- COCKROACH POKER -->
+    <a href="/cockroach" class="game-card">
+      <div>
+        <div class="card-meta">
+          <span class="game-pill">Bluff & Deceit</span>
+          <span class="players-tag"><span class="live-dot"></span>3–5 Players</span>
+        </div>
+        <h2 class="game-title">Cockroach Poker</h2>
+        <p class="game-desc">
+          Kakerlakenpoker: The legendary reverse set-collection bluffing game! Slide face-down cards to opponents with daring claims. Call their bluff, believe them, or secretly peek and pass forward. Only one player loses — everyone else wins!
+        </p>
+      </div>
+      <div>
+        <div class="card-art-wrap" style="margin-bottom: 14px;">
+          <div class="card-art-preview">
+            <span>🪳 Cockroach</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>👑 Royal Edition</span>
+            <span style="color:var(--text-muted);">·</span>
+            <span>🚨 4-of-a-Kind Loss</span>
+          </div>
+        </div>
+        <div class="btn-enter">Enter Cockroach Room →</div>
+      </div>
+    </a>
+  </div>
+
+  <footer>
+    <div>Crafted in Anthropic Editorial Style</div>
+    <div>Native WebSockets · Zero Accounts Needed</div>
+  </footer>
+</div>
+
+</body>
+</html>
