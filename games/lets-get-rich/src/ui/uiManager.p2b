@@ -1,0 +1,788 @@
+        soundManager.playClick();
+        const slotIdx = Number((btn as HTMLElement).dataset.slotIdx) as 0 | 1 | 2;
+        this.selectedTreasureSlotIndex = slotIdx;
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Pick Treasure from Pool
+    container.querySelectorAll('.lobby-tr-pool-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const trId = (btn as HTMLElement).dataset.trId;
+        if (!trId) return;
+        const curCharDef = getCharacterDef(targetPlayer.characterId);
+        const trDef = getTreasureDef(trId);
+        if (isMainSkillConflict(trDef.mainSkill.skillId, curCharDef.mainSkill.skillId)) {
+          // Conflict guard
+          return;
+        }
+
+        const newTrIds = [...targetPlayer.treasureIds];
+        newTrIds[this.selectedTreasureSlotIndex] = trId;
+        // Advance slot
+        this.selectedTreasureSlotIndex = ((this.selectedTreasureSlotIndex + 1) % 3) as 0 | 1 | 2;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          targetPlayer.characterId,
+          newTrIds as [string, string, string]
+        );
+        this.renderLobbyScreen();
+      });
+    });
+  }
+  // ==========================================================================
+  // SCREEN 4: IN-GAME OVERLAY (Reference Image 1 — 4 Corner HUDs + Center Arc Gauge)
+  // ==========================================================================
+  private buildInGameStaticHUD(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_IN_GAME'
+    ) as HTMLElement;
+    if (!container) return;
+
+    // Build Rainbow Gauge Arc SVG Paths (2..12)
+    const nums = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const colors = [
+      '#ef4444',
+      '#f97316',
+      '#f59e0b',
+      '#eab308',
+      '#84cc16',
+      '#22c55e',
+      '#06b6d4',
+      '#3b82f6',
+      '#6366f1',
+      '#8b5cf6',
+      '#d946ef',
+    ];
+    const rOuter = 148;
+    const rInner = 112;
+    const startDeg = -168;
+    const endDeg = -12;
+    const stepDeg = (endDeg - startDeg) / nums.length;
+
+    let arcHtml = '';
+    nums.forEach((num, i) => {
+      const a1 = ((startDeg + i * stepDeg) * Math.PI) / 180;
+      const a2 = ((startDeg + (i + 1) * stepDeg) * Math.PI) / 180;
+      const x1o = Math.cos(a1) * rOuter;
+      const y1o = Math.sin(a1) * rOuter;
+      const x2o = Math.cos(a2) * rOuter;
+      const y2o = Math.sin(a2) * rOuter;
+      const x2i = Math.cos(a2) * rInner;
+      const y2i = Math.sin(a2) * rInner;
+      const x1i = Math.cos(a1) * rInner;
+      const y1i = Math.sin(a1) * rInner;
+
+      const path = `M ${x1o} ${y1o} A ${rOuter} ${rOuter} 0 0 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${rInner} ${rInner} 0 0 0 ${x1i} ${y1i} Z`;
+      const midA = (a1 + a2) / 2;
+      const tx = Math.cos(midA) * ((rOuter + rInner) / 2);
+      const ty = Math.sin(midA) * ((rOuter + rInner) / 2) + 4;
+
+      arcHtml += `<path d="${path}" fill="${colors[i]}" stroke="#0f172a" stroke-width="2" />`;
+      arcHtml += `<text x="${tx}" y="${ty}" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" style="text-shadow:0 1px 2px #000;">${num}</text>`;
+    });
+
+    container.innerHTML = `
+      <!-- Top Skill Cut-In Toast Banner -->
+      <div id="liveBanner" class="skill-cutin-banner">
+        ⚡ กดปุ่ม ROLL ค้างไว้ (หรือกด Spacebar ค้าง) เพื่อวิ่งเข็มเกจโค้ง 2..12 | คลิกที่การ์ดผู้เล่นมุมจอเพื่อดูสแตท & สกิล
+      </div>
+
+      <!-- Monopoly Danger Alert Banner Slot -->
+      <div id="monopolyDangerBannerSlot"></div>
+
+      <!-- 3D Tile Hover Card Inspector -->
+      <div id="tileHoverCard" class="tile-hover-card"></div>
+
+      <!-- Human Bankrupt Fast-Exit Box -->
+      <div id="humanBankruptExitBox" style="display:none; position:absolute; bottom:114px; left:50%; transform:translateX(-50%); background:rgba(127,29,29,0.92); border:2px solid #f87171; border-radius:99px; padding:4px 16px; align-items:center; gap:10px; z-index:36; box-shadow:0 6px 18px rgba(0,0,0,0.6);">
+        <span style="font-size:11px; font-weight:800; color:#fecaca;">💀 คุณล้มละลายแล้ว (บอทกำลังแข่งต่อ)</span>
+        <button class="red-btn" id="btnFastExitBankrupt" style="padding:3px 12px; font-size:11px;">🚪 ออกสู่ล็อบบี้</button>
+      </div>
+
+      <!-- Board Target Picker Drawer (Shown during BOARD_TARGET_PICK phase) -->
+      <div id="boardTargetPickerDrawer" class="interactive-hud" style="position:absolute; top:48px; left:50%; z-index:48; width:820px; background:rgba(15, 23, 42, 0.94); border:2.5px solid #fde047; border-radius:14px; padding:10px 16px; box-shadow:0 10px 28px rgba(0,0,0,0.65);"></div>
+
+      <!-- 4 Corner Player HUDs -->
+      <div id="cornerHudContainer"></div>
+
+      <!-- Center-Board Plaza Controls (Turn Badge, Speed/Menu, Spotted Dice Readout, Rainbow Gauge Arc) -->
+      <svg viewBox="0 0 1280 720" style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:22;">
+        <!-- Turn Counter Badge Inside Board -->
+        <g transform="translate(760, 314)">
+          <rect x="0" y="0" width="128" height="48" rx="10" fill="rgba(15,23,42,0.88)" stroke="#94a3b8" stroke-width="2.5" />
+          <rect x="26" y="-10" width="76" height="17" rx="5" fill="#f59e0b" id="turnHeaderPill" />
+          <text x="64" y="2" text-anchor="middle" fill="#1e1b4b" font-size="10" font-weight="900" id="turnHeaderLabel">TURN</text>
+          <text x="64" y="32" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="900" id="turnCounterText">01 / 20</text>
+        </g>
+
+        <!-- Center Spotted Dice Readout Group -->
+        <g id="diceReadoutSvgGroup" transform="translate(590, 305)"></g>
+
+        <!-- Curved Rainbow Gauge Arc (2 .. 12) Inside Bottom Plaza -->
+        <g id="rainbowArcGroup" transform="translate(640, 650)">
+          ${arcHtml}
+        </g>
+
+        <!-- Rotating Gauge Needle -->
+        <g id="arcNeedleGroup" transform="translate(640, 650) rotate(0)">
+          <polygon points="-5,0 0,-134 5,0" fill="#ffffff" stroke="#0f172a" stroke-width="2" />
+          <circle cx="0" cy="-126" r="5.5" fill="#fde047" stroke="#0f172a" stroke-width="1.8" />
+        </g>
+      </svg>
+
+      <!-- Top-Center Mini Utility Bar (Sound, Speed 1x/2x/3x, Rules, Lobby/Menu) -->
+      <div class="interactive-hud top-util-bar" style="position:absolute; top:48px; right:268px; z-index:35; display:flex; gap:6px;">
+        <button class="tab-pill" id="btnSoundToggle" style="padding:4px 10px; font-size:11px;">🔊 Sound <span class="kbd-hint">M</span></button>
+        <button class="tab-pill" id="btnInGameSpeed" style="padding:4px 10px; font-size:11px;">⚡ 1x Speed</button>
+        <button class="tab-pill" id="btnInGameRules" style="padding:4px 10px; font-size:11px;">📊 Odds</button>
+        <button class="tab-pill" id="btnInGameLobby" style="padding:4px 10px; font-size:11px;">🏠 Lobby</button>
+      </div>
+
+      <!-- Bottom-Center Roll Button, ODD/EVEN Capsules & Island Bail Button -->
+      <div class="interactive-hud bottom-roll-bar" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; align-items:flex-end; gap:14px; z-index:35;">
+        <button class="gold-btn" id="btnEscapeIslandBail" style="display:none; padding:6px 12px; font-size:11px; margin-bottom:14px;">
+          🏝️ จ่ายประกัน 200K
+        </button>
+
+        <div class="oe-capsule" id="oeOddBtn">
+          <span>ODD (คี่)</span>
+          <span id="oeOddCharges" style="font-size:9px; color:#fde047;">3/3</span>
+          <div class="led"></div>
+        </div>
+
+        <button class="roll-circle-btn" id="btnCenterRoll">
+          <span>ROLL</span>
+          <span id="rollGaugeLiveText" style="font-size:10px; font-weight:800; color:#fef08a;">HOLD [Space]</span>
+        </button>
+
+        <div class="oe-capsule" id="oeEvenBtn">
+          <span>EVEN (คู่)</span>
+          <span id="oeEvenCharges" style="font-size:9px; color:#fde047;">3/3</span>
+          <div class="led"></div>
+        </div>
+      </div>
+    `;
+
+    // Wire Roll Hold & Release
+    const rollBtn = container.querySelector(
+      '#btnCenterRoll'
+    ) as HTMLButtonElement;
+    const startHold = (e: Event): void => {
+      e.preventDefault();
+      if (!this.canHumanRollNow()) return;
+      this.startArcCharge();
+    };
+    const endHold = (e: Event): void => {
+      if (!this.isChargingGauge) return;
+      e.preventDefault();
+      this.stopArcCharge();
+    };
+    rollBtn.addEventListener('mousedown', startHold);
+    rollBtn.addEventListener('touchstart', startHold, { passive: false });
+    window.addEventListener('mouseup', endHold);
+    window.addEventListener('touchend', endHold, { passive: false });
+    window.addEventListener('touchcancel', endHold, { passive: false });
+
+    // Wire ODD / EVEN Capsules
+    container.querySelector('#oeOddBtn')?.addEventListener('click', () => {
+      const activeP = this.getActivePlayer();
+      if (!activeP || activeP.oddEvenCharges <= 0) return;
+      soundManager.playClick();
+      this.callbacks.onSetOddEven?.('ODD');
+    });
+
+    container.querySelector('#oeEvenBtn')?.addEventListener('click', () => {
+      const activeP = this.getActivePlayer();
+      if (!activeP || activeP.oddEvenCharges <= 0) return;
+      soundManager.playClick();
+      this.callbacks.onSetOddEven?.('EVEN');
+    });
+
+    // Wire Island Bail Button
+    container
+      .querySelector('#btnEscapeIslandBail')
+      ?.addEventListener('click', () => {
+        this.callbacks.onPayIslandBail?.();
+      });
+
+    // Wire Utility Buttons
+    const soundBtn = container.querySelector(
+      '#btnSoundToggle'
+    ) as HTMLButtonElement | null;
+    soundBtn?.addEventListener('click', () => {
+      const isMuted = soundManager.toggleMute();
+      soundBtn.innerHTML = `${isMuted ? '🔇 Muted' : '🔊 Sound'} <span class="kbd-hint">M</span>`;
+      if (!isMuted) soundManager.playClick();
+    });
+
+    const speedBtn = container.querySelector(
+      '#btnInGameSpeed'
+    ) as HTMLButtonElement;
+    speedBtn?.addEventListener('click', () => {
+      soundManager.playClick();
+      this.speedMultiplier = ((this.speedMultiplier % 3) + 1) as 1 | 2 | 3;
+      speedBtn.textContent = `⚡ ${this.speedMultiplier}x ${
+        this.speedMultiplier === 3 ? 'Turbo' : 'Speed'
+      }`;
+      this.callbacks.onToggleSpeed?.(this.speedMultiplier);
+    });
+
+    container
+      .querySelector('#btnInGameRules')
+      ?.addEventListener('click', () => {
+        soundManager.playClick();
+        this.openRulesModal();
+      });
+
+    container
+      .querySelector('#btnInGameLobby')
+      ?.addEventListener('click', () => {
+        soundManager.playClick();
+        this.state.victoryResult = null;
+        if (this.callbacks.onReturnToLobby) {
+          this.callbacks.onReturnToLobby();
+        } else {
+          this.showScreen('LOBBY');
+        }
+      });
+
+    container
+      .querySelector('#btnFastExitBankrupt')
+      ?.addEventListener('click', () => {
+        soundManager.playClick();
+        this.callbacks.onReturnToLobby?.();
+      });
+
+    this.updateNeedleVisual();
+    this.renderCenterDiceReadout();
+  }
+
+  private getActivePlayer(): PlayerState | undefined {
+    return this.state.players[this.state.activePlayerIndex];
+  }
+
+  private canHumanRollNow(): boolean {
+    const activeP = this.getActivePlayer();
+    if (!activeP || activeP.isBankrupt) return false;
+    if (activeP.controlType !== 'HUMAN') return false;
+    if (!this.canControlSlotLocally(activeP.id)) return false;
+    return (
+      this.state.phase === 'IDLE_ROLL' || this.state.phase === 'GAUGE_CHARGING'
+    );
+  }
+
+  private startArcCharge(): void {
+    if (this.isChargingGauge) return;
+    this.isChargingGauge = true;
+    const rollBtn = this.stageEl.querySelector('#btnCenterRoll');
+    rollBtn?.classList.add('charging');
+
+    const activeP = this.getActivePlayer();
+    const dcLevel = activeP
+      ? getCharacterDef(activeP.characterId).stats.dc
+      : 2;
+    // Subtle gauge speed reduction (-1.8% per DC level) so high DC characters are smoother to time
+    const speedScale = 1 - dcLevel * 0.018;
+
+    if (activeP) {
+      this.callbacks.onGaugeStepChange?.(activeP.tileIndex, Math.round(this.gaugeVal));
+    }
+
+    this.lastGaugeFrameTime = performance.now();
+    this.lastTickSoundTime = performance.now();
+    const step = (now: number): void => {
+      if (!this.isChargingGauge) return;
+      const dt = Math.min(50, now - this.lastGaugeFrameTime) / 1000;
+      this.lastGaugeFrameTime = now;
+
+      if (now - this.lastTickSoundTime > 80) {
+        this.lastTickSoundTime = now;
+        soundManager.playRollGaugeTick((this.gaugeVal - 2) / 10);
+      }
+
+      this.gaugeVal += this.gaugeDir * 10.5 * speedScale * dt;
+      if (this.gaugeVal >= 12) {
+        this.gaugeVal = 12;
+        this.gaugeDir = -1;
+      } else if (this.gaugeVal <= 2) {
+        this.gaugeVal = 2;
+        this.gaugeDir = 1;
+      }
+      this.updateNeedleVisual();
+      this.gaugeRafId = requestAnimationFrame(step);
+    };
+    this.gaugeRafId = requestAnimationFrame(step);
+  }
+
+  private stopArcCharge(): void {
+    if (!this.isChargingGauge) return;
+    this.isChargingGauge = false;
+    soundManager.playDiceStop();
+    if (this.gaugeRafId !== null) {
+      cancelAnimationFrame(this.gaugeRafId);
+      this.gaugeRafId = null;
+    }
+    const rollBtn = this.stageEl.querySelector('#btnCenterRoll');
+    rollBtn?.classList.remove('charging');
+
+    const finalGauge = Number(this.gaugeVal.toFixed(2));
+    const activeP = this.getActivePlayer();
+    const lockedStep = Math.max(2, Math.min(12, Math.round(this.gaugeVal)));
+    if (activeP) {
+      this.callbacks.onGaugeStepChange?.(activeP.tileIndex, lockedStep);
+      setTimeout(() => {
+        this.callbacks.onGaugeStepChange?.(null, null);
+      }, 1000);
+    }
+    this.callbacks.onGaugeReleaseRoll?.(finalGauge);
+  }
+
+  private updateNeedleVisual(): void {
+    const needle = this.stageEl.querySelector('#arcNeedleGroup');
+    if (needle) {
+      const deg = ((this.gaugeVal - 7) / 5) * 75;
+      needle.setAttribute('transform', `translate(640, 650) rotate(${deg})`);
+    }
+
+    const activeP = this.getActivePlayer();
+    const activeStep = Math.max(2, Math.min(12, Math.round(this.gaugeVal)));
+    const targetIdx = activeP ? (activeP.tileIndex + activeStep) % 32 : 0;
+    const targetTileDef = WORLD_MAP_TILES[targetIdx];
+
+    const liveTxt = this.stageEl.querySelector('#rollGaugeLiveText');
+    if (liveTxt) {
+      liveTxt.textContent = this.isChargingGauge
+        ? `🎯 ${activeStep} ➔ #${targetIdx} ${targetTileDef?.nameTh ?? ''}`
+        : `🎯 ${activeStep}`;
+    }
+
+    if (activeP && this.isChargingGauge) {
+      this.callbacks.onGaugeStepChange?.(activeP.tileIndex, activeStep);
+    }
+  }
+
+  private renderCenterDiceReadout(): void {
+    const grp = this.stageEl.querySelector('#diceReadoutSvgGroup');
+    if (!grp) return;
+
+    const d = this.state.lastDice ?? { d1: 5, d2: 6, sum: 11, isDouble: false };
+    const activeP = this.getActivePlayer();
+    const streak = activeP?.consecutiveDoubles ?? 0;
+    const pipPositions: Record<number, [number, number][]> = {
+      1: [[0, 0]],
+      2: [
+        [-10, -10],
+        [10, 10],
+      ],
+      3: [
+        [-10, -10],
+        [0, 0],
+        [10, 10],
+      ],
+      4: [
+        [-10, -10],
+        [10, -10],
+        [-10, 10],
+        [10, 10],
+      ],
+      5: [
+        [-10, -10],
+        [10, -10],
+        [0, 0],
+        [-10, 10],
+        [10, 10],
+      ],
+      6: [
+        [-10, -10],
+        [10, -10],
+        [-10, 0],
+        [10, 0],
+        [-10, 10],
+        [10, 10],
+      ],
+    };
+
+    const renderDieFace = (val: number, tx: number, ty: number, rot: number) => {
+      const pips = (pipPositions[val] ?? pipPositions[1])
+        .map(
+          ([px, py]) =>
+            `<circle cx="${px}" cy="${py}" r="${
+              val === 1 ? 5.2 : 3.6
+            }" fill="${val === 1 || (px === 0 && py === 0) ? '#ef4444' : '#1e293b'}" />`
+        )
+        .join('');
+      return `
+        <g transform="translate(${tx}, ${ty}) rotate(${rot})">
+          <rect x="-22" y="-22" width="44" height="44" rx="9" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5" />
+          ${pips}
+        </g>
+      `;
+    };
+
+    grp.innerHTML = `
+      ${renderDieFace(d.d1, -28, -4, -12)}
+      ${renderDieFace(d.d2, 28, 6, 15)}
+      ${
+        d.isDouble || streak > 0
+            ? `<g transform="translate(0, -38)">
+              <rect x="-48" y="-12" width="96" height="22" rx="10" fill="#dc2626" stroke="#fde047" stroke-width="2" />
+              <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900">${d.isDouble ? `DOUBLE ${d.sum}!` : 'DOUBLE'}</text>
+              <g transform="translate(-16, 17)">
+                <circle cx="0" cy="0" r="3.5" fill="${streak >= 1 ? '#fde047' : '#334155'}" stroke="#f8fafc" stroke-width="0.8"/>
+                <circle cx="16" cy="0" r="3.5" fill="${streak >= 2 ? '#f97316' : '#334155'}" stroke="#f8fafc" stroke-width="0.8"/>
+                <circle cx="32" cy="0" r="3.5" fill="${streak >= 3 ? '#ef4444' : '#334155'}" stroke="#f8fafc" stroke-width="0.8"/>
+              </g>
+            </g>`
+          : ''
+      }
+    `;
+  }
+
+  private renderInGameHUD(): void {
+    const cornerBox = this.stageEl.querySelector(
+      '#cornerHudContainer'
+    ) as HTMLElement | null;
+    if (!cornerBox) return;
+
+    const activePlayer = this.getActivePlayer();
+
+    // Update Banner if provided
+    if (this.state.bannerText) {
+      const banner = this.stageEl.querySelector('#liveBanner');
+      if (banner && banner.innerHTML !== this.state.bannerText) {
+        banner.innerHTML = this.state.bannerText;
+      }
+    }
+
+    // Update Turn Counter & Late-Game x1.5 Indicator
+    const turnText = this.stageEl.querySelector('#turnCounterText');
+    const turnPill = this.stageEl.querySelector('#turnHeaderPill');
+    const turnLabel = this.stageEl.querySelector('#turnHeaderLabel');
+    if (turnText) {
+      const tStr = String(this.state.turnNumber).padStart(2, '0');
+      turnText.textContent = `${tStr} / ${this.state.maxTurns}`;
+    }
+    const isLateGame =
+      this.state.turnNumber >= MATCH_CONFIG.lateGameTurnThreshold;
+    if (turnPill && turnLabel) {
+      turnPill.setAttribute('fill', isLateGame ? '#ef4444' : '#f59e0b');
+      turnLabel.textContent = isLateGame ? '🔥 x1.5 TOLL' : 'TURN';
+      turnLabel.setAttribute('fill', isLateGame ? '#ffffff' : '#1e1b4b');
+    }
+
+    // Render 4 Corner Player HUD Cards
+    // In Pass 'n Play: If active player is currently a local human, place them at bottom-right!
+    const activeP = this.getActivePlayer();
+    const myPlayer =
+      (activeP && activeP.controlType === 'HUMAN' && this.canControlSlotLocally(activeP.id))
+        ? activeP
+        : (this.state.players.find(
+            (p) => p.isSlotActive !== false && p.id === this.youPlayerId
+          ) ??
+          this.state.players.find(
+            (p) => p.isSlotActive !== false && p.controlType === 'HUMAN'
+          ) ??
+          this.state.players[0]);
+    const myPlayerId = myPlayer?.id ?? 'P1';
+
+    const opponents = this.state.players.filter(
+      (p) => p.isSlotActive !== false && p.id !== myPlayerId
+    );
+
+    const getCornerPosClass = (p: PlayerState): string => {
+      if (p.id === myPlayerId) {
+        return 'pos-bottom-right';
+      }
+      const oppIdx = opponents.findIndex((o) => o.id === p.id);
+      if (oppIdx === 0) return 'pos-top-left';
+      if (oppIdx === 1) return 'pos-top-right';
+      if (oppIdx === 2) return 'pos-bottom-left';
+      return 'pos-top-left';
+    };
+
+    const numColors = ['#e11d48', '#0284c7', '#16a34a', '#d97706'];
+
+    cornerBox.innerHTML = this.state.players
+      .map((p, idx) => {
+        if (p.isSlotActive === false) return '';
+        const charDef = getCharacterDef(p.characterId);
+        const isTurn = idx === this.state.activePlayerIndex && !p.isBankrupt;
+        const isHuman = p.controlType === 'HUMAN';
+        const isMe = p.id === myPlayerId;
+        const posClass = getCornerPosClass(p);
+
+        const treasuresHtml = p.treasureIds
+          .map((tid) => {
+            const tr = getTreasureDef(tid);
+            const mDef = getSkillDef(tr.mainSkill.skillId);
+            const sDef = getSkillDef(tr.subSkill.skillId);
+            return `
+              <div class="p-tr-slot" data-pid="${p.id}" data-tid="${tid}" title="${tr.name} (${tr.nameEn})">
+                ${tr.iconEmoji}
+                <div class="treasure-hover-popover">
+                  <div class="tr-pop-header">
+                    <span class="tr-pop-icon">${tr.iconEmoji}</span>
+                    <div class="tr-pop-title-box">
+                      <span class="tr-pop-name">${tr.name}</span>
+                      <span class="tr-pop-rank">RANK S+ • ${tr.nameEn}</span>
+                    </div>
+                  </div>
+                  <div class="tr-pop-skill main">
+                    <div class="tr-pop-skill-badge">
+                      <span>⚡ MAIN (${mDef.code})</span>
+                      <strong class="tr-proc-rate">${tr.mainSkill.procPct}%</strong>
+                    </div>
+                    <div class="tr-pop-skill-name">${mDef.name}</div>
+                    <div class="tr-pop-skill-desc">${mDef.effectDesc}</div>
+                    <div class="tr-pop-skill-trigger">🎯 เงื่อนไข: ${mDef.trigger}</div>
+                  </div>
+                  <div class="tr-pop-skill sub">
+                    <div class="tr-pop-skill-badge">
+                      <span>🛡️ SUB (${sDef.code})</span>
+                      <strong class="tr-proc-rate">+${tr.subSkill.procPct}%</strong>
+                    </div>
+                    <div class="tr-pop-skill-name">${sDef.name}</div>
+                    <div class="tr-pop-skill-desc">${sDef.effectDesc}</div>
+                  </div>
+                  <div class="tr-pop-hint">💡 คลิกการ์ดเพื่อดูรายละเอียดและสแตททั้งหมด</div>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        const statusBadge = p.isBankrupt
+          ? `<span class="p-lap-pill" style="background:#7f1d1d; color:#fecaca;">💀 ล้มละลาย</span>`
+          : p.islandTurnsLeft > 0
+            ? `<span class="p-lap-pill" style="background:#9a3412; color:#fed7aa;">🏝️ เกาะ (${p.islandTurnsLeft})</span>`
+            : p.isWaitingTravel
+              ? `<span class="p-lap-pill" style="background:#0369a1; color:#e0f2fe;">✈️ รอบิน</span>`
+              : `<span class="p-lap-pill">Lap ${p.lapCount + 1}</span>`;
+
+        const teamTag =
+          this.state.mode === 'TEAM_2V2' && p.teamId
+            ? `<span class="p-team-mini-tag">TEAM ${p.teamId === 'ALPHA' ? 'A' : 'B'}</span>`
+            : '';
+
+        const turnBannerHtml = isTurn
+          ? `<div class="p-turn-banner" style="animation:floatBob 1.5s ease-in-out infinite;">
+               <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#1E1612; animation:turnBannerBounce 0.8s infinite;"></span>
+               <span>${isHuman ? '🎲 YOUR TURN (ตาคุณ!)' : `🎲 ตาของ ${p.name}`}</span>
+               <span style="font-size:12px;">👉</span>
+             </div>`
+          : '';
+
+        const youBadge = isMe
+          ? `<span class="p-you-badge" style="transform:rotate(-3deg); display:inline-block;">★ YOU</span>`
+          : '';
+
+        return `
+          <div id="hudCard_${p.id}" class="p-corner-card theme-p${idx + 1} ${posClass} ${
+            isTurn ? 'active-turn' : ''
+          } ${p.isBankrupt ? 'bankrupt' : ''}" data-pid="${p.id}">
+            ${turnBannerHtml}
+            <div class="p-avatar-box">
+              ${getMascotSvg(p.characterId, 46)}
+              <div class="p-num-badge" style="background:${numColors[idx]}; border:2px solid #1E1612;">${idx + 1}</div>
+              ${teamTag}
+            </div>
+            <div class="p-info-col">
+              <div class="p-name-line">
+                <span style="font-weight:900;">${p.name} (${charDef.name})</span>
+                ${youBadge}
+                ${statusBadge}
+                <span style="font-size:11px; opacity:0.85; margin-left:2px; font-weight:900;">ⓘ</span>
+              </div>
+              <div class="p-cash-pill">
+                ${getMarbleGemSvg(15)} <span style="font-family:var(--font-num);">${formatMarbleFull(p.marble)}</span>
+              </div>
+              <div class="p-treasures-row">
+                ${treasuresHtml}
+                ${p.hasDiscountCoupon ? `<span title="คูปองลด 50%" style="font-size:13px;">🎟️</span>` : ''}
+              </div>
+            </div>
+            <div class="p-face-up-slot">
+              ${
+                p.hasAngelCard
+                  ? `<div class="fup-card angel" title="การ์ดนางฟ้าคุ้มครอง: ป้องกันค่าผ่านทาง 100% หรือป้องกันการโจมตี">
+                      <div class="fup-body">
+                        <span class="fup-icon">👼</span>
+                        <span class="fup-text">ANGEL</span>
+                      </div>
+                    </div>`
+                  : `<div class="fup-card spent" title="ไม่มีการ์ดนางฟ้า (ใช้ไปแล้วหรือยังไม่ได้รับ)">
+                      <div class="fup-body">
+                        <span class="fup-icon">👼</span>
+                        <span class="fup-text">USED</span>
+                      </div>
+                    </div>`
+              }
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    cornerBox.querySelectorAll('.p-corner-card').forEach((card) => {
+      const pid = (card as HTMLElement).dataset.pid as PlayerId;
+      card.addEventListener('mouseenter', () => {
+        this.callbacks.onPlayerCardHover?.(pid);
+      });
+      card.addEventListener('mouseleave', () => {
+        this.callbacks.onPlayerCardHover?.(null);
+      });
+      card.addEventListener('click', (e) => {
+        // If clicking a treasure slot directly, handled separately
+        if ((e.target as HTMLElement).closest('.p-tr-slot')) return;
+        this.openPlayerInspector(pid);
+      });
+    });
+
+    cornerBox.querySelectorAll('.p-tr-slot').forEach((slot) => {
+      slot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pid = (slot as HTMLElement).dataset.pid as PlayerId;
+        this.openPlayerInspector(pid);
+      });
+    });
+
+    // Update Center Roll + ODD/EVEN + Island Bail Controls
+    const oddBtn = this.stageEl.querySelector('#oeOddBtn');
+    const evenBtn = this.stageEl.querySelector('#oeEvenBtn');
+    const oddCharges = this.stageEl.querySelector('#oeOddCharges');
+    const evenCharges = this.stageEl.querySelector('#oeEvenCharges');
+    const rollBtn = this.stageEl.querySelector(
+      '#btnCenterRoll'
+    ) as HTMLButtonElement | null;
+    const bailBtn = this.stageEl.querySelector(
+      '#btnEscapeIslandBail'
+    ) as HTMLButtonElement | null;
+
+    if (activePlayer) {
+      const charges = activePlayer.oddEvenCharges;
+      if (oddCharges) oddCharges.textContent = `${charges}/3`;
+      if (evenCharges) evenCharges.textContent = `${charges}/3`;
+      oddBtn?.classList.toggle(
+        'active',
+        activePlayer.selectedOddEven === 'ODD'
+      );
+      evenBtn?.classList.toggle(
+        'active',
+        activePlayer.selectedOddEven === 'EVEN'
+      );
+      oddBtn?.classList.toggle('disabled', charges <= 0);
+      evenBtn?.classList.toggle('disabled', charges <= 0);
+
+      if (rollBtn) {
+        rollBtn.disabled = !this.canHumanRollNow();
+      }
+      if (bailBtn) {
+        const showBail =
+          this.canHumanRollNow() &&
+          activePlayer.islandTurnsLeft > 0 &&
+          activePlayer.marble >= MATCH_CONFIG.desertIslandBailCost;
+        bailBtn.style.display = showBail ? 'inline-block' : 'none';
+      }
+    }
+
+    // Update Monopoly Danger Alert Banners
+    const alertSlot = this.stageEl.querySelector('#monopolyDangerBannerSlot');
+    if (alertSlot) {
+      const alerts = this.state.monopolyAlerts ?? [];
+      if (alerts.length > 0) {
+        const topAlert = alerts[0];
+        const owner = this.state.players.find(
+          (p) => p.id === topAlert.ownerPlayerId
+        );
+        const missingTile = WORLD_MAP_TILES[topAlert.missingTileIndex];
+        alertSlot.innerHTML = `
+          <div class="monopoly-danger-banner">
+            <span>🚨 DANGER!</span>
+            <span style="color:#ffffff;">${owner ? owner.name : topAlert.ownerPlayerId}</span>
+            <span>ขาดอีก 1 ช่อง (${
+              missingTile ? missingTile.nameTh : '#' + topAlert.missingTileIndex
+            }) ชนะ</span>
+            <span style="color:#fde047; text-decoration:underline;">${
+              topAlert.labelTh
+            }</span>
+          </div>
+        `;
+      } else {
+        alertSlot.innerHTML = '';
+      }
+    }
+
+    // Toggle Human Bankrupt Fast-Exit Box
+    const humanExitBox = this.stageEl.querySelector(
+      '#humanBankruptExitBox'
+    ) as HTMLElement | null;
+    if (humanExitBox) {
+      const humanPlayer = this.state.players.find(
+        (p) => p.isSlotActive !== false && p.controlType === 'HUMAN'
+      );
+      const isHumanBankrupt = humanPlayer?.isBankrupt ?? false;
+      const isGameOver = !!this.state.victoryResult;
+      humanExitBox.style.display =
+        isHumanBankrupt && !isGameOver ? 'flex' : 'none';
+    }
+
+    this.renderCenterDiceReadout();
+    this.renderBoardPickerDrawer();
+  }
+
+  // ==========================================================================
+  // SCREEN 5: PLAYER INFO & SKILL INSPECTOR MODAL (Reference Image 5)
+  // ==========================================================================
+  public openPlayerInspector(playerId: PlayerId): void {
+    this.inspectedPlayerId = playerId;
+    const modal = this.stageEl.querySelector(
+      '#modal_PLAYER_INSPECTOR'
+    ) as HTMLElement;
+    if (!modal) return;
+
+    const p =
+      this.state.players.find((x) => x.id === this.inspectedPlayerId) ??
+      this.state.players[0];
+    if (!p) return;
+
+    const charDef = getCharacterDef(p.characterId);
+    const charMainDef = getSkillDef(charDef.mainSkill.skillId);
+
+    const switcherHtml = this.state.players
+      .filter((pl) => pl.isSlotActive !== false)
+      .map((pl) => {
+        const c = getCharacterDef(pl.characterId);
+        return `
+          <button class="tab-pill inspector-p-tab ${
+            pl.id === p.id ? 'active' : ''
+          }" data-pid="${pl.id}" style="padding:4px 10px; font-size:11px; font-weight:900;">
+            ${c.name}
+          </button>
+        `;
+      })
+      .join('');
+
+    const getCategoryBadge = (text: string): string => {
+      if (text.includes('หลุมดำ') || text.includes('แม่เหล็ก') || text.includes('บังคับขาย') || text.includes('สลาย')) {
+        return `<span style="background:#EF4444; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">💥 TRAP</span>`;
+      }
+      if (text.includes('บิน') || text.includes('วาร์ป') || text.includes('เที่ยวบิน') || text.includes('แท็กซี่') || text.includes('สร้าง')) {
+        return `<span style="background:#0EA5E9; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">✈️ WARP</span>`;
+      }
+      if (text.includes('ลดค่าผ่านทาง') || text.includes('คูณ') || text.includes('เงิน') || text.includes('โบนัส')) {
+        return `<span style="background:#10B981; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">💰 TOLL</span>`;
+      }
+      return `<span style="background:#F59E0B; color:#1E1612; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">🛡️ DEFENSE</span>`;
+    };
+
+    const renderGoldenSkillCard = (
+      iconHtml: string,
+      procPct: number,
+      textDesc: string,
+      title?: string,
+      subSkillHtml?: string
+    ): string => `
+      <div class="lgr-skill-golden-row" style="
+        background: #FFF9EB;
