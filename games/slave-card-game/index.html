@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ไพ่สลาฟ — Slave Card Game (3–6 Players)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,400&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FAF9F5;
+      --bg-surface: #FFFFFF;
+      --bg-secondary: #F4F1EA;
+      --text-primary: #141413;
+      --text-secondary: #666560;
+      --text-muted: #9E9C94;
+      --border: #E5E2DC;
+      --border-strong: #CECAC0;
+      --accent: #D97757;
+      --accent-hover: #C26141;
+      --accent-soft: rgba(217, 119, 87, 0.12);
+      --danger: #B93829;
+      --success: #2E6F40;
+      --shadow-sm: 0 1px 3px rgba(20,20,19,0.04), 0 2px 8px rgba(20,20,19,0.03);
+      --shadow-md: 0 6px 20px rgba(20,20,19,0.07), 0 1px 3px rgba(20,20,19,0.04);
+      --font-serif: 'Newsreader', serif;
+      --font-sans: 'Sarabun', 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      padding: 16px 14px 40px;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    /* TOP BAR */
+    header.topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .brand h1 {
+      font-family: var(--font-serif);
+      font-size: 1.85rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .brand .subtitle {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+    .badge.stage-active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 600;
+    }
+
+    /* BUTTONS */
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--bg-secondary);
+      border-color: var(--text-primary);
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--text-primary);
+      color: var(--bg);
+      border-color: var(--text-primary);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-accent:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 0.75rem;
+    }
+    .kick-btn {
+      background: rgba(185, 56, 41, 0.06);
+      border: 1px solid rgba(185, 56, 41, 0.22);
+      color: var(--danger);
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.12s ease;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .kick-btn:hover {
+      background: var(--danger);
+      color: #FFFFFF;
+      border-color: var(--danger);
+      box-shadow: 0 1px 4px rgba(185, 56, 41, 0.25);
+    }
+
+    /* ANNOUNCEMENT BANNER */
+    .announcement-banner {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .announcement-banner.revolution {
+      border-left-color: var(--danger);
+      background: #FDF4F2;
+      font-weight: 600;
+    }
+
+    /* CENTER BOARD: CURRENT TRICK / MOST RECENT PLAY */
+    .center-board {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 20px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-height: 150px;
+      position: relative;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .board-header {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      align-items: baseline;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed var(--border);
+    }
+    .board-title {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+    }
+    .trick-cards-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      min-height: 84px;
+      flex-wrap: wrap;
+    }
+    .trick-played-by {
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+    }
+    .trick-meta-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      width: 100%;
+    }
+    .trick-hint-badge {
+      font-size: 0.82rem;
+      color: var(--text-primary);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 12px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .trick-hint-badge strong {
+      color: var(--accent);
+    }
+    .trick-pass-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .trick-empty {
+      color: var(--text-muted);
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.1rem;
+    }
+
+    /* CARD STYLES */
+    .card {
+      width: 58px;
+      height: 82px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      box-shadow: var(--shadow-sm);
+      user-select: none;
+      position: relative;
+    }
+    .card.red { color: #C93B2B; }
+    .card.black { color: #141413; }
+    .card .c-top {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .card .c-suit {
+      font-size: 1.55rem;
+      align-self: center;
+      line-height: 1;
+      transform: translateY(-1px);
+    }
+    .card .c-bot {
+      font-size: 0.75rem;
+      align-self: flex-end;
+      line-height: 1;
+      opacity: 0.65;
+    }
+
+    /* INTERACTIVE HAND CARDS */
+    .hand-card {
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .hand-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--text-primary);
+    }
+    .hand-card.selected {
+      transform: translateY(-16px) scale(1.03);
+      border-color: var(--accent);
+      box-shadow: 0 8px 20px -3px rgba(217, 119, 87, 0.38), 0 0 0 2px var(--accent);
+      background: #FFFFFF;
+      z-index: 2;
+    }
+
+    /* PLAYERS GRID */
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .player-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.14s ease;
+    }
+    .player-card.active-turn {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-md);
+      background: #FFFAF7;
+    }
+    .player-card.me {
+      border-left: 3px solid var(--accent);
+    }
+    .player-card.passed {
+      opacity: 0.55;
+      background: var(--bg-secondary);
+    }
+    .player-card.finished {
+      border-color: var(--success);
+      background: #F4F9F5;
+    }
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .player-name {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .role-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .role-king { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+    .role-queen { background: #FCE7F3; color: #9D174D; border: 1px solid #FBCFE8; }
+    .role-citizen { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+    .role-vice-slave { background: #E0E7FF; color: #3730A3; border: 1px solid #C7D2FE; }
+    .role-slave { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+
+    /* HAND PANEL */
+    .hand-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .hand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hand-title {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .hand-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 6px;
+      padding: 16px 4px 6px;
+    }
+    .hand-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* LOBBY CARD */
+    .lobby-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      max-width: 400px;
+    }
+    .rules-nav-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rule-pill {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .rule-pill:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .text-input {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 5px;
+      background: var(--bg);
+      color: var(--text-primary);
+      flex: 1;
+      min-width: 220px;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20,20,19,0.55);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-card {
+      background: var(--bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 580px;
+      width: 100%;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-title {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    /* PODIUM / FINISH RANKS */
+    .podium-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .podium-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    @media (hover: none) {
+      .hand-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--border-strong);
+      }
+      .hand-card.selected:hover {
+        transform: translateY(-12px) scale(1.03);
+        border-color: var(--accent);
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      }
+      header.topbar {
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+      }
+      .brand h1 {
+        font-size: 1.4rem;
+      }
+      .players-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .player-card {
+        padding: 8px 10px !important;
+        min-width: 0;
+      }
+      .hand-panel {
+        padding: 12px 10px !important;
+      }
+      .hand-row {
+        gap: 12px 4px;
+        justify-content: center;
+      }
+      .hand-row .card {
+        width: 48px;
+        height: 70px;
+        padding: 5px 6px;
+      }
+      .hand-row .card .c-top { font-size: 0.85rem; }
+      .hand-row .card .c-suit { font-size: 1.3rem; }
+      .hand-row .card .c-bot { font-size: 0.65rem; }
+      .hand-card.selected {
+        transform: translateY(-10px) scale(1.03);
+      }
+      .hand-actions {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+      }
+      .hand-actions > div {
+        display: flex !important;
+        width: 100% !important;
+        gap: 6px !important;
+      }
+      .hand-actions .btn {
+        flex: 1 !important;
+      }
+      .btn {
+        min-height: 42px;
+        padding: 8px 12px;
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      body {
+        padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      }
+      header.topbar {
+        padding-bottom: 6px;
+        margin-bottom: 8px;
+      }
+      .brand h1 {
+        font-size: 1.25rem;
+      }
+      .trick-arena {
+        padding: 10px 12px;
+        min-height: 86px;
+        margin-bottom: 10px;
+      }
+      .players-grid {
+        grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
+        gap: 6px !important;
+        margin-bottom: 10px !important;
+      }
+      .player-card {
+        padding: 6px 8px !important;
+        gap: 4px !important;
+      }
+      .hand-panel {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+      }
+      .hand-row {
+        gap: 10px 4px;
+        padding: 10px 2px 4px;
+      }
+      .hand-row .card {
+        width: 46px;
+        height: 66px;
+        padding: 4px 5px;
+      }
+      .hand-row .card .c-top { font-size: 0.8rem; }
+      .hand-row .card .c-suit { font-size: 1.2rem; }
+      .hand-actions {
+        flex-direction: row !important;
+        padding-top: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <a href="/" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-secondary);text-decoration:none;border:1px solid var(--border);padding:2px 8px;border-radius:4px;">← Lounge</a>
+      <h1>ไพ่สลาฟ</h1>
+      <span class="subtitle">Slave Card Game · 3–6 Players</span>
+    </div>
+    <div class="topbar-meta" id="topbarMeta">
+      <span class="badge">Connecting...</span>
+    </div>
+  </header>
+
+  <!-- ANNOUNCEMENT -->
+  <div id="announcementRow"></div>
+
+  <!-- MAIN WORKSPACE -->
+  <main id="mainContainer"></main>
+
+  <!-- MODALS -->
+  <div id="modalContainer"></div>
+
+  <script>
+    const RANKS = ['3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A', '2'];
+    const SUITS = ['c', 'd', 'h', 's'];
+    const SUIT_SYMBOLS = { c: '♣', d: '♦', h: '♥', s: '♠' };
+    const RANK_LABELS = {
+      '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
+      'T': '10', 'J': 'J', 'Q': 'Q', 'K': 'K', 'A': 'A', '2': '2'
+    };
+    const ROLE_LABELS = {
+      KING: '👑 KING (คิง)',
+      QUEEN: '👸 QUEEN (ควีน)',
+      CITIZEN: '🧑 CITIZEN (ประชาชน)',
+      VICE_SLAVE: '🦹 VICE-SLAVE (รองสลาฟ)',
+      SLAVE_VICE: '🦹 VICE-SLAVE (รองสลาฟ)',
+      SLAVE: '⛓️ SLAVE (สลาฟ)'
+    };
+    const ROLE_CLASSES = {
+      KING: 'role-king',
+      QUEEN: 'role-queen',
+      CITIZEN: 'role-citizen',
+      VICE_SLAVE: 'role-vice-slave',
+      SLAVE_VICE: 'role-vice-slave',
+      SLAVE: 'role-slave'
+    };
+
+    let sessionToken = localStorage.getItem('slave_player_token');
+    if (!sessionToken) {
+      sessionToken = 'p_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('slave_player_token', sessionToken);
+    }
+    let savedName = localStorage.getItem('slave_player_name') || '';
+
+    let ws = null;
+    let gameState = null;
+    let selectedCards = [];
+    let tributeSelectedCards = [];
+    let showRulesModal = false;
+    let showGuidance = localStorage.getItem('slave_show_guidance') === 'true'; // Default: false (OFF)
+
+    function toggleGuidance() {
+      showGuidance = !showGuidance;
+      localStorage.setItem('slave_show_guidance', String(showGuidance));
+      renderAll();
+    }
+
+    function cleanName(name) {
+      if (!name) return 'ผู้เล่น';
+      return String(name).replace(/\s*\(คุณ\)/g, '').trim();
+    }
+
+    function getTrickBeatHint(trick) {
+      if (!trick) return '';
+      const r = trick.rank;
+      const rankLabel = RANK_LABELS[r] || r;
+      if (trick.type === 'SINGLE') {
+        if (r === '2') {
+          return '💡 ไพ่ 2 ใหญ่สุดแล้ว — สู้ได้ด้วย <strong>ตองปาดเดี่ยว (3 ใบ)</strong> เท่านั้น!';
+        }
+        return `💡 สู้ด้วย: ไพ่เดี่ยวที่แต้มสูงกว่า <strong>${rankLabel}</strong> (หรือแต้มเท่าแต่ดอกใหญ่กว่า) หรือ <strong>ตองปาดเดี่ยว</strong>`;
+      }
+      if (trick.type === 'PAIR') {
+        if (r === '2') {
+          return '💡 คู่ 2 ใหญ่สุดแล้ว — สู้ได้ด้วย <strong>โฟร์ปาดคู่ (4 ใบ)</strong> เท่านั้น!';
+        }
+        return `💡 สู้ด้วย: ไพ่คู่ที่แต้มสูงกว่าคู่ <strong>${rankLabel}</strong> หรือ <strong>โฟร์ปาดคู่</strong>`;
+      }
+      if (trick.type === 'TRIPLE') {
+        return `💡 สู้ด้วย: ตองที่แต้มสูงกว่าตอง <strong>${rankLabel}</strong> เท่านั้น`;
+      }
+      if (trick.type === 'FOUR_OF_A_KIND') {
+        return `💡 สู้ด้วย: โฟร์ที่แต้มสูงกว่าโฟร์ <strong>${rankLabel}</strong> เท่านั้น`;
+      }
+      return '';
+    }
+
+    function getCardScore(card) {
+      if (!card || card.length < 2) return -1;
+      const r = card[0];
+      const s = card[1];
+      const rIdx = RANKS.indexOf(r);
+      const sIdx = SUITS.indexOf(s);
+      return rIdx * 4 + sIdx;
+    }
+
+    function sortCards(cards) {
+      return [...cards].sort((a, b) => getCardScore(a) - getCardScore(b));
+    }
+
+    function formatCardHtml(c, isHand = false, isSelected = false) {
+      if (!c || c === '??') {
+        return `<div class="card" style="background:#EAE6DC;border-style:dashed;color:var(--text-muted);align-items:center;justify-content:center;font-size:12px;">??</div>`;
+      }
+      const r = c[0];
+      const s = c[1];
+      const isRed = s === 'h' || s === 'd';
+      const label = RANK_LABELS[r] || r;
+      const symbol = SUIT_SYMBOLS[s] || s;
+
+      const cls = `card ${isRed ? 'red' : 'black'} ${isHand ? 'hand-card' : ''} ${isSelected ? 'selected' : ''}`;
+      const clickAttr = isHand ? `onclick="toggleSelectCard('${c}')"` : '';
+
+      return `
+        <div class="${cls}" ${clickAttr} title="${label}${symbol}">
+          <div class="c-top">${label}</div>
+          <div class="c-suit">${symbol}</div>
+          <div class="c-bot">${symbol}</div>
+        </div>
+      `;
+    }
+
+    function playTurnChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.45);
+      } catch (e) {}
+    }
+
+    function connectWebSocket() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // If mounted on /slave in tabletop-hub, connect to /slave/ws, otherwise connect to root ws
+      const wsPath = location.pathname.startsWith('/slave') ? '/slave/ws' : '';
+      ws = new WebSocket(`${proto}//${location.host}${wsPath}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'AUTH',
+          token: sessionToken,
+          name: savedName
+        }));
+      };
+
+      let prevTurn = null;
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'STATE') {
+          gameState = msg.state;
+          const me = gameState.players.find(p => p.id === gameState.youId);
+          if (me) {
+            savedName = cleanName(me.name);
+            localStorage.setItem('slave_player_name', savedName);
+          }
+          if (gameState.turnPlayerId === gameState.youId && prevTurn !== gameState.youId) {
+            playTurnChime();
+          }
+          prevTurn = gameState.turnPlayerId;
+          renderAll();
+        }
+      };
+
+      ws.onclose = () => setTimeout(connectWebSocket, 1500);
+    }
+
+    function sendAction(type, payload = {}) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type, ...payload }));
+      }
+    }
+
+    function toggleSelectCard(c) {
+      if (gameState && gameState.stage === 'TRIBUTE') {
+        const me = gameState.players.find(p => p.id === gameState.youId);
+        const myPending = gameState.tributeState?.exchanges.find(ex => ex.toId === me?.id && ex.status === 'WAITING_RETURN');
+        const maxCards = myPending ? myPending.cardCount : 1;
+
+        if (tributeSelectedCards.includes(c)) {
+          tributeSelectedCards = tributeSelectedCards.filter(item => item !== c);
+        } else {
+          if (maxCards === 1) {
+            tributeSelectedCards = [c];
+          } else if (tributeSelectedCards.length >= maxCards) {
+            tributeSelectedCards = [...tributeSelectedCards.slice(1), c];
+          } else {
+            tributeSelectedCards.push(c);
+          }
+        }
+      } else {
+        if (selectedCards.includes(c)) {
+          selectedCards = selectedCards.filter(item => item !== c);
+        } else {
+          selectedCards.push(c);
+        }
+      }
+      renderAll();
+    }
+
+    function clearSelectedCards() {
+      selectedCards = [];
+      renderAll();
+    }
+
+    function renderAll() {
+      if (!gameState) return;
+      renderTopbar();
+      renderAnnouncement();
+      renderMain();
+      renderModal();
+    }
+
+    function renderTopbar() {
+      const meta = document.getElementById('topbarMeta');
+      const stageLabels = {
+        LOBBY: 'LOBBY (ห้องพัก)',
+        TRIBUTE: `ROUND ${gameState.roundNumber} · ส่วยบรรณาการ`,
+        PLAYING: `ROUND ${gameState.roundNumber}`,
+        ROUND_OVER: `ROUND ${gameState.roundNumber} จบรอบ`
+      };
+      const isLobby = gameState.stage === 'LOBBY';
+      meta.innerHTML = `
+        <button class="btn btn-sm" onclick="showRulesModal = true; renderModal();">📜 กติกาไพ่สลาฟ</button>
+        <button class="btn btn-sm ${showGuidance ? 'btn-accent' : ''}" onclick="toggleGuidance()" title="เปิด/ปิด แถบคำแนะนำการสู้ไพ่กลางโต๊ะ">
+          💡 คำแนะนำ: ${showGuidance ? 'เปิด' : 'ปิด'}
+        </button>
+        <span class="badge stage-active">${stageLabels[gameState.stage] || gameState.stage}</span>
+        ${isLobby ? '' : `
+          <button class="btn btn-sm" onclick="sendAction('RETURN_LOBBY')">Lobby</button>
+          <button class="btn btn-sm" onclick="sendAction('START_MATCH')">Reset Match</button>
+        `}
+      `;
+    }
+
+    function renderAnnouncement() {
+      const row = document.getElementById('announcementRow');
+      if (!gameState.roundAnnouncement) {
+        row.innerHTML = '';
+        return;
+      }
+      const isRevo = gameState.roundAnnouncement.includes('ล้มเจ้า');
+      row.innerHTML = `
+        <div class="announcement-banner ${isRevo ? 'revolution' : ''}">
+          <span>${gameState.roundAnnouncement}</span>
+        </div>
+      `;
+    }
+
+    function renderMain() {
+      const main = document.getElementById('mainContainer');
+
+      // LOBBY VIEW
+      if (gameState.stage === 'LOBBY') {
+        const me = gameState.players.find(p => p.id === gameState.youId);
+        const canStart = gameState.players.length >= gameState.minPlayers && gameState.players.length <= gameState.maxPlayers;
+
+        main.innerHTML = `
+          <div class="lobby-card">
+            <div>
+              <h2 style="font-family:var(--font-serif);font-size:24px;font-weight:600;">ห้องรวมก๊วนสลาฟ (3–6 คน)</h2>
+              <p style="color:var(--text-secondary);font-size:14px;margin-top:4px;">
+                ส่งลิงก์นี้ให้เพื่อนเข้ามาร่วมวงได้ทันที เล่นผ่านเบราว์เซอร์ ไม่ต้องโหลดแอป!
+              </p>
+            </div>
+
+            <div class="input-row">
+              <input id="nameInput" class="text-input" type="text" maxlength="22" placeholder="ชื่อ / ฉายาของคุณ" value="${escapeHtml(me ? cleanName(me.name) : cleanName(savedName))}" />
+              <button class="btn" onclick="updateName()">เปลี่ยนชื่อ</button>
+            </div>
+
+            <div class="players-grid">
+              ${gameState.players.map(p => `
+                <div class="player-card ${p.id === gameState.youId ? 'me' : ''}">
+                  <div class="player-header">
+                    <div>
+                      <span class="player-name">${escapeHtml(cleanName(p.name))}</span>
+                      ${p.id === gameState.youId ? '<span class="badge stage-active" style="margin-left:4px;font-size:10px;padding:2px 6px;">YOU</span>' : `<button class="kick-btn" onclick="sendAction('KICK', { targetPlayerId: '${p.id}' })">✕ kick</button>`}
+                    </div>
+                    <span class="badge">${p.connected ? 'ONLINE' : 'OFFLINE'}</span>
+                  </div>
+                  <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+                    ที่นั่ง #${p.seat}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid var(--border);padding-top:12px;">
+              <span style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);">
+                ผู้เล่นในห้อง: ${gameState.players.length} / ${gameState.maxPlayers} คน (อย่างน้อย 3 คนเพื่อเริ่มเกม)
+              </span>
+              <button class="btn btn-primary" ${canStart ? '' : 'disabled'} onclick="sendAction('START_MATCH')">
+                เริ่มศึกสลาฟ (${gameState.players.length} คน) →
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // ACTIVE GAME / PLAYING / TRIBUTE
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      const isMyTurn = gameState.turnPlayerId === gameState.youId && gameState.stage === 'PLAYING';
+
+      // Center Board (Current Trick)
+      const trick = gameState.currentTrick;
+      let trickContent = '';
+      if (trick) {
+        const hint = getTrickBeatHint(trick);
+        const activeInRound = gameState.players.filter(p => !p.finishRank);
+        const passedCount = activeInRound.filter(p => p.hasPassed).length;
+        const totalOpponents = Math.max(1, activeInRound.length - 1);
+
+        trickContent = `
+          <div class="trick-cards-row">
+            ${trick.cards.map(c => formatCardHtml(c)).join('')}
+          </div>
+          <div class="trick-meta-row">
+            <div class="trick-played-by">
+              ลงโดย: <strong>${escapeHtml(cleanName(trick.playedByName))}</strong>
+              <span class="badge stage-active" style="margin-left:6px;">${trick.type}</span>
+            </div>
+            ${(showGuidance && hint) ? `
+              <div class="trick-hint-badge">
+                <span>${hint}</span>
+              </div>
+            ` : ''}
+            <div class="trick-pass-status">
+              <span class="badge" style="font-size:11px;">ผ่านแล้ว ${passedCount} / ${totalOpponents} คน ${passedCount >= totalOpponents ? '(ทุกคนผ่านแล้ว วงพร้อมล้าง)' : ''}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        const leader = gameState.players.find(p => p.id === gameState.turnPlayerId);
+        const leaderName = leader ? cleanName(leader.name) : 'ผู้เล่น';
+        trickContent = `
+          <div class="trick-empty">
+            วงว่างเปล่า — รอ ${escapeHtml(leaderName)} เปิดไพ่ชุดใหม่
+          </div>
+          ${showGuidance ? `
+            <div style="font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);margin-top:4px;text-align:center;">
+              💡 คนเปิดวงสามารถเลือกลงไพ่ <strong>เดี่ยว (1 ใบ), คู่ (2 ใบ), ตอง (3 ใบ), หรือ โฟร์ (4 ใบ)</strong> ได้อิสระ
+            </div>
+          ` : ''}
+        `;
+      }
+
+      const centerBoardHtml = `
+        <div class="center-board">
+          <div class="board-header">
+            <span class="board-title">กองไพ่ตรงกลาง (Active Trick)</span>
+            <span class="badge">${trick ? `ไพ่ล่าสุด` : `ล้างวงแล้ว`}</span>
+          </div>
+          ${trickContent}
+        </div>
+      `;
+
+      // Players Grid
+      const playersGridHtml = `
+        <div class="players-grid">
+          ${gameState.players.map(p => {
+            const isTurn = p.id === gameState.turnPlayerId && gameState.stage === 'PLAYING';
+            const roleLabel = p.role ? ROLE_LABELS[p.role] : 'ยังไม่มีตำแหน่ง';
+            const roleClass = p.role ? ROLE_CLASSES[p.role] : '';
+
+            let statusBadge = '';
+            if (p.finishRank) {
+              statusBadge = `<span class="badge" style="border-color:var(--success);color:var(--success);font-weight:700;">✓ จบอันดับ ${p.finishRank}</span>`;
+            } else if (p.hasPassed) {
+              statusBadge = `<span class="badge">ผ่านแล้ว (Pass)</span>`;
+            } else if (isTurn) {
+              statusBadge = `<span class="badge stage-active">กำลังคิด...</span>`;
+            }
+
+            return `
+              <div class="player-card ${isTurn ? 'active-turn' : ''} ${p.hasPassed ? 'passed' : ''} ${p.finishRank ? 'finished' : ''} ${p.id === gameState.youId ? 'me' : ''}">
+                <div class="player-header">
+                  <div>
+                    <span class="player-name">${escapeHtml(cleanName(p.name))}</span>
+                    ${p.id === gameState.youId ? '<span class="badge stage-active" style="font-size:10px;margin-left:4px;padding:2px 6px;">YOU</span>' : `<button class="kick-btn" onclick="sendAction('KICK', { targetPlayerId: '${p.id}' })">✕ kick</button>`}
+                  </div>
+                  <span class="badge" style="font-size:11px;">#${p.seat}</span>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                  <span class="role-tag ${roleClass}">${roleLabel}</span>
+                  <span style="font-family:var(--font-mono);font-size:12px;font-weight:600;">
+                    ${p.finishRank ? 'หมดมือ' : `${p.cardCount} ใบ`}
+                  </span>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+                  ${statusBadge}
+                  ${p.isOverthrown ? '<span class="badge" style="border-color:var(--danger);color:var(--danger);">💥 โดนล้มเจ้า</span>' : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      // Active Player Hand Panel
+      let handHtml = '';
+      if (me) {
+        const myCards = me.hand.filter(c => typeof c === 'string' && c !== '??');
+        const canPass = isMyTurn && Boolean(gameState.currentTrick);
+        const cleanMyName = cleanName(me.name);
+
+        handHtml = `
+          <div class="hand-panel">
+            <div class="hand-header">
+              <span class="hand-title">ไพ่ในมือของคุณ (${escapeHtml(cleanMyName)}) — ${myCards.length} ใบ</span>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+                ${me.finishRank ? 'คุณทิ้งไพ่หมดมือแล้ว!' : (isMyTurn ? 'ตาของคุณแล้ว! เลือกไพ่แล้วกดลง' : 'รอผู้เล่นคนอื่น...')}
+              </span>
+            </div>
+
+            <div class="hand-row">
+              ${myCards.map(c => formatCardHtml(c, true, selectedCards.includes(c))).join('')}
+            </div>
+
+            <div class="hand-actions">
+              <div style="font-family:var(--font-mono);font-size:13px;">
+                ${selectedCards.length > 0 ? `เลือกไว้: ${selectedCards.map(c => (RANK_LABELS[c[0]]||c[0]) + (SUIT_SYMBOLS[c[1]]||c[1])).join(' ')}` : 'คลิกที่ไพ่เพื่อเลือก (เดี่ยว, คู่, ตอง, โฟร์)'}
+              </div>
+
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-sm" onclick="clearSelectedCards()" ${selectedCards.length > 0 ? '' : 'disabled'}>
+                  ยกเลิกเลือก
+                </button>
+                <button class="btn btn-sm" onclick="sendAction('PASS')" ${canPass ? '' : 'disabled'} title="${!gameState.currentTrick ? 'ต้องเปิดไพ่ใบแรกของวง (ไม่สามารถผ่านได้)' : (!isMyTurn ? 'รอถึงตาของคุณ' : 'ผ่านรอบนี้')}">
+                  ผ่าน (Pass)
+                </button>
+                <button class="btn btn-primary" onclick="confirmPlayCards()" ${isMyTurn && selectedCards.length > 0 ? '' : 'disabled'}>
+                  ลงไพ่ (${selectedCards.length} ใบ) →
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      main.innerHTML = centerBoardHtml + playersGridHtml + handHtml;
+    }
+
+    function confirmPlayCards() {
+      if (selectedCards.length === 0) return;
+      sendAction('PLAY_CARDS', { cards: selectedCards });
+      selectedCards = [];
+    }
+
+    function renderModal() {
+      const container = document.getElementById('modalContainer');
+
+      // Rules Modal
+      if (showRulesModal) {
+        container.innerHTML = `
+          <div class="modal-backdrop" onclick="showRulesModal = false; renderModal();">
+            <div class="modal-card" onclick="event.stopPropagation()">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <h3 class="modal-title">กติกาไพ่สลาฟ (Slave Rules)</h3>
+                  <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">
+                    ลำดับศักดิ์และการเอาชนะประจำวงสลาฟ
+                  </div>
+                </div>
+                <button class="btn btn-sm" onclick="showRulesModal = false; renderModal();">✕</button>
+              </div>
+
+              <div class="rules-nav-pills">
+                <button class="rule-pill" onclick="document.getElementById('rule-sec-1').scrollIntoView({behavior:'smooth'})">1. ลำดับแต้ม & ดอก</button>
+                <button class="rule-pill" onclick="document.getElementById('rule-sec-2').scrollIntoView({behavior:'smooth'})">2. การปาดไพ่</button>
+                <button class="rule-pill" onclick="document.getElementById('rule-sec-3').scrollIntoView({behavior:'smooth'})">3. การผ่าน</button>
+                <button class="rule-pill" onclick="document.getElementById('rule-sec-4').scrollIntoView({behavior:'smooth'})">4. ส่วยบรรณาการ</button>
+                <button class="rule-pill" onclick="document.getElementById('rule-sec-5').scrollIntoView({behavior:'smooth'})">5. กฎล้มเจ้า</button>
+              </div>
+
+              <div style="font-size:14px;line-height:1.6;display:flex;flex-direction:column;gap:14px;max-height:60vh;overflow-y:auto;padding-right:4px;">
+                <div id="rule-sec-1">
+                  <strong>1. ลำดับความใหญ่ของไพ่:</strong><br>
+                  • แต้ม: <code>3 &lt; 4 &lt; 5 &lt; ... &lt; K &lt; A &lt; 2</code> (3 เล็กสุด, 2 ใหญ่สุด)<br>
+                  • ดอก: <code>♣ (จิก) &lt; ♦ (หลาม) &lt; ♥ (โพแดง) &lt; ♠ (โพดำ)</code><br>
+                  • ไพ่ใหญ่สุดในเกมคือ <strong>2♠</strong> และเล็กสุดคือ <strong>3♣</strong>
+                </div>
+
+                <div id="rule-sec-2">
+                  <strong>2. การปาดไพ่พิเศษ:</strong><br>
+                  • <strong>ตองปาดเดี่ยว:</strong> ไพ่ตอง 3 ใบ สามารถใช้ปาดไพ่เดี่ยว 1 ใบได้ทุกชนิด!<br>
+                  • <strong>โฟร์ปาดคู่:</strong> ไพ่โฟร์ 4 ใบ สามารถใช้ปาดไพ่คู่ 2 ใบได้ทุกชนิด!
+                </div>
+
+                <div id="rule-sec-3">
+                  <strong>3. การผ่าน (Hard Pass):</strong><br>
+                  • เมื่อกด "ผ่าน" จะถูกล็อกห้ามลงในกองนั้น จนกว่าทุกคนจะผ่านหมดและเริ่มล้างวงใหม่
+                </div>
+
+                <div id="rule-sec-4">
+                  <strong>4. การแลกไพ่ (ส่วยบรรณาการ):</strong><br>
+                  • <strong>Slave ↔ King:</strong> Slave ส่งไพ่ใหญ่สุดให้ King 2 ใบ (หรือ 1 ใบสำหรับ 3 คน) ส่วน King ส่งไพ่ใบไหนกลับไปก็ได้<br>
+                  • <strong>Vice-Slave ↔ Queen:</strong> Vice-Slave ส่งไพ่ใหญ่สุดให้ Queen 1 ใบ ส่วน Queen ส่งใบไหนกลับไปก็ได้<br>
+                  • เมื่อแลกเสร็จ <strong>Slave</strong> จะได้เป็นคนเปิดเกมคนแรก
+                </div>
+
+                <div id="rule-sec-5">
+                  <strong>5. กฎล้มเจ้า (สำคัญมาก!):</strong><br>
+                  • หาก King ไม่สามารถเข้าที่ 1 ได้ แล้วมีคนอื่น (Queen, Citizen, หรือ Slave) เข้าที่ 1 แทน... คนนั้นจะได้เป็น King ใหม่ทันที ส่วน King เดิมจะ <strong>"ล้มเจ้า" ร่วงลงไปเป็น Slave อัตโนมัติ!</strong>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px;">
+                <button class="btn btn-primary" onclick="showRulesModal = false; renderModal();">เข้าใจแล้ว</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Tribute Phase Modal (Round 2+)
+      if (gameState && gameState.stage === 'TRIBUTE' && gameState.tributeState) {
+        const me = gameState.players.find(p => p.id === gameState.youId);
+        const exchanges = gameState.tributeState.exchanges;
+
+        // Check if I need to return cards (King or Queen)
+        const myPendingReturn = me ? exchanges.find(ex => ex.toId === me.id && ex.status === 'WAITING_RETURN') : null;
+
+        container.innerHTML = `
+          <div class="modal-backdrop">
+            <div class="modal-card">
+              <div class="badge stage-active" style="align-self:flex-start;">TRIBUTE CEREMONY · ธรรมเนียมส่งส่วย</div>
+              <h3 class="modal-title">ส่งมอบเครื่องบรรณาการ (Round ${gameState.roundNumber})</h3>
+
+              <div class="podium-list">
+                ${exchanges.map(ex => `
+                  <div class="podium-item">
+                    <div>
+                      <strong>${escapeHtml(cleanName(ex.fromName))}</strong> (${ex.fromRole})
+                      → ส่ง ${ex.cardCount} ใบใหญ่สุดให้ →
+                      <strong>${escapeHtml(cleanName(ex.toName))}</strong> (${ex.toRole})
+                    </div>
+                    <span class="badge ${ex.status === 'CONFIRMED' ? 'stage-active' : ''}">
+                      ${ex.status === 'CONFIRMED' ? '✓ แลกเสร็จแล้ว' : 'รอส่งไพ่กลับ'}
+                    </span>
+                  </div>
+                `).join('')}
+              </div>
+
+              ${myPendingReturn ? `
+                <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px;">
+                  <div style="font-weight:600;font-size:14px;">
+                    คุณคือ ${myPendingReturn.toRole} (${escapeHtml(cleanName(me.name))}): เลือกไพ่ ${myPendingReturn.cardCount} ใบเพื่อส่งคืนให้ ${escapeHtml(cleanName(myPendingReturn.fromName))}
+                  </div>
+                  <div class="hand-row">
+                    ${me.hand.map(c => formatCardHtml(c, true, tributeSelectedCards.includes(c))).join('')}
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-family:var(--font-mono);font-size:12px;">เลือกไว้: ${tributeSelectedCards.length} / ${myPendingReturn.cardCount} ใบ</span>
+                    <button class="btn btn-accent" ${tributeSelectedCards.length === myPendingReturn.cardCount ? '' : 'disabled'} onclick="confirmTributeReturn('${myPendingReturn.id}')">
+                      ยืนยันส่งไพ่กลับ →
+                    </button>
+                  </div>
+                </div>
+              ` : `
+                <div style="text-align:center;padding:12px;color:var(--text-secondary);font-size:13px;">
+                  กำลังรอ King และ Queen เลือกไพ่ส่งกลับ...
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Round Over Modal
+      if (gameState && gameState.stage === 'ROUND_OVER') {
+        container.innerHTML = `
+          <div class="modal-backdrop">
+            <div class="modal-card">
+              <div class="badge stage-active" style="align-self:flex-start;">ROUND OVER · จบการแข่งขัน</div>
+              <h3 class="modal-title">สรุปอันดับรอบที่ ${gameState.roundNumber}</h3>
+
+              <div class="podium-list">
+                ${gameState.players.map((p, idx) => `
+                  <div class="podium-item">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span style="font-family:var(--font-mono);font-weight:700;font-size:16px;">#${p.finishRank || (idx+1)}</span>
+                      <div>
+                        <strong>${escapeHtml(cleanName(p.name))}</strong>
+                        ${p.id === gameState.youId ? '<span class="badge stage-active" style="font-size:10px;margin-left:4px;padding:2px 6px;">YOU</span>' : ''}
+                        <div style="font-size:12px;color:var(--text-secondary);">${p.isOverthrown ? '💥 โดนล้มเจ้าร่วงสู่ Slave!' : ''}</div>
+                      </div>
+                    </div>
+                    <span class="role-tag ${ROLE_CLASSES[p.role]}">${ROLE_LABELS[p.role]}</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:14px;">
+                <button class="btn" onclick="sendAction('RETURN_LOBBY')">กลับห้องพัก (Lobby)</button>
+                <button class="btn btn-primary" onclick="sendAction('NEXT_ROUND')">เริ่มตาต่อไป (แลกส่วย) →</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+    }
+
+    function confirmTributeReturn(exId) {
+      if (!tributeSelectedCards || tributeSelectedCards.length === 0) return;
+      sendAction('RETURN_TRIBUTE', { exchangeId: exId, returnCards: [...tributeSelectedCards] });
+      tributeSelectedCards = [];
+      renderModal();
+    }
+    window.confirmTributeReturn = confirmTributeReturn;
+    window.toggleSelectCard = toggleSelectCard;
+    window.confirmPlayCards = confirmPlayCards;
+    window.clearSelectedCards = clearSelectedCards;
+    window.sendAction = sendAction;
+
+    window.updateName = function() {
+      const input = document.getElementById('nameInput');
+      if (!input) return;
+      const val = input.value.trim();
+      if (val) {
+        savedName = val;
+        localStorage.setItem('slave_player_name', val);
+        sendAction('SET_NAME', { name: val });
+      }
+    };
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    connectWebSocket();
+  </script>
+</body>
+</html>
