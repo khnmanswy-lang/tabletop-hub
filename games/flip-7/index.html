@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Flip 7 — Press-Your-Luck Editorial Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #FAF9F5;
+      --bg-secondary: #F4F1EA;
+      --bg-surface: #FFFFFF;
+      --text-primary: #141413;
+      --text-secondary: #666560;
+      --text-muted: #8E8C84;
+      --accent: #D97757;
+      --accent-hover: #C26141;
+      --accent-soft: rgba(217, 119, 87, 0.12);
+      --border: #E5E2DC;
+      --border-strong: #CECAC0;
+      --sage: #2E6B4E;
+      --sage-soft: rgba(46, 107, 78, 0.11);
+      --crimson: #9E3333;
+      --crimson-soft: rgba(158, 51, 51, 0.10);
+      --gold: #9A6B26;
+      --gold-soft: rgba(154, 107, 38, 0.12);
+      --shadow-sm: 0 1px 2px rgba(20, 20, 19, 0.04), 0 2px 6px rgba(20, 20, 19, 0.03);
+      --shadow-md: 0 4px 12px rgba(20, 20, 19, 0.06), 0 1px 3px rgba(20, 20, 19, 0.04);
+      --shadow-lg: 0 12px 32px rgba(20, 20, 19, 0.10), 0 2px 6px rgba(20, 20, 19, 0.05);
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand h1 {
+      font-family: var(--font-serif);
+      font-weight: 600;
+      font-size: 23px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand .subtitle {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge.accent {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+    }
+
+    .badge.sage {
+      background: var(--sage-soft);
+      border-color: var(--sage);
+      color: var(--sage);
+    }
+
+    .badge.crimson {
+      background: var(--crimson-soft);
+      border-color: var(--crimson);
+      color: var(--crimson);
+    }
+
+    .badge.gold {
+      background: var(--gold-soft);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* BUTTONS */
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.14s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #FFFFFF;
+    }
+
+    .btn-sage {
+      background: var(--sage);
+      border-color: var(--sage);
+      color: #FFFFFF;
+    }
+
+    .btn-sage:hover:not(:disabled) {
+      filter: brightness(0.92);
+      color: #FFFFFF;
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+
+    .kick-btn {
+      background: rgba(185, 56, 41, 0.06);
+      border: 1px solid rgba(185, 56, 41, 0.22);
+      color: var(--crimson);
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.12s ease;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .kick-btn:hover {
+      background: var(--crimson);
+      color: #FFFFFF;
+      border-color: var(--crimson);
+      box-shadow: 0 1px 4px rgba(185, 56, 41, 0.25);
+    }
+
+    .rules-nav-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rule-pill {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .rule-pill:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* WORKSPACE */
+    .workspace {
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 18px 24px 36px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+    }
+
+    .main-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 1-LINE ANNOUNCEMENT BANNER */
+    .announcement-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    .announcement-banner.bust {
+      border-left-color: var(--crimson);
+      background: #FFF7F6;
+    }
+    .announcement-banner.flip7 {
+      border-left-color: var(--gold);
+      background: #FEFAF2;
+      font-weight: 600;
+    }
+
+    /* ACTION CONSOLE BANNER */
+    .console-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .console-banner.my-turn {
+      background: #FFFDFB;
+      border-color: var(--accent);
+      border-left-width: 4px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .console-title {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .console-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* PLAYER TABLEAU ROWS */
+    .players-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .player-board {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.15s ease;
+    }
+
+    .player-board.active-turn {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+    }
+
+    .player-board.busted {
+      background: var(--bg-secondary);
+      opacity: 0.72;
+    }
+
+    .player-board.stayed {
+      border-left: 3px solid var(--sage);
+    }
+
+    .board-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .player-id-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .player-name {
+      font-family: var(--font-serif);
+      font-size: 19px;
+      font-weight: 500;
+    }
+
+    .score-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-family: var(--font-mono);
+    }
+
+    .round-pts {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .total-pts {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border-strong);
+    }
+
+    /* PROGRESS BAR TO 200 PTS */
+    .score-bar-track {
+      height: 5px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.25s ease;
+    }
+
+    /* TABLEAU AREA */
+    .tableau-area {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modifiers-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 28px;
+    }
+
+    .numbers-row {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    @media (max-width: 680px) {
+      header.topbar {
+        padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+        height: auto;
+        min-height: 50px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .workspace {
+        padding: 12px max(10px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        gap: 14px;
+      }
+      .numbers-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .num-slot {
+        height: 64px;
+      }
+      .num-slot .card-big-num {
+        font-size: 22px;
+      }
+      .console-banner {
+        padding: 12px 14px;
+      }
+      .player-board {
+        padding: 12px 14px;
+      }
+      .modal-card {
+        padding: 16px;
+        max-height: 90dvh;
+        overflow-y: auto;
+      }
+      .btn {
+        min-height: 42px;
+        padding: 8px 12px;
+      }
+    }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      header.topbar {
+        padding: max(6px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));
+        height: auto;
+        min-height: 42px;
+      }
+      .workspace {
+        padding: 8px max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+        gap: 10px;
+      }
+      .console-banner {
+        padding: 10px 14px;
+      }
+      .console-title {
+        font-size: 16px;
+      }
+      .player-board {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .numbers-row {
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+        gap: 5px;
+      }
+      .num-slot {
+        height: 54px;
+      }
+      .num-slot .card-big-num {
+        font-size: 20px;
+      }
+      .modal-card {
+        padding: 14px;
+        max-height: 92dvh;
+        overflow-y: auto;
+      }
+    }
+
+    .num-slot {
+      height: 76px;
+      border-radius: 5px;
+      border: 1px dashed var(--border-strong);
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .num-slot.filled {
+      border-style: solid;
+      border-color: var(--text-primary);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .num-slot.duplicate-bust {
+      border-color: var(--crimson);
+      background: var(--crimson-soft);
+    }
+
+    .num-slot .slot-index {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .num-slot .card-big-num {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .num-slot .card-freq {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    .mod-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--gold-soft);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+    }
+
+    .shield-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--sage-soft);
+      border: 1px solid var(--sage);
+      color: var(--sage);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .side-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .side-box-title {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .shoe-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .shoe-cell {
+      padding: 6px 4px;
+      border-radius: 4px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: var(--font-mono);
+    }
+
+    .shoe-cell.danger {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .shoe-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .shoe-rem {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 20, 19, 0.48);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 60;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      max-width: 520px;
+      width: 100%;
+      padding: 22px 24px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-title {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 500;
+    }
+
+    .target-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .target-btn {
+      padding: 11px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      transition: all 0.12s ease;
+    }
+
+    .target-btn:hover {
+      border-color: var(--accent);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lobby-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .text-input {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-width: 220px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <a href="/" id="loungeLink" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-secondary);text-decoration:none;border:1px solid var(--border);padding:2px 8px;border-radius:4px;display:none;">← Lounge</a>
+      <h1>Flip 7</h1>
+      <span class="subtitle">94-Card Press-Your-Luck · 3–6 Players · 200 Pts</span>
+    </div>
+    <div class="topbar-meta" id="topbarMeta">
+      <span class="badge">Connecting...</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="main-column" id="mainColumn"></section>
+
+    <aside class="sidebar">
+      <div class="side-box">
+        <div class="side-box-title">
+          <span>Live Draw Shoe Tracker</span>
+          <span class="badge" id="shoeCountBadge">94 Cards</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-secondary);">
+          Highlighted numbers match cards currently in your tableau (would trigger a duplicate Bust if flipped).
+        </div>
+        <div class="shoe-grid" id="shoeGrid"></div>
+        <div id="shoeExtra" style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);padding-top:4px;"></div>
+      </div>
+
+      <div class="side-box">
+        <div class="side-box-title">
+          <span>Card Counts & Scoring</span>
+          <span class="badge">Official</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);display:flex;flex-direction:column;gap:6px;">
+          <div><strong>• Number Cards (0–12):</strong> Frequency equals value (one 1, two 2s ... twelve 12s, plus one 0).</div>
+          <div><strong>• Flip 7 Bonus (+15 pts):</strong> Collect 7 unique numbers to immediately end the round with +15 bonus pts.</div>
+          <div><strong>• ×2 Modifier:</strong> Doubles the sum of your Number cards only.</div>
+          <div><strong>• Second Chance:</strong> Automatically cancels 1 duplicate bust.</div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="modalContainer"></div>
+
+  <script>
+    // Detect if inside Tabletop Hub to show ← Lounge link
+    if (location.pathname.startsWith('/flip-7')) {
+      document.getElementById('loungeLink').style.display = 'inline-block';
+    }
+
+    let sessionToken = localStorage.getItem('flip7_player_token');
+    if (!sessionToken) {
+      sessionToken = 'f7_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('flip7_player_token', sessionToken);
+    }
+
+    let savedName = localStorage.getItem('flip7_player_name') || '';
+    let ws = null;
+    let gameState = null;
+    let prevTurnId = null;
+    let showRulesModal = false;
+
+    function cleanName(name) {
+      if (!name) return 'Player';
+      return String(name).replace(/\s*(\(You\)|\(คุณ\))/gi, '').trim();
+    }
+
+    function playTurnChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.45);
+      } catch (e) {}
+    }
+
+    function connectWebSocket() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsPath = location.pathname.startsWith('/flip-7') ? '/flip-7/ws' : '';
+      ws = new WebSocket(`${proto}//${location.host}${wsPath}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'AUTH',
+          token: sessionToken,
+          name: savedName
+        }));
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'STATE') {
+          gameState = msg.state;
+          const me = gameState.players.find(p => p.id === gameState.youId);
+          if (me) {
+            savedName = me.name;
+            localStorage.setItem('flip7_player_name', savedName);
+          }
+          if (gameState.turnPlayerId === gameState.youId && prevTurnId !== gameState.youId) {
+            playTurnChime();
+          }
+          prevTurnId = gameState.turnPlayerId;
+          renderAll();
+        }
+      };
+
+      ws.onclose = () => setTimeout(connectWebSocket, 1500);
+    }
+
+    function sendAction(type, payload = {}) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type, ...payload }));
+      }
+    }
+
+    function renderAll() {
+      if (!gameState) return;
+      renderTopbar();
+      renderMainColumn();
+      renderShoeTracker();
+      renderModal();
+    }
+
+    function renderTopbar() {
+      const meta = document.getElementById('topbarMeta');
+      const dealer = gameState.players.find(p => p.id === gameState.dealerId);
+      const isLobby = gameState.stage === 'LOBBY';
+      meta.innerHTML = `
+        <button class="btn btn-sm" onclick="showRulesModal = true; renderModal();">📜 Rules</button>
+        <span class="badge accent">STAGE: ${gameState.stage}</span>
+        <span class="badge">ROUND: ${gameState.roundNumber}</span>
+        ${dealer ? `<span class="badge">DEALER: ${escapeHtml(cleanName(dealer.name))}</span>` : ''}
+        <span class="badge">DRAW SHOE: ${gameState.shoeStats?.totalDrawPile ?? gameState.deckCount ?? 0}</span>
+        <span class="badge gold">GOAL: ${gameState.winningScore} PTS</span>
+        ${isLobby ? '' : `
+          <button class="btn btn-sm" onclick="sendAction('RETURN_LOBBY')">Lobby</button>
+          <button class="btn btn-sm" onclick="sendAction('RESET_MATCH')">Reset Match</button>
+        `}
+      `;
+    }
+
+    function renderMainColumn() {
+      const col = document.getElementById('mainColumn');
+
+      if (gameState.stage === 'LOBBY') {
+        const me = gameState.players.find(p => p.id === gameState.youId);
+        const canStart = gameState.players.length >= gameState.minPlayers && gameState.players.length <= gameState.maxPlayers;
+
+        col.innerHTML = `
+          <div class="lobby-card">
+            <div>
+              <h2 style="font-family:var(--font-serif);font-size:24px;font-weight:500;">Flip 7 Table Lobby (${gameState.minPlayers}–${gameState.maxPlayers} Players)</h2>
+              <p style="color:var(--text-secondary);font-size:13px;margin-top:4px;">
+                Open this URL across multiple tabs or send the link to friends to play in real-time. Your seat is saved automatically in <code>localStorage</code>.
+              </p>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;max-width:400px;">
+              <input id="nameInput" class="text-input" type="text" maxlength="20" placeholder="Your Player Name" value="${escapeHtml(me ? cleanName(me.name) : cleanName(savedName))}" />
+              <button class="btn" onclick="updateName()">Update Name</button>
+            </div>
+
+            <div class="players-stack">
+              ${gameState.players.map(p => `
+                <div class="player-board" style="padding:12px 16px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="player-id-group">
+                      <span class="badge">SEAT ${p.seat}</span>
+                      <span class="player-name">${escapeHtml(cleanName(p.name))}</span>
+                      ${p.id === gameState.youId ? '<span class="badge accent">YOU</span>' : `<button class="kick-btn" onclick="sendAction('KICK', { targetPlayerId: '${p.id}' })">✕ kick</button>`}
+                    </div>
+                    <span class="badge ${p.connected ? 'sage' : 'crimson'}">${p.connected ? 'ONLINE' : 'OFFLINE'}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:10px;border-top:1px solid var(--border);">
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+                Seated Players: ${gameState.players.length} / ${gameState.maxPlayers} (${gameState.minPlayers} required to start)
+              </span>
+              <button class="btn btn-primary" ${canStart ? '' : 'disabled'} onclick="sendAction('START_MATCH')">
+                Deal Round 1 (${gameState.players.length} Players) →
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const turnPlayer = gameState.players.find(p => p.id === gameState.turnPlayerId);
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      const isMyTurn = gameState.stage === 'PLAYER_TURN' && turnPlayer && me && turnPlayer.id === me.id;
+
+      // Announcement Banner
+      let announcementHtml = '';
+      if (gameState.lastAnnouncement) {
+        const isBust = gameState.lastAnnouncement.includes('BUST');
+        const isFlip7 = gameState.lastAnnouncement.includes('FLIP 7');
+        announcementHtml = `
+          <div class="announcement-banner ${isBust ? 'bust' : ''} ${isFlip7 ? 'flip7' : ''}">
+            <span>${escapeHtml(gameState.lastAnnouncement)}</span>
+          </div>
+        `;
+      }
+
+      let consoleHtml = '';
+      if (gameState.stage === 'PLAYER_TURN' || gameState.stage === 'AWAIT_TARGET') {
+        consoleHtml = `
+          <div class="console-banner ${isMyTurn ? 'my-turn' : ''}">
+            <div>
+              <div class="console-title">
+                ${isMyTurn
+                  ? `Your Turn — Hand Value: ${me.roundScore} pts (${me.numbers.length}/7 Unique Numbers)`
+                  : `Active Turn: ${escapeHtml(turnPlayer ? turnPlayer.name : '')}`}
+              </div>
+              <div class="console-sub">
+                ${isMyTurn
+                  ? `Next-flip Bust Risk: ${me.bustRiskPct}% ${me.secondChance ? '(🛡 Second Chance Shield Active)' : ''}`
+                  : 'Flipping a duplicate number busts your hand for 0 pts; reaching 7 unique numbers scores +15 bonus pts immediately.'}
+              </div>
+            </div>
+            ${isMyTurn ? `
+              <div style="display:flex;gap:10px;align-items:center;">
+                <button class="btn btn-primary" onclick="sendAction('HIT')">
+                  Hit (Flip Card · ${me.bustRiskPct}% Bust Risk)
+                </button>
+                <button class="btn btn-sage" ${me.canStay ? '' : 'disabled'} onclick="sendAction('STAY')" title="${me.canStay ? 'Bank points and exit hand' : 'Cannot Stay with 0 cards'}">
+                  Stay & Bank +${me.roundScore} Pts
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else if (gameState.stage === 'ROUND_OVER' || gameState.stage === 'GAME_OVER') {
+        const summary = gameState.roundSummary;
+        const winner = gameState.players.find(p => p.id === summary?.winnerId);
+
+        consoleHtml = `
+          <div class="console-banner my-turn">
+            <div>
+              <div class="console-title">
+                ${gameState.stage === 'GAME_OVER' && winner
+                  ? `Match Complete — ${escapeHtml(winner.name)} Wins with ${winner.totalScore} Points!`
+                  : `Round ${gameState.roundNumber} Complete — ${escapeHtml(summary?.reason || '')}`}
+              </div>
+              <div class="console-sub">
+                Used cards from this round are set aside face-down; the remaining draw shoe carries into the next round.
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              ${gameState.stage === 'ROUND_OVER'
+                ? `<button class="btn btn-primary" onclick="sendAction('NEXT_ROUND')">Deal Round ${gameState.roundNumber + 1} →</button>`
+                : `<button class="btn btn-primary" onclick="sendAction('START_MATCH')">New 200-Pt Match</button>
+                   <button class="btn" onclick="sendAction('RETURN_LOBBY')">Return to Lobby</button>`}
+            </div>
+          </div>
+        `;
+      }
+
+      const boardsHtml = `
+        <div class="players-stack">
+          ${gameState.players.map(p => renderPlayerBoard(p)).join('')}
+        </div>
+      `;
+
+      col.innerHTML = announcementHtml + consoleHtml + boardsHtml;
+    }
+
+    function renderPlayerBoard(p) {
+      const isTurn = (gameState.stage === 'PLAYER_TURN' || gameState.stage === 'AWAIT_TARGET') && gameState.turnPlayerId === p.id;
+      const pctToWin = Math.min(100, Math.round((p.totalScore / gameState.winningScore) * 100));
+
+      let statusBadge = '<span class="badge accent">IN PLAY</span>';
+      if (p.status === 'STAYED') statusBadge = `<span class="badge sage">BANKED +${p.roundScore} PTS</span>`;
+      if (p.status === 'BUSTED') statusBadge = '<span class="badge crimson">BUSTED (0 PTS)</span>';
+
+      const slots = [];
+      const seenValues = new Set();
+      for (let i = 0; i < 7; i++) {
+        const card = p.numbers[i];
+        if (card) {
+          const isDup = seenValues.has(card.value);
+          seenValues.add(card.value);
+          slots.push(`
+            <div class="num-slot filled ${isDup ? 'duplicate-bust' : ''}">
+              <span class="slot-index">#${i + 1}</span>
+              <span class="card-big-num">${card.label}</span>
+              <span class="card-freq">${card.value === 0 ? '1 in deck' : card.value + ' in deck'}</span>
+            </div>
+          `);
+        } else {
+          slots.push(`
+            <div class="num-slot">
+              <span class="slot-index">#${i + 1}</span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${i === 6 ? '+15 BONUS' : 'EMPTY'}</span>
+            </div>
+          `);
+        }
+      }
+
+      const modPills = (p.modifiers || []).map(m => `
+        <span class="mod-pill" title="${m.sub}">MODIFIER ${m.label}</span>
+      `).join('');
+
+      const shieldPill = p.secondChance
+        ? '<span class="shield-pill" title="Automatically cancels your next duplicate Number bust">🛡 SECOND CHANCE ACTIVE</span>'
+        : '';
+
+      const actionPills = (p.resolvedActions || []).map(a => `
+        <span class="badge">${a.label}</span>
+      `).join('');
+
+      return `
+        <div class="player-board ${isTurn ? 'active-turn' : ''} ${p.status === 'BUSTED' ? 'busted' : ''} ${p.status === 'STAYED' ? 'stayed' : ''}">
+          <div class="board-header">
+            <div class="player-id-group">
+              <span class="badge">S${p.seat}</span>
+              <span class="player-name">${escapeHtml(p.name)}</span>
+              ${p.id === gameState.youId ? '<span class="badge accent">YOU</span>' : `<button class="kick-btn" onclick="sendAction('KICK', { targetPlayerId: '${p.id}' })">kick</button>`}
+              ${p.id === gameState.dealerId ? '<span class="badge gold">DEALER</span>' : ''}
+              ${statusBadge}
+              ${p.status === 'ACTIVE' ? `<span class="badge">BUST RISK: ${p.bustRiskPct}%</span>` : ''}
+            </div>
+            <div class="score-group">
+              <span class="round-pts">Hand: <strong>${p.status === 'BUSTED' ? 0 : p.roundScore}</strong> pts</span>
+              <span class="total-pts">${p.totalScore} / ${gameState.winningScore} PTS</span>
+            </div>
+          </div>
+
+          <div class="score-bar-track" title="${p.totalScore} / ${gameState.winningScore} points">
+            <div class="score-bar-fill" style="width:${pctToWin}%"></div>
+          </div>
+
+          <div class="tableau-area">
+            <div class="modifiers-row">
+              ${shieldPill}
+              ${modPills}
+              ${actionPills}
+              ${!shieldPill && !modPills && !actionPills ? '<span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">No Score Modifiers or Active Shields</span>' : ''}
+            </div>
+            <div class="numbers-row">
+              ${slots.join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderShoeTracker() {
+      const grid = document.getElementById('shoeGrid');
+      const badge = document.getElementById('shoeCountBadge');
+      const extra = document.getElementById('shoeExtra');
+      const stats = gameState.shoeStats;
+      badge.textContent = `${stats.totalDrawPile} Left`;
+
+      const me = gameState.players.find(p => p.id === gameState.youId);
+      const myNums = new Set(me ? me.numbers.map(c => c.value) : []);
+
+      const cells = [];
+      for (let n = 12; n >= 0; n--) {
+        const rem = stats.numberCounts[n] || 0;
+        const max = n === 0 ? 1 : n;
+        const isDanger = myNums.has(n) && rem > 0;
+        cells.push(`
+          <div class="shoe-cell ${isDanger ? 'danger' : ''}" title="${rem} of ${max} remaining in draw shoe">
+            <span class="shoe-val">#${n}</span>
+            <span class="shoe-rem">${rem}/${max}</span>
+          </div>
+        `);
+      }
+      grid.innerHTML = cells.join('');
+      extra.innerHTML = `
+        <span>Modifiers: <strong>${stats.modifiersLeft}/6</strong></span>
+        <span>Actions: <strong>${stats.actionsLeft}/9</strong></span>
+      `;
+    }
+
+    function renderModal() {
+      const container = document.getElementById('modalContainer');
+
+      // Rules Modal
+      if (showRulesModal) {
+        container.innerHTML = `
+          <div class="modal-backdrop" onclick="showRulesModal = false; renderModal();">
+            <div class="modal-card" onclick="event.stopPropagation()">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <h3 class="modal-title">Flip 7 Rules Reference</h3>
+                  <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Official 94-Card Press-Your-Luck Rules</div>
+                </div>
+                <button class="btn btn-sm" onclick="showRulesModal = false; renderModal();">✕</button>
+              </div>
+
+              <div class="rules-nav-pills">
+                <button class="rule-pill" onclick="document.getElementById('f7-sec-1').scrollIntoView({behavior:'smooth'})">1. Goal</button>
+                <button class="rule-pill" onclick="document.getElementById('f7-sec-2').scrollIntoView({behavior:'smooth'})">2. Turn</button>
+                <button class="rule-pill" onclick="document.getElementById('f7-sec-3').scrollIntoView({behavior:'smooth'})">3. Busting</button>
+                <button class="rule-pill" onclick="document.getElementById('f7-sec-4').scrollIntoView({behavior:'smooth'})">4. Flip 7</button>
+                <button class="rule-pill" onclick="document.getElementById('f7-sec-5').scrollIntoView({behavior:'smooth'})">5. Modifiers</button>
+                <button class="rule-pill" onclick="document.getElementById('f7-sec-6').scrollIntoView({behavior:'smooth'})">6. Action Cards</button>
+              </div>
+
+              <div style="font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px;">
+                <div id="f7-sec-1"><strong>1. Goal:</strong> Be the first player to reach <strong>200 total points</strong> across rounds.</div>
+                <div id="f7-sec-2"><strong>2. Your Turn:</strong> On your turn, choose to either <strong>Hit</strong> (draw 1 card) or <strong>Stay</strong> (bank your current points and exit the round).</div>
+                <div id="f7-sec-3"><strong>3. Number Cards & Busting:</strong><br>
+                  • The deck contains cards numbered 0 through 12. The quantity of each card in the deck equals its number (one 1, two 2s ... twelve 12s, plus one 0).<br>
+                  • If you draw a number card matching one already in your row, you <strong>BUST</strong> and score 0 points for the round!
+                </div>
+                <div id="f7-sec-4"><strong>4. Flip 7 Victory:</strong> If you collect <strong>7 unique numbers</strong> (0–12), you immediately score a <strong>+15 bonus</strong> and the round ends immediately for everyone!</div>
+                <div id="f7-sec-5"><strong>5. Modifiers:</strong><br>
+                  • <strong>+2, +4, +6, +8, +10:</strong> Added directly to your round score.<br>
+                  • <strong>×2:</strong> Doubles the sum of your Number cards only (applied before addition modifiers and the Flip 7 bonus).
+                </div>
+                <div id="f7-sec-6"><strong>6. Action Cards:</strong><br>
+                  • <strong>Freeze:</strong> Target banks their current points and stays immediately.<br>
+                  • <strong>Flip Three:</strong> Target must flip 3 cards one by one.<br>
+                  • <strong>Second Chance:</strong> Automatically cancels your next duplicate number bust.
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px;">
+                <button class="btn btn-primary" onclick="showRulesModal = false; renderModal();">Got it</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Target Choice Modal
+      const choice = gameState.pendingChoice;
+      if (gameState.stage === 'AWAIT_TARGET' && choice && choice.chooserId === gameState.youId) {
+        const targets = choice.validTargetIds
+          .map(id => gameState.players.find(p => p.id === id))
+          .filter(Boolean);
+
+        container.innerHTML = `
+          <div class="modal-backdrop">
+            <div class="modal-card">
+              <span class="badge accent" style="align-self:flex-start;">ACTION CARD: ${escapeHtml(choice.cardLabel)}</span>
+              <div class="modal-title">Select a Player to Target</div>
+              <div style="font-size:13px;color:var(--text-secondary);">${escapeHtml(choice.reason)}</div>
+              <div class="target-grid">
+                ${targets.map(t => `
+                  <button class="target-btn" onclick="sendAction('SELECT_TARGET', { targetId: '${t.id}' })">
+                    <div>
+                      <div style="font-family:var(--font-serif);font-size:17px;font-weight:600;">
+                        ${escapeHtml(t.name)} ${t.id === gameState.youId ? '(You)' : ''}
+                      </div>
+                      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);">
+                        ${t.numbers.length}/7 Unique Numbers · Current Hand: ${t.roundScore} pts · Total: ${t.totalScore} pts
+                      </div>
+                    </div>
+                    <span class="badge accent">Target →</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+    }
+
+    window.updateName = function() {
+      const input = document.getElementById('nameInput');
+      if (!input) return;
+      const val = input.value.trim();
+      if (val) {
+        savedName = val;
+        localStorage.setItem('flip7_player_name', val);
+        sendAction('SET_NAME', { name: val });
+      }
+    };
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    connectWebSocket();
+  </script>
+</body>
+</html>
