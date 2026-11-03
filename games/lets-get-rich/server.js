@@ -294,6 +294,8 @@ function createRichGameRoom() {
       pendingBoardPick,
       pendingCityModal,
       pendingTakeoverModal,
+      pendingFortuneCard: m.activePrompt?.type === 'FORTUNE_CARD_MODAL' ? m.activePrompt : null,
+      blackHole: m.blackHole ?? null,
       victoryResult: m.victoryResult,
       monopolyAlerts: m.monopolyAlerts ?? []
     };
@@ -332,114 +334,157 @@ function createRichGameRoom() {
     }
   });
 
-  // Automated AI loop
+  // Automated AI loop (uses GameEngine's built-in prepareAiRollAndGetGaugeTarget & stepAiTurn)
   function checkAndTriggerAi() {
     clearAiTimeout();
     const m = engine.getMatchState();
-    if (!m || m.phase === 'MATCH_ENDED' || m.victoryResult) return;
-
-    const activeP = m.players[m.activePlayerId];
-    if (!activeP || activeP.controlType !== 'AI_BOT') return;
-
-    // AI Turn to Roll
-    if (m.phase === 'IDLE_ROLL' || m.phase === 'WAITING_FOR_ROLL') {
-      aiStepTimeout = setTimeout(() => {
-        executeAiRoll();
-      }, 1200);
+    if (!m || engine.getScreenState() !== 'IN_GAME' || m.phase === 'VICTORY_SUMMARY' || m.victoryResult) {
       return;
     }
 
-    // AI Interactive Prompts
-    if (m.activePrompt) {
-      aiStepTimeout = setTimeout(() => {
-        executeAiPrompt();
-      }, 900);
+    // Check if the current decision-maker (active player OR debtor in DEBT_RESOLUTION) is an AI_BOT
+    let isAiDecision = false;
+    if (m.phase === 'DEBT_RESOLUTION' && m.pendingDebt) {
+      const debtor = m.players[m.pendingDebt.debtorId];
+      isAiDecision = debtor?.controlType === 'AI_BOT';
+    } else {
+      const activeP = m.players[m.activePlayerId];
+      isAiDecision = activeP?.controlType === 'AI_BOT';
     }
+
+    if (!isAiDecision) return;
+
+    const activeP = m.players[m.activePlayerId];
+
+    // 1. Normal AI Dice Roll (when in IDLE_ROLL and not waiting at Sky Terminal)
+    if (m.phase === 'IDLE_ROLL' && activeP?.controlType === 'AI_BOT' && !activeP.isWaitingTravel) {
+      aiStepTimeout = setTimeout(() => {
+        executeAiRoll();
+      }, 950);
+      return;
+    }
+
+    // 2. All other AI decisions (Sky Terminal trigger, City Build, Takeover, Bonus Coin, Fortune Card, Board Pick, Debt Resolution)
+    const delayMs = m.activePrompt?.type === 'FORTUNE_CARD_MODAL' ? 1200 : 750;
+    aiStepTimeout = setTimeout(() => {
+      executeAiPrompt();
+    }, delayMs);
   }
 
   function executeAiRoll() {
-    const m = engine.getMatchState();
-    if (!m) return;
-    const activeP = m.players[m.activePlayerId];
-    if (!activeP || activeP.controlType !== 'AI_BOT') return;
+    try {
+      const m = engine.getMatchState();
+      if (!m || m.phase !== 'IDLE_ROLL') return;
+      const activeP = m.players[m.activePlayerId];
+      if (!activeP || activeP.controlType !== 'AI_BOT') return;
 
-    const plan = planAiRollDecision(activeP, m);
-    if (plan.useOddEven !== 'NONE') {
-      engine.toggleOddEvenMode(plan.useOddEven);
-    }
+      if (activeP.isWaitingTravel) {
+        engine.startGaugeCharge();
+        broadcastState();
+        checkAndTriggerAi();
+        return;
+      }
 
-    const rollResult = engine.releaseGaugeRoll(plan.targetGauge);
-    if (!rollResult) return;
+      const targetGauge = engine.prepareAiRollAndGetGaugeTarget();
+      const rollResult = engine.releaseGaugeRoll(targetGauge);
+      if (!rollResult) {
+        broadcastState();
+        checkAndTriggerAi();
+        return;
+      }
 
-    const movePath = m.pendingMovePath ? [...m.pendingMovePath] : [];
-    broadcast({
-      type: 'DICE_ROLLED',
-      activePlayerId: m.activePlayerId,
-      die1: rollResult.die1,
-      die2: rollResult.die2,
-      gaugeValue: rollResult.gaugeValue,
-      isDouble: rollResult.isDouble,
-      movePath
-    });
+      const afterRoll = engine.getMatchState();
+      // If 3rd consecutive double sent AI directly to Desert Island, there is no dice animation phase
+      if (afterRoll && afterRoll.phase !== 'DICE_ANIMATING') {
+        broadcastState();
+        checkAndTriggerAi();
+        return;
+      }
 
-    // Schedule hop completion
-    const hopDuration = Math.max(800, movePath.length * 160 + 500);
-    setTimeout(() => {
       engine.completeDiceAnimation();
-      engine.completePieceMovement();
-      broadcastState();
-      checkAndTriggerAi();
-    }, hopDuration);
+      const afterDice = engine.getMatchState();
+      const movePath = afterDice?.pendingMovePath ? [...afterDice.pendingMovePath] : [];
+
+      broadcast({
+        type: 'DICE_ROLLED',
+        activePlayerId: m.activePlayerId,
+        die1: rollResult.die1,
+        die2: rollResult.die2,
+        gaugeValue: rollResult.gaugeValue,
+        isDouble: rollResult.isDouble,
+        movePath
+      });
+
+      const hopDuration = Math.max(850, movePath.length * 165 + 550);
+      aiStepTimeout = setTimeout(() => {
+        try {
+          if (movePath.length > 0) {
+            for (const stepTileIdx of movePath) {
+              engine.advancePieceStep(stepTileIdx);
+            }
+          }
+          engine.completePieceMovement();
+          broadcastState();
+          checkAndTriggerAi();
+        } catch (err) {
+          console.error('[Rich AI Hop Error]:', err);
+        }
+      }, hopDuration);
+    } catch (err) {
+      console.error('[Rich AI Roll Error]:', err);
+    }
   }
 
   function executeAiPrompt() {
-    const m = engine.getMatchState();
-    if (!m || !m.activePrompt) return;
-    const activeP = m.players[m.activePlayerId];
+    try {
+      const m = engine.getMatchState();
+      if (!m || m.phase === 'VICTORY_SUMMARY') return;
 
-    if (m.activePrompt.type === 'BUY_OR_UPGRADE_CITY') {
-      const level = decideAiBuildLevel(activeP, m, m.activePrompt);
-      if (level !== null) {
-        engine.confirmBuildOrUpgrade(level);
-      } else {
-        engine.skipBuildOrUpgrade();
+      const wasWorldTravelPick =
+        m.phase === 'BOARD_TARGET_PICK' &&
+        (m.boardPickReason === 'WORLD_TRAVEL_DEST' || m.boardPickReason === 'LINE_TELEPORT_DEST');
+      const moverId = m.activePlayerId;
+
+      const stepped = engine.stepAiTurn();
+      if (!stepped) return;
+
+      const afterStep = engine.getMatchState();
+      if (
+        wasWorldTravelPick &&
+        afterStep &&
+        afterStep.phase === 'PIECE_MOVING' &&
+        afterStep.pendingMovePath.length > 0
+      ) {
+        const movePath = [...afterStep.pendingMovePath];
+        broadcast({
+          type: 'DICE_ROLLED',
+          activePlayerId: moverId,
+          die1: afterStep.lastDiceRoll?.die1 ?? 1,
+          die2: afterStep.lastDiceRoll?.die2 ?? 1,
+          gaugeValue: afterStep.lastDiceRoll?.gaugeValue ?? 7,
+          isDouble: false,
+          movePath
+        });
+        const hopDuration = Math.max(800, movePath.length * 150 + 400);
+        aiStepTimeout = setTimeout(() => {
+          try {
+            for (const stepTileIdx of movePath) {
+              engine.advancePieceStep(stepTileIdx);
+            }
+            engine.completePieceMovement();
+            broadcastState();
+            checkAndTriggerAi();
+          } catch (err) {
+            console.error('[Rich AI Travel Error]:', err);
+          }
+        }, hopDuration);
+        return;
       }
+
       broadcastState();
       checkAndTriggerAi();
-    } else if (m.activePrompt.type === 'TAKEOVER_PROMPT') {
-      const shouldTakeover = decideAiTakeover(activeP, m, m.activePrompt);
-      if (shouldTakeover) {
-        engine.confirmTakeover();
-      } else {
-        engine.skipTakeover();
-      }
-      broadcastState();
-      checkAndTriggerAi();
-    } else if (m.activePrompt.type === 'BONUS_COIN_GAME') {
-      const guess = decideAiBonusCoinAction(activeP, m.activePrompt.bonusState);
-      if (guess) {
-        engine.flipBonusCoin(guess);
-      } else {
-        engine.takeBonusReward();
-      }
-      broadcastState();
-      checkAndTriggerAi();
-    } else if (m.phase === 'BOARD_TARGET_PICK' && m.boardPickReason) {
-      const targetTile = decideAiBoardTarget(activeP, m, m.boardPickReason, m.boardPickValidTiles);
-      engine.selectBoardTargetTile(targetTile);
-      broadcastState();
-      checkAndTriggerAi();
-    } else if (m.pendingDebt) {
-      const bestTile = selectBestTileToSellForDebt(activeP, m, m.pendingDebt.amountDue);
-      if (bestTile !== null) {
-        engine.sellOwnedTileForDebt(bestTile);
-      } else if (!activeP.loanUsed) {
-        engine.takeBankLoan();
-      } else {
-        engine.declareBankruptcy();
-      }
-      broadcastState();
-      checkAndTriggerAi();
+    } catch (err) {
+      console.error('[Rich AI Prompt Error]:', err);
     }
   }
 
@@ -608,10 +653,27 @@ function createRichGameRoom() {
             if (isAssignedToOtherClient) return;
           }
 
+          const activeP = m.players[m.activePlayerId];
+          if (activeP && activeP.isWaitingTravel) {
+            engine.startGaugeCharge();
+            broadcastState();
+            checkAndTriggerAi();
+            break;
+          }
+
           const rollResult = engine.releaseGaugeRoll(msg.gaugeValue);
           if (!rollResult) return;
 
-          const movePath = m.pendingMovePath ? [...m.pendingMovePath] : [];
+          const afterRoll = engine.getMatchState();
+          if (afterRoll && afterRoll.phase !== 'DICE_ANIMATING') {
+            broadcastState();
+            checkAndTriggerAi();
+            break;
+          }
+
+          engine.completeDiceAnimation();
+          const afterDice = engine.getMatchState();
+          const movePath = afterDice?.pendingMovePath ? [...afterDice.pendingMovePath] : [];
           broadcast({
             type: 'DICE_ROLLED',
             activePlayerId: m.activePlayerId,
@@ -622,13 +684,28 @@ function createRichGameRoom() {
             movePath
           });
 
-          const hopDuration = Math.max(800, movePath.length * 160 + 500);
+          const hopDuration = Math.max(850, movePath.length * 165 + 550);
           setTimeout(() => {
-            engine.completeDiceAnimation();
-            engine.completePieceMovement();
-            broadcastState();
-            checkAndTriggerAi();
+            try {
+              if (movePath.length > 0) {
+                for (const stepTileIdx of movePath) {
+                  engine.advancePieceStep(stepTileIdx);
+                }
+              }
+              engine.completePieceMovement();
+              broadcastState();
+              checkAndTriggerAi();
+            } catch (err) {
+              console.error('[Rich Human Hop Error]:', err);
+            }
           }, hopDuration);
+          break;
+        }
+
+        case 'CONFIRM_FORTUNE': {
+          engine.confirmFortuneCard();
+          broadcastState();
+          checkAndTriggerAi();
           break;
         }
 
@@ -684,10 +761,39 @@ function createRichGameRoom() {
         }
 
         case 'PICK_TILE': {
+          const m = engine.getMatchState();
+          const moverId = m?.activePlayerId ?? 'P1';
           if (msg.extraMode) {
             engine.setDisruptMode(msg.extraMode === 'SWAP' ? 'SWAP' : 'FORCE_SELL');
           }
           engine.selectBoardTargetTile(msg.tileIndex);
+          const afterPick = engine.getMatchState();
+          if (afterPick && afterPick.phase === 'PIECE_MOVING' && afterPick.pendingMovePath.length > 0) {
+            const movePath = [...afterPick.pendingMovePath];
+            broadcast({
+              type: 'DICE_ROLLED',
+              activePlayerId: moverId,
+              die1: afterPick.lastDiceRoll?.die1 ?? 1,
+              die2: afterPick.lastDiceRoll?.die2 ?? 1,
+              gaugeValue: afterPick.lastDiceRoll?.gaugeValue ?? 7,
+              isDouble: false,
+              movePath
+            });
+            const hopDuration = Math.max(800, movePath.length * 150 + 400);
+            setTimeout(() => {
+              try {
+                for (const stepTileIdx of movePath) {
+                  engine.advancePieceStep(stepTileIdx);
+                }
+                engine.completePieceMovement();
+                broadcastState();
+                checkAndTriggerAi();
+              } catch (err) {
+                console.error('[Rich Pick Tile Move Error]:', err);
+              }
+            }, hopDuration);
+            break;
+          }
           broadcastState();
           checkAndTriggerAi();
           break;
