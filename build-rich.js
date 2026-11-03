@@ -16,6 +16,12 @@ if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
     .map(f => fs.readFileSync(path.join(uiDir, f), 'utf8'))
     .join('');
 
+  // Default 3-Tab High-Legibility Lobby on both PC and Mobile (with toggle button for Compact All-in-One view)
+  combined = combined.replace(
+    `  private isMobileLobbyMode(): boolean {\n    if (this.forceMobileLobbyOverride !== null) {\n      return this.forceMobileLobbyOverride;\n    }\n    const vv = window.visualViewport;\n    const vw = vv ? vv.width : window.innerWidth;\n    const vh = vv ? vv.height : window.innerHeight;\n    return vw <= 1100 || vh <= 620;\n  }`,
+    `  private isMobileLobbyMode(): boolean {\n    if (this.forceMobileLobbyOverride !== null) {\n      return this.forceMobileLobbyOverride;\n    }\n    return true;\n  }`
+  );
+
   // Ensure per-slot isPlayerSlotActive & 2P/3P/4P quick selector are active in uiManager.ts
   if (!combined.includes('const isPlayerSlotActive =')) {
     combined = combined.replace(
@@ -25,6 +31,10 @@ if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
     combined = combined.replace(
       `const playerBannersHtml = PLAYER_IDS.map((pid, idx) => {\n      const isActiveSlot = isTeamMode || idx < ffaCount;\n      const p = this.state.players[idx];`,
       `const playerBannersHtml = PLAYER_IDS.map((pid, idx) => {\n      const p = this.state.players[idx];\n      const isActiveSlot = isPlayerSlotActive(p, idx);`
+    );
+    combined = combined.replace(
+      `<div style="font-size:11px; font-weight:900; color:#786C5E;">SLOT \${pid} EMPTY</div>\n            <div style="display:flex; gap:6px; width:100%;">\n              <button class="gold-btn btn-lobby-add-ai" data-idx="\${idx}" style="flex:1; padding:4px 6px; font-size:10px; font-weight:900; border-radius:8px;">\n                🤖 + Add AI\n              </button>\n              <button class="tab-pill btn-lobby-add-human" data-idx="\${idx}" style="flex:1; padding:4px 4px; font-size:10px; font-weight:900; border-radius:8px;">\n                👤 + Human\n              </button>\n            </div>`,
+      `<div style="font-size:12px; font-weight:900; color:#786C5E;">ที่นั่ง \${pid} ว่าง (EMPTY SLOT)</div>\n            <div style="display:flex; gap:6px; width:100%;">\n              <button class="gold-btn btn-lobby-add-ai" data-idx="\${idx}" style="flex:1; padding:5px 6px; font-size:11px; font-weight:900; border-radius:8px; cursor:pointer;">\n                🤖 + เพิ่ม AI Bot\n              </button>\n              <button class="tab-pill btn-lobby-add-human" data-idx="\${idx}" style="flex:1; padding:5px 4px; font-size:11px; font-weight:900; border-radius:8px; cursor:pointer;">\n                👤 + ผู้เล่น\n              </button>\n            </div>`
     );
     combined = combined.replace(
       `const activeHumans = this.state.players.filter((p, i) => (isTeamMode || i < ffaCount) && p.controlType === 'HUMAN').length;`,
