@@ -1,0 +1,798 @@
+import {
+  BlackHoleState,
+  BLUE_TOURISM_INDICES,
+  BoardPickReason,
+  BoardTileState,
+  BuildingLevel,
+  CHARACTER_ROSTER,
+  CHARACTER_SYNERGIES,
+  CharacterDef,
+  CharacterSynergyDef,
+  ControlType,
+  DICE_TABLE_EVEN,
+  DICE_TABLE_NONE,
+  DICE_TABLE_ODD,
+  formatMarbleCompact,
+  FORTUNE_CARD_DECK,
+  FortuneCardId,
+  GameMode,
+  getCharacterDef,
+  getCharacterSynergy,
+  getSkillDef,
+  getTreasureDef,
+  getTourismMultiplierForTile,
+  MainSkillId,
+  MATCH_CONFIG,
+  NON_DOUBLE_DIE_PAIRS,
+  OddEvenMode,
+  PendingBonusGameState,
+  PendingDebtState,
+  PlayerId,
+  PlayerState,
+  RED_TOURISM_INDICES,
+  ScreenState,
+  SKILL_CATALOG,
+  SkillDefinition,
+  SkillId,
+  STAT_SCALING_TABLE,
+  SubSkillId,
+  TeamId,
+  TREASURE_POOL,
+  TreasureDef,
+  TurnPhase,
+  UNIVERSAL_DOUBLE_PROB_PCT,
+  VictoryResult,
+  WORLD_MAP_TILES,
+  WorldTileDef,
+} from '../data/lgrGameData';
+import {
+  decideAiBoardTarget,
+  decideAiBonusCoinAction,
+  decideAiBuildLevel,
+  decideAiTakeover,
+  planAiRollDecision,
+  selectBestTileToSellForDebt,
+} from './botDecisionTree';
+
+export const SESSION_STORAGE_KEY = 'LGR_PEAK_ERA_SESSION_V1';
+
+export {
+  CHARACTER_ROSTER,
+  CHARACTER_SYNERGIES,
+  TREASURE_POOL,
+  WORLD_MAP_TILES,
+  MATCH_CONFIG,
+  formatMarbleCompact,
+  getCharacterDef,
+  getCharacterSynergy,
+  getTreasureDef,
+  getSkillDef,
+} from '../data/lgrGameData';
+export type { CharacterSynergyDef } from '../data/lgrGameData';
+
+export {
+  planAiRollDecision,
+  decideAiBuildLevel,
+  decideAiTakeover,
+  decideAiBonusCoinAction,
+  decideAiBoardTarget,
+  selectBestTileToSellForDebt,
+} from './botDecisionTree';
+
+export const PLAYER_IDS: readonly PlayerId[] = ['P1', 'P2', 'P3', 'P4'] as const;
+
+export const DEFAULT_PLAYER_COLORS: Readonly<Record<PlayerId, string>> = {
+  P1: '#E11D48',
+  P2: '#0284C7',
+  P3: '#16A34A',
+  P4: '#D97706',
+};
+
+export const COLOR_GROUP_TILES: Readonly<Record<number, readonly number[]>> = {
+  1: [1, 3],
+  2: [6, 7, 9],
+  3: [11, 12, 14],
+  4: [17, 18],
+  5: [21, 22, 23],
+  6: [26, 27],
+  7: [29, 31],
+};
+
+export const LINE_PURCHASABLE_TILES: Readonly<Record<0 | 1 | 2 | 3, readonly number[]>> = {
+  0: [1, 3, 5, 6, 7],
+  1: [9, 10, 11, 12, 14, 15],
+  2: [17, 18, 19, 21, 22, 23],
+  3: [25, 26, 27, 29, 31],
+};
+
+// 5 Tourism Islands: 3 Blue Islands (5, 10, 15) and 2 Red Islands (19, 25)
+export const TOURISM_TILE_INDICES: readonly number[] = [5, 10, 15, 19, 25] as const;
+export { BLUE_TOURISM_INDICES, RED_TOURISM_INDICES };
+
+export interface LobbyPlayerSlot {
+  id: PlayerId;
+  name: string;
+  colorHex: string;
+  teamId: TeamId;
+  controlType: ControlType;
+  characterId: string;
+  treasureIds: [string, string, string];
+  isSlotActive?: boolean;
+}
+
+export interface LobbyConfig {
+  gameMode: GameMode;
+  ffaPlayerCount?: 2 | 3 | 4;
+  players: Record<PlayerId, LobbyPlayerSlot>;
+  loadoutInspectPlayerId: PlayerId;
+}
+
+export interface EquippedMainSkillEntry {
+  skillId: MainSkillId;
+  def: SkillDefinition;
+  procPct: number;
+  sourceType: 'CHARACTER' | 'TREASURE';
+  sourceName: string;
+  sourceEmoji: string;
+  usesRemaining: number | null;
+  maxUses: number | null;
+}
+
+export interface EquippedSubSkillEntry {
+  skillId: SubSkillId;
+  def: SkillDefinition;
+  totalProcPct: number;
+  sources: {
+    sourceType: 'CHARACTER' | 'TREASURE';
+    sourceName: string;
+    sourceEmoji: string;
+    procPct: number;
+  }[];
+  usesRemaining: number | null;
+  maxUses: number | null;
+}
+
+export interface ComputedPlayerStats {
+  dcLevel: number;
+  dcProcPct: number;
+  gaugeSpeed: number;
+  constDcLevel: number;
+  constDiscountPct: number;
+  acqDcLevel: number;
+  acqDiscountPct: number;
+  tollDcLevel: number;
+  tollDiscountPct: number;
+  salLuckLevel: number;
+  salBonusPct: number;
+  doubleBoostPct: number;
+}
+
+export interface PlayerEquippedSkillsSummary {
+  character: CharacterDef;
+  treasures: [TreasureDef, TreasureDef, TreasureDef];
+  mainSkills: EquippedMainSkillEntry[];
+  subSkills: EquippedSubSkillEntry[];
+  computedStats: ComputedPlayerStats;
+}
+
+export interface DiceRollResult {
+  playerId: PlayerId;
+  gaugeValue: number;
+  targetSum: number;
+  die1: number;
+  die2: number;
+  sum: number;
+  isDouble: boolean;
+  dcTriggered: boolean;
+  dcProcPct: number;
+  oddEvenUsed: OddEvenMode;
+  doubleBoostPct: number;
+}
+
+export interface BuildOptionEntry {
+  level: BuildingLevel;
+  labelEn: string;
+  labelTh: string;
+  cost: number;
+  canAfford: boolean;
+  isLockedByLap1: boolean;
+}
+
+export type ActiveActionPrompt =
+  | {
+      type: 'BUY_OR_UPGRADE_CITY';
+      playerId: PlayerId;
+      tileIndex: number;
+      currentLevel: BuildingLevel;
+      maxAllowedLevel: BuildingLevel;
+      lap1HotelLocked: boolean;
+      isAfterTakeover: boolean;
+      options: BuildOptionEntry[];
+    }
+  | {
+      type: 'TAKEOVER_PROMPT';
+      playerId: PlayerId;
+      tileIndex: number;
+      defenderId: PlayerId;
+      buildingLevel: BuildingLevel;
+      takeoverCost: number;
+      canAfford: boolean;
+      paidToll: number;
+      tollExemptReason?: string;
+    }
+  | {
+      type: 'ANGEL_CARD_PROMPT';
+      playerId: PlayerId;
+      tileIndex: number;
+      creditorId: PlayerId | 'BANK';
+      tollAmount: number;
+      hasDiscountCoupon: boolean;
+      discountedTollAmount: number;
+      reason: 'TOLL' | 'TAX';
+    }
+  | {
+      type: 'BONUS_COIN_GAME';
+      bonusState: PendingBonusGameState;
+    }
+  | ({
+      type: 'FORTUNE_CARD_MODAL';
+    } & FortuneCardModalPayload);
+
+export interface FortuneCardModalPayload {
+  playerId: PlayerId;
+  cardId: FortuneCardId;
+  titleTh: string;
+  titleEn: string;
+  descTh: string;
+  rewardAmount: number;
+}
+
+export interface MonopolyAlertInfo {
+  ownerPlayerId: PlayerId;
+  teamId: TeamId;
+  alertType: 'TRIPLE_MONOPOLY' | 'LINE_MONOPOLY' | 'TOURISM_MONOPOLY';
+  labelTh: string;
+  missingTileIndex: number;
+}
+
+export interface ActionLogEntry {
+  id: string;
+  turnNumber: number;
+  playerId: PlayerId;
+  message: string;
+  category: 'DICE' | 'MOVE' | 'BUILD' | 'TOLL' | 'SKILL' | 'SYSTEM';
+  timestamp: number;
+}
+
+export interface SkillBannerPayload {
+  playerId: PlayerId;
+  playerName: string;
+  skillId: SkillId;
+  skillName: string;
+  procPct: number;
+  message: string;
+}
+
+export interface FloatingTextPayload {
+  tileIndex: number;
+  text: string;
+  colorHex: string;
+}
+
+export type DisruptActionMode = 'FORCE_SELL' | 'SWAP';
+
+export interface MatchState {
+  gameMode: GameMode;
+  turnNumber: number;
+  maxTurns: number;
+  activePlayerIndex: number;
+  activePlayerId: PlayerId;
+  phase: TurnPhase;
+  players: Record<PlayerId, PlayerState>;
+  tiles: BoardTileState[];
+  blackHole: BlackHoleState | null;
+  olympicTileIndex: number | null;
+  olympicHostCount: number;
+  gaugeValue: number;
+  gaugeDirection: 1 | -1;
+  lastDiceRoll: DiceRollResult | null;
+  pendingMovePath: number[];
+  pendingSteppedCount: number;
+  activePrompt: ActiveActionPrompt | null;
+  boardPickReason: BoardPickReason | null;
+  boardPickValidTiles: number[];
+  pendingBlackHoleLandmarkIndex: number | null;
+  pendingLineTeleportLandmarkIndex: number | null;
+  pendingOlympicIsFree: boolean;
+  disruptMode: DisruptActionMode;
+  pendingDebt: PendingDebtState | null;
+  pendingDebtQueue: PendingDebtState[];
+  extraRollGranted: boolean;
+  freeWorldTravelMap: Record<PlayerId, boolean>;
+  monopolyAlerts: MonopolyAlertInfo[];
+  actionLogs: ActionLogEntry[];
+  victoryResult: VictoryResult | null;
+}
+
+export interface PersistedSessionEnvelope {
+  version: 1;
+  screenState: ScreenState;
+  lobbyConfig: LobbyConfig;
+  matchState: MatchState | null;
+}
+
+export interface GameEngineCallbacks {
+  onStateChange?: (engine: GameEngine) => void;
+  onSkillBanner?: (payload: SkillBannerPayload) => void;
+  onToastBanner?: (message: string, accentColor?: string) => void;
+  onFloatingText?: (payload: FloatingTextPayload) => void;
+  onPerfumeSteal?: (payload: {
+    stealerId: PlayerId;
+    victimId: PlayerId;
+    amount: number;
+    tileIndex: number;
+    ratePct: number;
+  }) => void;
+  onTollPaid?: (payload: {
+    payerId: PlayerId;
+    receiverId: PlayerId;
+    amount: number;
+    tileIndex: number;
+  }) => void;
+  onTaxPaid?: (payload: {
+    payerId: PlayerId;
+    amount: number;
+    tileIndex: number;
+  }) => void;
+  onAngelCardUsed?: (payload: {
+    playerId: PlayerId;
+    tileIndex: number;
+    targetName: string;
+    reason: 'TOLL' | 'BLACKOUT' | 'DISRUPT';
+  }) => void;
+  onActionLog?: (entry: ActionLogEntry) => void;
+}
+
+// ============================================================================
+// PURE HELPER FUNCTIONS FOR LOADOUT, STATS & SKILL STACKING
+// ============================================================================
+
+export function isTreasureValidForCharacter(characterId: string, treasureId: string): boolean {
+  const charDef = getCharacterDef(characterId);
+  const trDef = getTreasureDef(treasureId);
+  return trDef.mainSkill.skillId !== charDef.mainSkill.skillId;
+}
+
+/** Two Main skills conflict (can't be co-equipped) — except M06 Super Perfume, which may stack. */
+export function isMainSkillConflict(a: string, b: string): boolean {
+  return a === b && a !== 'M06_SUPER_PERFUME';
+}
+
+export function sanitizePlayerTreasures(
+  characterId: string,
+  treasureIds: readonly string[]
+): [string, string, string] {
+  const charDef = getCharacterDef(characterId);
+  const result: string[] = [];
+  const usedIds = new Set<string>();
+  const usedMainSkills = new Set<MainSkillId>([charDef.mainSkill.skillId]);
+  // Exception: M06 Super Perfume may duplicate (char 12% + treasure 7% = 19% steal)
+  const isBlocked = (id: MainSkillId) => id !== 'M06_SUPER_PERFUME' && usedMainSkills.has(id);
+
+  for (const tid of treasureIds) {
+    if (result.length >= 3) break;
+    const tr = TREASURE_POOL.find((t) => t.id === tid);
+    if (tr && !usedIds.has(tr.id) && !isBlocked(tr.mainSkill.skillId)) {
+      result.push(tr.id);
+      usedIds.add(tr.id);
+      usedMainSkills.add(tr.mainSkill.skillId);
+    }
+  }
+
+  for (const fallback of TREASURE_POOL) {
+    if (result.length >= 3) break;
+    if (!usedIds.has(fallback.id) && !usedMainSkills.has(fallback.mainSkill.skillId)) {
+      result.push(fallback.id);
+      usedIds.add(fallback.id);
+      usedMainSkills.add(fallback.mainSkill.skillId);
+    }
+  }
+
+  return [result[0], result[1], result[2]];
+}
+
+/**
+ * Generates a synergistic 3-treasure loadout for a character following the
+ * "2 Core Synergies + 1 Wildcard" archetype meta pattern:
+ * - 2 treasures drawn from character-specific curated high-synergy pool
+ * - 1 wildcard treasure drawn from remaining valid pool (off-meta variety)
+ * - 100% sanitized against duplicate main skills and duplicate IDs
+ */
+export function generateSynergisticLoadout(
+  characterId: string
+): [string, string, string] {
+  const charDef = getCharacterDef(characterId);
+  const synergy = CHARACTER_SYNERGIES[characterId];
+
+  // 1. All valid treasures (excluding duplicate main skill)
+  const validTreasures = TREASURE_POOL.filter(
+    (t) => t.mainSkill.skillId !== charDef.mainSkill.skillId || t.mainSkill.skillId === 'M06_SUPER_PERFUME'
+  ).map((t) => t.id);
+
+  // 2. Curated core synergistic treasures
+  const corePool = (synergy?.coreTreasures ?? []).filter((id) =>
+    validTreasures.includes(id)
+  );
+
+  // Shuffle core candidates and pick 2
+  const shuffledCore = [...corePool].sort(() => Math.random() - 0.5);
+  const pickedCore = shuffledCore.slice(0, 2);
+
+  // 3. For the 3rd slot (Wildcard), pick from remaining valid treasures
+  const wildcardPool = validTreasures.filter((id) => !pickedCore.includes(id));
+  const shuffledWildcard = [...wildcardPool].sort(() => Math.random() - 0.5);
+  const pickedWildcard = shuffledWildcard.slice(0, 1);
+
+  // 4. Sanitize and validate
+  return sanitizePlayerTreasures(characterId, [...pickedCore, ...pickedWildcard]);
+}
+
+export function computePlayerStats(
+  characterId: string,
+  treasureIds: readonly [string, string, string]
+): ComputedPlayerStats {
+  const charDef = getCharacterDef(characterId);
+  const clampLv = (v: number) => Math.max(0, Math.min(5, Math.round(v)));
+
+  const dcLevel = clampLv(charDef.stats.dc);
+  const constDcLevel = clampLv(charDef.stats.constDc);
+  const acqDcLevel = clampLv(charDef.stats.acqDc);
+  const tollDcLevel = clampLv(charDef.stats.tollDc);
+  const salLuckLevel = clampLv(charDef.stats.salLuck);
+
+  const dcProcPct = STAT_SCALING_TABLE.dcProcPct[dcLevel];
+  const gaugeSpeed = Number((9.5 * (1 - 0.018 * dcLevel)).toFixed(3));
+  const constDiscountPct = STAT_SCALING_TABLE.constDiscountPct[constDcLevel];
+  const acqDiscountPct = STAT_SCALING_TABLE.acqDiscountPct[acqDcLevel];
+  const tollDiscountPct = STAT_SCALING_TABLE.tollDiscountPct[tollDcLevel];
+  const salBonusPct = STAT_SCALING_TABLE.salLuckBonusPct[salLuckLevel];
+
+  // Additive S10_DOUBLE_BOOST across Character's 2 subs and 3 Treasures' subs
+  let doubleBoostPct = 0;
+  for (const sub of charDef.subSkills) {
+    if (sub.skillId === 'S10_DOUBLE_BOOST') {
+      doubleBoostPct += sub.procPct;
+    }
+  }
+  for (const tid of treasureIds) {
+    const tr = getTreasureDef(tid);
+    if (tr.subSkill.skillId === 'S10_DOUBLE_BOOST') {
+      doubleBoostPct += tr.subSkill.procPct;
+    }
+  }
+
+  return {
+    dcLevel,
+    dcProcPct,
+    gaugeSpeed,
+    constDcLevel,
+    constDiscountPct,
+    acqDcLevel,
+    acqDiscountPct,
+    tollDcLevel,
+    tollDiscountPct,
+    salLuckLevel,
+    salBonusPct,
+    doubleBoostPct,
+  };
+}
+
+export function getPlayerEquippedSkillsSummary(
+  slotOrPlayer: Pick<PlayerState, 'characterId' | 'treasureIds'> & {
+    skillUsesRemaining?: Record<string, number>;
+  }
+): PlayerEquippedSkillsSummary {
+  const charDef = getCharacterDef(slotOrPlayer.characterId);
+  const cleanTreasureIds = sanitizePlayerTreasures(
+    slotOrPlayer.characterId,
+    slotOrPlayer.treasureIds
+  );
+  const treasures: [TreasureDef, TreasureDef, TreasureDef] = [
+    getTreasureDef(cleanTreasureIds[0]),
+    getTreasureDef(cleanTreasureIds[1]),
+    getTreasureDef(cleanTreasureIds[2]),
+  ];
+
+  const usesMap = slotOrPlayer.skillUsesRemaining ?? {};
+
+  // 1. 4 Main Skills (1 from Character + 3 from Treasures, all distinct)
+  const mainSkills: EquippedMainSkillEntry[] = [];
+  const charMainDef = getSkillDef(charDef.mainSkill.skillId);
+  mainSkills.push({
+    skillId: charDef.mainSkill.skillId,
+    def: charMainDef,
+    procPct: charDef.mainSkill.procPct,
+    sourceType: 'CHARACTER',
+    sourceName: charDef.name,
+    sourceEmoji: charDef.avatarEmoji,
+    maxUses: charMainDef.maxUsesPerMatch,
+    usesRemaining:
+      charMainDef.maxUsesPerMatch !== null
+        ? (usesMap[charDef.mainSkill.skillId] ?? charMainDef.maxUsesPerMatch)
+        : null,
+  });
+
+  for (const tr of treasures) {
+    const mDef = getSkillDef(tr.mainSkill.skillId);
+    const maxUses = tr.mainSkill.maxUses ?? mDef.maxUsesPerMatch;
+    mainSkills.push({
+      skillId: tr.mainSkill.skillId,
+      def: mDef,
+      procPct: tr.mainSkill.procPct,
+      sourceType: 'TREASURE',
+      sourceName: tr.name,
+      sourceEmoji: tr.iconEmoji,
+      maxUses,
+      usesRemaining: maxUses !== null ? (usesMap[tr.mainSkill.skillId] ?? maxUses) : null,
+    });
+  }
+
+  // 2. Sub Skills (Stack directly & additively!)
+  const subMap = new Map<SubSkillId, EquippedSubSkillEntry>();
+
+  const addSubSource = (
+    skillId: SubSkillId,
+    procPct: number,
+    sourceType: 'CHARACTER' | 'TREASURE',
+    sourceName: string,
+    sourceEmoji: string
+  ) => {
+    const def = getSkillDef(skillId);
+    const existing = subMap.get(skillId);
+    if (!existing) {
+      const maxUses = def.maxUsesPerMatch;
+      subMap.set(skillId, {
+        skillId,
+        def,
+        totalProcPct: Math.min(95, procPct),
+        sources: [{ sourceType, sourceName, sourceEmoji, procPct }],
+        maxUses,
+        usesRemaining: maxUses !== null ? (usesMap[skillId] ?? maxUses) : null,
+      });
+    } else {
+      existing.sources.push({ sourceType, sourceName, sourceEmoji, procPct });
+      existing.totalProcPct = Math.min(95, existing.totalProcPct + procPct);
+    }
+  };
+
+  for (const sub of charDef.subSkills) {
+    addSubSource(sub.skillId, sub.procPct, 'CHARACTER', charDef.name, charDef.avatarEmoji);
+  }
+  for (const tr of treasures) {
+    addSubSource(tr.subSkill.skillId, tr.subSkill.procPct, 'TREASURE', tr.name, tr.iconEmoji);
+  }
+
+  return {
+    character: charDef,
+    treasures,
+    mainSkills,
+    subSkills: Array.from(subMap.values()),
+    computedStats: computePlayerStats(charDef.id, cleanTreasureIds),
+  };
+}
+
+export function createInitialSkillUsesMap(
+  characterId: string,
+  treasureIds: readonly [string, string, string]
+): Record<string, number> {
+  const uses: Record<string, number> = {};
+  const summary = getPlayerEquippedSkillsSummary({
+    characterId,
+    treasureIds: [treasureIds[0], treasureIds[1], treasureIds[2]],
+  });
+
+  for (const m of summary.mainSkills) {
+    if (m.maxUses !== null) {
+      uses[m.skillId] = m.maxUses;
+    }
+  }
+  for (const s of summary.subSkills) {
+    if (s.maxUses !== null) {
+      uses[s.skillId] = s.maxUses;
+    }
+  }
+  return uses;
+}
+
+export function getEffectiveSkillPct(player: PlayerState, skillId: SkillId): number {
+  const def = getSkillDef(skillId);
+  if (def.maxUsesPerMatch !== null) {
+    const remaining = player.skillUsesRemaining[skillId] ?? def.maxUsesPerMatch;
+    if (remaining <= 0) return 0;
+  }
+
+  const charDef = getCharacterDef(player.characterId);
+
+  if (def.slotCategory === 'MAIN') {
+    if (charDef.mainSkill.skillId === skillId) {
+      return charDef.mainSkill.procPct;
+    }
+    for (const tid of player.treasureIds) {
+      const tr = getTreasureDef(tid);
+      if (tr.mainSkill.skillId === skillId) {
+        return tr.mainSkill.procPct;
+      }
+    }
+    return 0;
+  }
+
+  // SUB SKILL: Direct additive stacking across Character's 2 subSkills + 3 Treasures' subSkills
+  let sumPct = 0;
+  for (const sub of charDef.subSkills) {
+    if (sub.skillId === skillId) {
+      sumPct += sub.procPct;
+    }
+  }
+  for (const tid of player.treasureIds) {
+    const tr = getTreasureDef(tid);
+    if (tr.subSkill.skillId === skillId) {
+      sumPct += tr.subSkill.procPct;
+    }
+  }
+
+  return Math.min(95, sumPct);
+}
+
+// ============================================================================
+// MAIN GAME ENGINE CLASS
+// ============================================================================
+
+export class GameEngine {
+  private screenState: ScreenState = 'LOBBY';
+  private lobbyConfig: LobbyConfig;
+  private matchState: MatchState | null = null;
+  private callbacks: GameEngineCallbacks;
+  /** M09 Victory Horn may only fire in a tile resolution where the player built/upgraded something. */
+  private builtThisResolution = false;
+
+  constructor(callbacks: GameEngineCallbacks = {}) {
+    this.callbacks = callbacks;
+    this.lobbyConfig = this.createDefaultLobbyConfig();
+    this.restoreFromSessionStorage();
+  }
+
+  public setCallbacks(callbacks: GameEngineCallbacks): void {
+    this.callbacks = { ...this.callbacks, ...callbacks };
+  }
+
+  private createDefaultLobbyConfig(): LobbyConfig {
+    const defaultChars = ['CHAR_COSMO', 'CHAR_CLEO', 'CHAR_ARIA', 'CHAR_KAEL'] as const;
+    const defaultTreasures: [string, string, string][] = [
+      sanitizePlayerTreasures(defaultChars[0], ['TR_01_MAGNET', 'TR_03_HAMMER', 'TR_05_TICKET']),
+      sanitizePlayerTreasures(defaultChars[1], ['TR_02_BLACKHOLE', 'TR_06_BLUEPRINT', 'TR_08_RADIO']),
+      sanitizePlayerTreasures(defaultChars[2], ['TR_02_BLACKHOLE', 'TR_03_HAMMER', 'TR_09_HORN']),
+      sanitizePlayerTreasures(defaultChars[3], ['TR_01_MAGNET', 'TR_06_BLUEPRINT', 'TR_10_ORB']),
+    ];
+
+    return {
+      gameMode: 'FFA_4P',
+      ffaPlayerCount: 4,
+      loadoutInspectPlayerId: 'P1',
+      players: {
+        P1: {
+          id: 'P1',
+          name: 'Player 1',
+          colorHex: DEFAULT_PLAYER_COLORS.P1,
+          teamId: null,
+          controlType: 'HUMAN',
+          characterId: defaultChars[0],
+          treasureIds: defaultTreasures[0],
+          isSlotActive: true,
+        },
+        P2: {
+          id: 'P2',
+          name: 'Bot Cleo',
+          colorHex: DEFAULT_PLAYER_COLORS.P2,
+          teamId: null,
+          controlType: 'AI_BOT',
+          characterId: defaultChars[1],
+          treasureIds: defaultTreasures[1],
+          isSlotActive: true,
+        },
+        P3: {
+          id: 'P3',
+          name: 'Bot Aria',
+          colorHex: DEFAULT_PLAYER_COLORS.P3,
+          teamId: null,
+          controlType: 'AI_BOT',
+          characterId: defaultChars[2],
+          treasureIds: defaultTreasures[2],
+          isSlotActive: true,
+        },
+        P4: {
+          id: 'P4',
+          name: 'Bot Kael',
+          colorHex: DEFAULT_PLAYER_COLORS.P4,
+          teamId: null,
+          controlType: 'AI_BOT',
+          characterId: defaultChars[3],
+          treasureIds: defaultTreasures[3],
+          isSlotActive: true,
+        },
+      },
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // SESSION STORAGE PERSISTENCE
+  // --------------------------------------------------------------------------
+
+  public saveToSessionStorage(): void {
+    try {
+      if (typeof window === 'undefined' || !window.sessionStorage) return;
+      const envelope: PersistedSessionEnvelope = {
+        version: 1,
+        screenState: this.screenState,
+        lobbyConfig: this.lobbyConfig,
+        matchState: this.matchState,
+      };
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(envelope));
+    } catch {
+      // Ignore storage quota or private mode errors
+    }
+  }
+
+  public restoreFromSessionStorage(): boolean {
+    try {
+      if (typeof window === 'undefined' || !window.sessionStorage) return false;
+      const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as Partial<PersistedSessionEnvelope>;
+      if (parsed.version !== 1 || !parsed.lobbyConfig) return false;
+
+      this.lobbyConfig = parsed.lobbyConfig;
+      if (
+        this.lobbyConfig.ffaPlayerCount !== 2 &&
+        this.lobbyConfig.ffaPlayerCount !== 3 &&
+        this.lobbyConfig.ffaPlayerCount !== 4
+      ) {
+        this.lobbyConfig.ffaPlayerCount = 4;
+      }
+      for (const pid of PLAYER_IDS) {
+        const slot = this.lobbyConfig.players[pid];
+        if (slot) {
+          slot.treasureIds = sanitizePlayerTreasures(slot.characterId, slot.treasureIds);
+        }
+      }
+
+      if (parsed.matchState) {
+        this.matchState = parsed.matchState;
+      }
+
+      if (parsed.screenState === 'IN_GAME' && !this.matchState) {
+        this.screenState = 'LOBBY';
+      } else if (parsed.screenState) {
+        this.screenState = parsed.screenState;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  public clearSessionStorage(): void {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  private emitStateChange(): void {
+    this.saveToSessionStorage();
+    this.callbacks.onStateChange?.(this);
+  }
+
+  // --------------------------------------------------------------
