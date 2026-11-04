@@ -1,1350 +1,562 @@
+ration: none;">
+            <button class="tab-pill" type="button" style="padding: 12px 16px; font-size: 13px;">
+              ⬅ กลับสู่ Tabletop Lounge
+            </button>
+          </a>
+        </div>
+      </div>
 
-    container.querySelectorAll('.loadout-p-switch').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
-        if (pid) {
-          this.selectedLoadoutPlayerId = pid;
-          this.renderLoadoutScreen();
+      <!-- 16:9 Widescreen Viewport Shell -->
+      <div class="lgr-viewport-shell" id="lgrViewportShell">
+        <!-- Three.js 3D Isometric Board Canvas Host -->
+        <div class="lgr-canvas-host" id="lgrCanvasHost"></div>
+
+        <!-- 1280x720 Scaled UI Stage -->
+        <div class="lgr-stage-16x9" id="lgrStage16x9">
+          <!-- SCREEN 1: MAIN MENU (Reference Image 3 without currency/Lv clutter) -->
+          <div id="screen_MAIN_MENU" class="screen-layer" style="background: radial-gradient(circle at 30% 50%, #3b82f6 0%, #1d4ed8 45%, #0f172a 100%); padding: 16px 24px;"></div>
+
+          <!-- SCREEN 2: CHARACTER & TREASURE LOADOUT (Reference Image 2 without currency clutter) -->
+          <div id="screen_LOADOUT" class="screen-layer" style="background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #091326 100%); padding: 12px 18px;"></div>
+
+          <!-- SCREEN 3: LOBBY 4P / 2v2 (Toy-Box Arcade Theme) -->
+          <div id="screen_LOBBY" class="screen-layer" style="background: radial-gradient(rgba(255, 255, 255, 0.18) 2px, transparent 2px), linear-gradient(180deg, #1D6FD8 0%, #0F4DA8 100%); background-size: 24px 24px, 100% 100%; padding: 14px 20px;"></div>
+
+          <!-- SCREEN 4: IN-GAME OVERLAY (Reference Image 1) -->
+          <div id="screen_IN_GAME" class="screen-layer in-game-layer"></div>
+
+          <!-- MODAL LAYER: SCREEN 5 PLAYER INFO & SKILL INSPECTOR -->
+          <div id="modal_PLAYER_INSPECTOR" class="lgr-modal-backdrop"></div>
+
+          <!-- MODAL LAYER: SCREEN 6 CITY PURCHASE & CONSTRUCTION / TAKEOVER / MINIGAME / DEBT / RULES / VICTORY -->
+          <div id="modal_GAMEPLAY_ACTION" class="lgr-modal-backdrop"></div>
+
+          <!-- MODAL LAYER: GAME RULES & ODDS ((÷3)×1.6) -->
+          <div id="modal_RULES_ODDS" class="lgr-modal-backdrop"></div>
+        </div>
+      </div>
+    `;
+
+    this.canvasHostEl = this.rootEl.querySelector(
+      '#lgrCanvasHost'
+    ) as HTMLElement;
+    this.stageEl = this.rootEl.querySelector('#lgrStage16x9') as HTMLElement;
+
+    // Wire Portrait Guard Buttons
+    const btnLock = this.rootEl.querySelector('#btnLockLandscape');
+    btnLock?.addEventListener('click', async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
         }
-      });
+        const orient = screen.orientation as unknown as {
+          lock?: (mode: string) => Promise<void>;
+        };
+        if (orient?.lock) {
+          await orient.lock('landscape');
+        }
+      } catch {
+        // Fallback if browser blocks orientation lock
+      }
     });
 
-    container.querySelector('#invTabChar')?.addEventListener('click', () => {
-      this.loadoutInvTab = 'CHAR';
-      this.renderLoadoutScreen();
+    this.buildInGameStaticHUD();
+    this.updateScreenVisibility();
+  }
+
+  private isMobileLobbyMode(): boolean {
+    if (this.forceMobileLobbyOverride !== null) {
+      return this.forceMobileLobbyOverride;
+    }
+    return true;
+  }
+
+  private setupResponsiveScale(): void {
+    const updateScale = (): void => {
+      const vv = window.visualViewport;
+      const vw = vv ? vv.width : window.innerWidth;
+      const vh = vv ? vv.height : window.innerHeight;
+      const scale = Math.min(vw / 1280, vh / 720);
+      document.documentElement.style.setProperty(
+        '--ui-scale',
+        scale.toFixed(4)
+      );
+      const nowMobile = this.isMobileLobbyMode();
+      if (nowMobile !== this.lastDetectedMobileLobby) {
+        this.lastDetectedMobileLobby = nowMobile;
+        if (this.state.screen === 'LOBBY') {
+          this.renderLobbyScreen();
+        }
+      }
+    };
+    this.lastDetectedMobileLobby = this.isMobileLobbyMode();
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(updateScale, 120);
     });
-    container.querySelector('#invTabTr')?.addEventListener('click', () => {
-      this.loadoutInvTab = 'TR';
-      this.renderLoadoutScreen();
+    window.visualViewport?.addEventListener('resize', updateScale);
+  }
+
+  private setupKeyboardShortcuts(): void {
+    window.addEventListener('keydown', (e) => {
+      // 1. Esc: Close Inspector, Rules, or pass build/takeover
+      if (e.code === 'Escape') {
+        const inspector = this.stageEl.querySelector('#modal_PLAYER_INSPECTOR');
+        if (inspector?.classList.contains('open')) {
+          soundManager.playClick();
+          inspector.classList.remove('open');
+          return;
+        }
+        const rules = this.stageEl.querySelector('#modal_RULES_ODDS');
+        if (rules?.classList.contains('open')) {
+          soundManager.playClick();
+          rules.classList.remove('open');
+          return;
+        }
+        const passBuild = this.stageEl.querySelector(
+          '#btnPassBuild'
+        ) as HTMLButtonElement | null;
+        if (passBuild && passBuild.offsetParent !== null) {
+          soundManager.playClick();
+          passBuild.click();
+          return;
+        }
+        const skipTakeover = this.stageEl.querySelector(
+          '#btnSkipTakeover'
+        ) as HTMLButtonElement | null;
+        if (skipTakeover && skipTakeover.offsetParent !== null) {
+          soundManager.playClick();
+          skipTakeover.click();
+          return;
+        }
+      }
+
+      // 2. Enter: Quick confirm building or takeover
+      if (e.code === 'Enter' && !e.repeat) {
+        const confirmBuild = this.stageEl.querySelector(
+          '#btnConfirmBuild'
+        ) as HTMLButtonElement | null;
+        if (
+          confirmBuild &&
+          confirmBuild.offsetParent !== null &&
+          !confirmBuild.disabled
+        ) {
+          soundManager.playClick();
+          confirmBuild.click();
+          return;
+        }
+        const doTakeover = this.stageEl.querySelector(
+          '#btnDoTakeover'
+        ) as HTMLButtonElement | null;
+        if (
+          doTakeover &&
+          doTakeover.offsetParent !== null &&
+          !doTakeover.disabled
+        ) {
+          soundManager.playClick();
+          doTakeover.click();
+          return;
+        }
+      }
+
+      // 3. Digit1 or O: Toggle ODD
+      if (
+        (e.code === 'Digit1' || e.code === 'KeyO') &&
+        !e.repeat &&
+        this.state.screen === 'IN_GAME'
+      ) {
+        const oddBtn = this.stageEl.querySelector(
+          '#oeOddBtn'
+        ) as HTMLElement | null;
+        if (oddBtn && !oddBtn.classList.contains('disabled')) {
+          soundManager.playClick();
+          oddBtn.click();
+          return;
+        }
+      }
+
+      // 4. Digit2 or E: Toggle EVEN
+      if (
+        (e.code === 'Digit2' || e.code === 'KeyE') &&
+        !e.repeat &&
+        this.state.screen === 'IN_GAME'
+      ) {
+        const evenBtn = this.stageEl.querySelector(
+          '#oeEvenBtn'
+        ) as HTMLElement | null;
+        if (evenBtn && !evenBtn.classList.contains('disabled')) {
+          soundManager.playClick();
+          evenBtn.click();
+          return;
+        }
+      }
+
+      // 5. M: Toggle sound mute
+      if (e.code === 'KeyM' && !e.repeat) {
+        const soundBtn = this.stageEl.querySelector(
+          '#btnSoundToggle'
+        ) as HTMLButtonElement | null;
+        soundBtn?.click();
+        return;
+      }
+
+      // 6. Space: Charge roll
+      if (
+        e.code === 'Space' &&
+        !e.repeat &&
+        this.state.screen === 'IN_GAME' &&
+        this.canHumanRollNow()
+      ) {
+        e.preventDefault();
+        this.startArcCharge();
+      }
     });
 
-    container.querySelectorAll('.inv-char-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        const charId = (card as HTMLElement).dataset.charId;
-        if (!charId) return;
-        const newChar = getCharacterDef(charId);
-        // Auto-remove any treasure that conflicts with new character's Main skill
-        const filtered = targetPlayer.treasureIds.filter(
-          (tid) =>
-            !isMainSkillConflict(getTreasureDef(tid).mainSkill.skillId, newChar.mainSkill.skillId)
-        );
-        for (const tr of TREASURE_POOL) {
-          if (
-            filtered.length < 3 &&
-            !isMainSkillConflict(tr.mainSkill.skillId, newChar.mainSkill.skillId) &&
-            !filtered.includes(tr.id)
-          ) {
-            filtered.push(tr.id);
-          }
-        }
-        const nextTr = [filtered[0], filtered[1], filtered[2]] as [
-          string,
-          string,
-          string,
-        ];
-        targetPlayer.characterId = newChar.id;
-        targetPlayer.treasureIds = nextTr;
-        this.callbacks.onUpdatePlayerLoadout?.(
-          targetPlayer.id,
-          newChar.id,
-          nextTr
-        );
-        this.renderLoadoutScreen();
-      });
-    });
-
-    container.querySelectorAll('.inv-tr-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        const trId = (card as HTMLElement).dataset.trId;
-        if (!trId) return;
-        const trDef = getTreasureDef(trId);
-        if (isMainSkillConflict(trDef.mainSkill.skillId, curChar.mainSkill.skillId)) {
-          return; // Blocked: conflicts with Character Main
-        }
-        const list = [...targetPlayer.treasureIds];
-        if (list.includes(trId)) {
-          return; // Already equipped
-        }
-        list.shift();
-        list.push(trId);
-        const nextTr = [list[0], list[1], list[2]] as [string, string, string];
-        targetPlayer.treasureIds = nextTr;
-        this.callbacks.onUpdatePlayerLoadout?.(
-          targetPlayer.id,
-          targetPlayer.characterId,
-          nextTr
-        );
-        this.renderLoadoutScreen();
-      });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && this.isChargingGauge) {
+        e.preventDefault();
+        this.stopArcCharge();
+      }
     });
   }
 
+  private updateScreenVisibility(): void {
+    const screens: ScreenState[] = [
+      'MAIN_MENU',
+      'LOADOUT',
+      'LOBBY',
+      'IN_GAME',
+    ];
+    for (const s of screens) {
+      const el = this.stageEl.querySelector(`#screen_${s}`) as HTMLElement;
+      if (el) {
+        el.classList.toggle('active', this.state.screen === s);
+      }
+    }
+  }
+
+  private renderAll(): void {
+    this.renderMainMenuScreen();
+    this.renderLoadoutScreen();
+    this.renderLobbyScreen();
+    this.renderInGameHUD();
+    this.renderActiveGameplayModals();
+  }
+
   // ==========================================================================
+  // SCREEN 1: MAIN MENU (Reference Image 3 — Clean Header without fake clutter)
   // ==========================================================================
-  // SCREEN 3: UNIFIED LOBBY (Topbar + 4x Player Banners + 1/3 Pick / 2/3 Inspect)
-  // ==========================================================================
-  private renderLobbyScreen(): void {
+  private renderMainMenuScreen(): void {
     const container = this.stageEl.querySelector(
-      '#screen_LOBBY'
+      '#screen_MAIN_MENU'
     ) as HTMLElement;
     if (!container) return;
 
-    const isTeamMode = this.state.mode === 'TEAM_2V2';
-    const ffaCount = this.state.ffaPlayerCount ?? 4;
-    const activeSlotCount = isTeamMode ? 4 : ffaCount;
+    container.innerHTML = `
+      <!-- Top Clean Header (Game Logo Emblem + Direct Navigation Pills, NO fake Gold/Diamond/Lv/sessionStorage) -->
+      <div style="display:flex; justify-content:space-between; align-items:center; height:64px;">
+        <div style="background:linear-gradient(180deg,#fde047 0%,#eab308 55%,#ca8a04 100%); border:3px solid #ffffff; border-radius:16px; padding:6px 18px; box-shadow:0 6px 16px rgba(0,0,0,0.45); display:flex; align-items:center; gap:12px;">
+          <span style="font-size:32px; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4));">🎲</span>
+          <div>
+            <div style="font-size:11px; font-weight:900; color:#78350f; letter-spacing:0.8px;">LINE CLASSIC RECREATION (32-TILE WORLD MAP)</div>
+            <div style="font-size:24px; font-weight:900; color:#1e3a8a; letter-spacing:0.4px;">
+              Let's Get Rich <span style="font-size:14px; color:#b91c1c; font-weight:900;">(Peak Era)</span>
+            </div>
+          </div>
+        </div>
 
-    // Ensure selected player is valid
-    if (!this.state.players.some((p) => p.id === this.selectedLoadoutPlayerId)) {
-      this.selectedLoadoutPlayerId = 'P1';
-    }
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="tab-pill" id="menuNavLoadout" style="padding:8px 14px; font-size:13px;">
+            🎒 จัดตัวละคร & สมบัติ
+          </button>
+          <button class="tab-pill" id="menuNavRules" style="padding:8px 14px; font-size:13px;">
+            📊 ตารางเรทสกิล & เต๋า
+          </button>
+          <button class="tab-pill" id="menuNavFullscreen" style="padding:8px 14px; font-size:13px;">
+            ⛶ Fullscreen
+          </button>
+        </div>
+      </div>
+
+      <!-- Center Content: Globe Hero on Left + 4P & 2v2 Tall Banners on Right -->
+      <div style="display:grid; grid-template-columns: 42% 58%; height:calc(100% - 136px); align-items:center; margin-top:8px;">
+        <!-- Left Hero: Mascot + World Landmarks Globe + Floating Red Dice -->
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; gap:14px;">
+          <div style="width:248px; height:248px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #6ee7b7 0%, #3b82f6 55%, #1e3a8a 100%); border:5px solid #bae6fd; box-shadow:0 0 42px rgba(56,189,248,0.7), inset 0 4px 12px rgba(255,255,255,0.55); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;">
+            <div style="font-size:48px; letter-spacing:2px;">🗼🗽🏛️🕌</div>
+            <div style="font-size:66px; margin-top:-6px;">🧞‍♂️🎲👸</div>
+            <div style="position:absolute; top:-10px; right:-16px; background:linear-gradient(180deg,#ef4444,#b91c1c); border:2.5px solid #ffffff; border-radius:10px; padding:5px 12px; font-weight:900; font-size:14px; transform:rotate(12deg); box-shadow:0 6px 14px rgba(0,0,0,0.5);">
+              🎲 DOUBLE 12!
+            </div>
+            <div style="position:absolute; bottom:-12px; background:#0f172a; border:2px solid #fde047; border-radius:99px; padding:4px 16px; font-size:12px; font-weight:900; color:#fde047; box-shadow:0 4px 10px rgba(0,0,0,0.5);">
+              8 ตัวละคร • 10 สมบัติ • 20 สกิลฮิต
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Mode Cards: 4P Free-For-All & 2v2 Team Match -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px; height:92%;">
+          <!-- 2-4P FREE-FOR-ALL Card -->
+          <div style="background:linear-gradient(180deg, #f97316 0%, #b45309 55%, #78350f 100%); border:3.5px solid #fde047; border-radius:20px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; text-align:center; box-shadow:0 12px 28px rgba(0,0,0,0.55), inset 0 2px 2px rgba(255,255,255,0.45);">
+            <div>
+              <div style="font-size:42px; font-weight:900; color:#fef08a; text-shadow:0 3px 6px rgba(0,0,0,0.65); line-height:1;">2–4P</div>
+              <div style="font-size:21px; font-weight:900; color:#ffffff; margin-top:4px;">FREE-FOR-ALL</div>
+              <div style="font-size:13px; color:#fed7aa; font-weight:800; margin-top:2px;">Solo Battle (ศึกเดี่ยว 2–4 คน ชิงความเป็นหนึ่ง)</div>
+            </div>
+            <div style="font-size:44px; background:rgba(0,0,0,0.28); width:92%; padding:14px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.35);">
+              👩‍🦰👦🧑👧
+              <div style="font-size:11px; color:#fef3c7; font-weight:800; margin-top:6px;">เลือกได้ 2P / 3P / 4P • Triple x2 • Line x3 • Tourism x5</div>
+            </div>
+            <button class="gold-btn" id="btnPlay4P" style="width:90%; padding:11px; font-size:16px;">
+              PLAY NOW
+            </button>
+          </div>
+
+          <!-- 2v2 TEAM MATCH Card -->
+          <div style="background:linear-gradient(180deg, #0284c7 0%, #1d4ed8 55%, #1e1b4b 100%); border:3.5px solid #7dd3fc; border-radius:20px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; text-align:center; box-shadow:0 12px 28px rgba(0,0,0,0.55), inset 0 2px 2px rgba(255,255,255,0.45);">
+            <div>
+              <div style="font-size:42px; font-weight:900; color:#fde047; text-shadow:0 3px 6px rgba(0,0,0,0.65); line-height:1;">2v2</div>
+              <div style="font-size:21px; font-weight:900; color:#ffffff; margin-top:4px;">TEAM MATCH</div>
+              <div style="font-size:13px; color:#bae6fd; font-weight:800; margin-top:2px;">Shared Monopoly (ทีม Alpha vs Bravo นับสีร่วมกัน)</div>
+            </div>
+            <div style="font-size:44px; background:rgba(0,0,0,0.28); width:92%; padding:14px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.35);">
+              🤝🎲🏙️
+              <div style="font-size:11px; color:#e0f2fe; font-weight:800; margin-top:6px;">เหยียบเมืองเพื่อนฟรี • รวมโฉนดชนะ Monopoly</div>
+            </div>
+            <button class="gold-btn" id="btnPlay2v2" style="width:90%; padding:11px; font-size:16px;">
+              PLAY NOW
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom 3 Buttons Bar -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px;">
+        <button class="royal-panel" id="btnBottomLoadout" style="padding:11px 14px; font-weight:900; font-size:14px; color:#fef08a; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          🎒 CHARACTERS & TREASURES
+        </button>
+        <button class="royal-panel" id="btnBottomRules" style="padding:11px 14px; font-weight:900; font-size:14px; color:#f8fafc; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          📊 GAME RULES / ODDS ((÷3)×1.6)
+        </button>
+        <button class="royal-panel" id="btnBottomLobby" style="padding:11px 14px; font-weight:900; font-size:14px; color:#7dd3fc; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          👥 MATCH LOBBY (4P / 2v2)
+        </button>
+      </div>
+    `;
+
+    container
+      .querySelector('#btnPlay4P')
+      ?.addEventListener('click', () => {
+        this.state.mode = 'FFA_4P';
+        this.callbacks.onModeChange?.('FFA_4P');
+        this.showScreen('LOBBY');
+      });
+
+    container
+      .querySelector('#btnPlay2v2')
+      ?.addEventListener('click', () => {
+        this.state.mode = 'TEAM_2V2';
+        this.callbacks.onModeChange?.('TEAM_2V2');
+        this.showScreen('LOBBY');
+      });
+
+    container
+      .querySelector('#btnBottomLoadout')
+      ?.addEventListener('click', () => this.showScreen('LOADOUT'));
+    container
+      .querySelector('#menuNavLoadout')
+      ?.addEventListener('click', () => this.showScreen('LOADOUT'));
+    container
+      .querySelector('#btnBottomLobby')
+      ?.addEventListener('click', () => this.showScreen('LOBBY'));
+    container
+      .querySelector('#btnBottomRules')
+      ?.addEventListener('click', () => this.openRulesModal());
+    container
+      .querySelector('#menuNavRules')
+      ?.addEventListener('click', () => this.openRulesModal());
+    container
+      .querySelector('#menuNavFullscreen')
+      ?.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+  }
+
+  // ==========================================================================
+  // SCREEN 2: CHARACTER & TREASURE LOADOUT (Reference Image 2 — Clean Header + P1..P4 Switcher)
+  // ==========================================================================
+  private renderLoadoutScreen(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_LOADOUT'
+    ) as HTMLElement;
+    if (!container) return;
+
     const targetPlayer =
       this.state.players.find((p) => p.id === this.selectedLoadoutPlayerId) ??
       this.state.players[0];
+    if (!targetPlayer) return;
 
     const curChar: CharacterDef = getCharacterDef(targetPlayer.characterId);
     const curTrIds = [...targetPlayer.treasureIds] as [string, string, string];
-    const charMainDef = getSkillDef(curChar.mainSkill.skillId);
     const combinedSkills = computeCombinedPlayerSkills(
       curChar.id,
       curTrIds,
       targetPlayer.skillUsesRemaining
     );
 
-    // 1. Topbar Mode Buttons & Controls
-    const startBalLabel = formatMarbleCompact(
-      MATCH_CONFIG.startingMarbleByPlayer[targetPlayer.id] ?? MATCH_CONFIG.startingMarble
-    );
-
-    // 2. Player Banners (4x Horizontal Row - Chunky Toy License Cards)
-    const playerBannerGradients: Record<PlayerId, string> = {
-      P1: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
-      P2: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-      P3: 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
-      P4: 'linear-gradient(135deg, #F59E0B 0%, #B45309 100%)',
-    };
-
-    const playerBannersHtml = PLAYER_IDS.map((pid, idx) => {
-      const isActiveSlot = isTeamMode || idx < ffaCount;
-      const p = this.state.players[idx];
-      const isSelected = pid === this.selectedLoadoutPlayerId;
-
-      if (!isActiveSlot || !p) {
-        return `
-          <div class="lobby-banner-empty" style="background:#FFF9EB; border:3px dashed #A89078; border-radius:14px; padding:6px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:88px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.06);">
-            <div style="font-size:11px; font-weight:900; color:#786C5E;">SLOT ${pid} EMPTY</div>
-            <div style="display:flex; gap:6px; width:100%;">
-              <button class="gold-btn btn-lobby-add-ai" data-idx="${idx}" style="flex:1; padding:4px 6px; font-size:10px; font-weight:900; border-radius:8px;">
-                🤖 + Add AI
-              </button>
-              <button class="tab-pill btn-lobby-add-human" data-idx="${idx}" style="flex:1; padding:4px 4px; font-size:10px; font-weight:900; border-radius:8px;">
-                👤 + Human
-              </button>
-            </div>
-          </div>
-        `;
-      }
-
-      const pChar = getCharacterDef(p.characterId);
-      const teamBadge = isTeamMode
-        ? p.teamId === 'ALPHA' ? 'TEAM A' : 'TEAM B'
-        : `SOLO ${p.id}`;
-
-      const isYou = this.youPlayerId ? p.id === this.youPlayerId : false;
-      const isHuman = p.controlType === 'HUMAN';
-      const isRemoteConnected = isHuman && p.connected && !isYou;
-
-      let controlBadgeHtml = '';
-      if (isRemoteConnected) {
-        controlBadgeHtml = `<span style="font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:999px; background:#F0FDF4; color:#15803D; border:2px solid #1E1612;">👤 Online</span>`;
-      } else {
-        controlBadgeHtml = `
-          <button class="btn-lobby-toggle-control" data-pid="${p.id}" title="คลิกสลับ: Human (Pass 'n Play) / AI Bot" style="background:${isHuman ? 'linear-gradient(180deg,#22C55E 0%,#16A34A 100%)' : 'linear-gradient(180deg,#38BDF8 0%,#0284C7 100%)'}; border:2px solid #1E1612; color:#fff; border-radius:999px; padding:2px 8px; font-size:9.5px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 0 #1E1612;">
-            ${isHuman ? '🟢 Pass \'n Play' : '🤖 AI Bot'}
-          </button>
-        `;
-      }
-
-      const youBadgeHtml = isYou
-        ? `<span style="background:#FFD43B; color:#1E1612; font-weight:900; font-size:9px; padding:1px 7px; border-radius:999px; border:2px solid #1E1612; transform:rotate(-3deg); display:inline-block; box-shadow:0 2px 0 #1E1612;">YOU ★</span>`
-        : '';
-
-      const kickBtnHtml = !isYou
-        ? `<button class="btn-lobby-kick" data-pid="${p.id}" title="Kick Player / Clear Slot" style="background:linear-gradient(180deg,#FF5A5F 0%,#DC2626 100%); border:2px solid #1E1612; color:#fff; border-radius:999px; padding:1px 7px; font-size:9px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:2px; box-shadow:0 2px 0 #7F1D1D;">✕ Kick</button>`
-        : '';
-
-      return `
-        <div class="lobby-player-banner" data-pid="${p.id}" style="background:${playerBannerGradients[p.id]}; border:3px solid #1E1612; outline:${isSelected ? '4px solid #FFD43B' : 'none'}; box-shadow:${isSelected ? '0 6px 0 #1E1612, inset 0 2px 0 rgba(255,255,255,0.4)' : '0 4px 0 #1E1612, inset 0 2px 0 rgba(255,255,255,0.3)'}; border-radius:14px; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; height:88px; position:relative; cursor:pointer; transition:transform 0.15s ease;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="background:#FFF9EB; border:2px solid #1E1612; border-radius:999px; padding:1px 7px; font-size:9.5px; font-weight:900; color:#1E1612; box-shadow:0 1.5px 0 #1E1612;">
-              ${teamBadge}
-            </span>
-            <div style="display:flex; align-items:center; gap:4px;">
-              ${youBadgeHtml}
-              ${controlBadgeHtml}
-              <button class="btn-lobby-randomize" data-pid="${p.id}" title="สุ่มจัดเซ็ตคอมโบ (Synergistic Meta Build)" style="background:linear-gradient(180deg,#A855F7 0%,#7E22CE 100%); border:2px solid #1E1612; color:#fff; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:2px; box-shadow:0 2px 0 #581C87;">🎲 Build</button>
-              ${kickBtnHtml}
-            </div>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div style="width:38px; height:38px; border-radius:10px; background:#FFF9EB; border:2px solid #1E1612; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 0 #1E1612; overflow:hidden;">
-              ${getMascotSvg(p.characterId, 36)}
-            </div>
-            <div style="overflow:hidden;">
-              <div style="font-size:12px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1.5px 0 #1E1612;">
-                ${p.name}
-              </div>
-              <div style="font-size:10px; font-weight:900; color:#FEF08A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 0 rgba(0,0,0,0.5);">
-                ${pChar.name} <span style="color:#FFF; font-size:9px;">(${pChar.rank})</span>
-              </div>
-            </div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:9px; font-weight:900; color:#FFF;">
-            <span>${p.treasureIds.map(tid => getTreasureDef(tid).iconEmoji).join(' ')} <span style="background:rgba(0,0,0,0.25); border-radius:4px; padding:0 3px; font-size:8px; margin-left:2px;">[${CHARACTER_SYNERGIES[p.characterId]?.archetypeTh || ''}]</span></span>
-            ${isSelected ? `<span style="background:#FFD43B; color:#1E1612; border:1.5px solid #1E1612; border-radius:999px; padding:0 6px; font-size:8.5px; font-weight:900; transform:rotate(-2deg); display:inline-block;">★ EDITING</span>` : `<span style="opacity:0.85; font-size:8.5px;">Click to Edit</span>`}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // 3. Left Panel (1/3 Width): Pick Char + Pick Treasure
-    const charPickerCardsHtml = CHARACTER_ROSTER.map((c) => {
-      const isSelected = c.id === targetPlayer.characterId;
-      return `
-        <div class="lobby-char-btn" data-char-id="${c.id}" style="background:${isSelected ? 'linear-gradient(180deg,#FFFBEB 0%,#FEF08A 100%)' : '#FFF9EB'}; border:2.5px solid #1E1612; border-radius:10px; padding:4px; text-align:center; cursor:pointer; box-shadow:${isSelected ? 'inset 0 2px 0 rgba(255,255,255,0.8), 0 3px 0 #B45309, 0 5px 0 #1E1612' : '0 3px 0 #1E1612'}; position:relative; transition:transform 0.1s ease;">
-          ${isSelected ? `<span style="position:absolute; top:2px; right:3px; font-size:9px; color:#15803D; font-weight:900; background:#DCFCE7; border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; border:1px solid #15803D;">✔</span>` : ''}
-          <div style="display:flex; justify-content:center; align-items:center; height:32px;">${getMascotSvg(c.id, 32)}</div>
-          <div style="font-size:10px; font-weight:900; color:#1E1612; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">${c.name}</div>
-          <div style="font-size:8px; font-weight:900; color:#B45309;">${c.rank} • ${c.mainSkill.procPct}%</div>
-        </div>
-      `;
-    }).join('');
-
-    // Equipped 3 Treasure Slots
-    const equippedTrSlotsHtml = curTrIds.map((tid, slotIdx) => {
-      const tr = getTreasureDef(tid);
-      const isSlotActive = slotIdx === this.selectedTreasureSlotIndex;
-      const isConflict = isMainSkillConflict(tr.mainSkill.skillId, curChar.mainSkill.skillId);
-      return `
-        <div class="lobby-tr-slot-btn" data-slot-idx="${slotIdx}" style="background:${isSlotActive ? '#FEF9C3' : '#FFF9EB'}; border:2.5px solid ${isConflict ? '#DC2626' : '#1E1612'}; border-radius:10px; padding:4px 6px; display:flex; align-items:center; gap:6px; cursor:pointer; box-shadow:${isSlotActive ? '0 3px 0 #CA8A04, 0 5px 0 #1E1612' : '0 3px 0 #1E1612'};">
-          <span style="font-size:20px;">${tr.iconEmoji}</span>
-          <div style="overflow:hidden; flex:1;">
-            <div style="font-size:9px; font-weight:900; color:${isConflict ? '#DC2626' : '#1E1612'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              Slot ${slotIdx + 1}: ${tr.name}
-            </div>
-            <div style="font-size:8px; color:${isConflict ? '#B91C1C' : '#64748B'}; font-weight:800;">
-              ${isConflict ? '⛔ ซ้ำ Main' : `Main ${tr.mainSkill.procPct}%`}
-            </div>
-          </div>
-          ${isSlotActive ? `<span style="font-size:9px; color:#B45309; font-weight:900;">▼</span>` : ''}
-        </div>
-      `;
-    }).join('');
-
-    // 10 Treasure Pool
-    const treasurePoolCardsHtml = TREASURE_POOL.map((t) => {
-      const isEquippedInActiveSlot = curTrIds[this.selectedTreasureSlotIndex] === t.id;
-      const isEquippedAnywhere = curTrIds.includes(t.id);
-      const isConflict = isMainSkillConflict(t.mainSkill.skillId, curChar.mainSkill.skillId);
-      return `
-        <div class="lobby-tr-pool-btn" data-tr-id="${t.id}" title="${t.name} (${t.nameEn})" style="background:${isEquippedInActiveSlot ? '#FEF9C3' : '#FFF9EB'}; border:2px solid ${isConflict ? '#DC2626' : '#1E1612'}; border-radius:8px; padding:3px; text-align:center; cursor:${isConflict ? 'not-allowed' : 'pointer'}; opacity:${isConflict ? 0.45 : 1}; position:relative; box-shadow:0 2px 0 #1E1612;">
-          ${isEquippedAnywhere ? `<span style="position:absolute; top:1px; right:2px; font-size:8px; color:#15803D; font-weight:900; background:#DCFCE7; border-radius:50%; width:12px; height:12px; display:flex; align-items:center; justify-content:center; border:1px solid #15803D;">✔</span>` : ''}
-          <div style="font-size:20px; line-height:1;">${t.iconEmoji}</div>
-          <div style="font-size:9px; font-weight:900; color:#1E1612; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.name}</div>
-          <div style="font-size:7.5px; color:${isConflict ? '#B91C1C' : '#64748B'}; font-weight:800;">
-            ${isConflict ? 'ซ้ำ Main' : `${t.mainSkill.procPct}%`}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // 4. Right Panel (2/3 Width): See Abilities + See Sum Stat and Skills
     const statsList = [
-      { label: `🎲 Dice Control`, pct: `${STAT_SCALING_TABLE.dcProcPct[curChar.stats.dc]}%`, lv: curChar.stats.dc, color: '#38bdf8' },
-      { label: `🛠️ Construction DC`, pct: `-${STAT_SCALING_TABLE.constDiscountPct[curChar.stats.constDc]}%`, lv: curChar.stats.constDc, color: '#fb923c' },
-      { label: `🤝 Acquisition DC`, pct: `-${STAT_SCALING_TABLE.acqDiscountPct[curChar.stats.acqDc]}%`, lv: curChar.stats.acqDc, color: '#facc15' },
-      { label: `🛡️ Toll Discount`, pct: `-${STAT_SCALING_TABLE.tollDiscountPct[curChar.stats.tollDc]}%`, lv: curChar.stats.tollDc, color: '#f59e0b' },
-      { label: `🍀 Salary / Luck`, pct: `+${STAT_SCALING_TABLE.salLuckBonusPct[curChar.stats.salLuck]}%`, lv: curChar.stats.salLuck, color: '#4ade80' },
+      {
+        label: `🎲 Dice Control (DC ${STAT_SCALING_TABLE.dcProcPct[curChar.stats.dc]}%)`,
+        lv: curChar.stats.dc,
+        color: '#38bdf8',
+      },
+      {
+        label: `🛠️ Construction Discount (-${STAT_SCALING_TABLE.constDiscountPct[curChar.stats.constDc]}%)`,
+        lv: curChar.stats.constDc,
+        color: '#fb923c',
+      },
+      {
+        label: `🤝 Acquisition Discount (-${STAT_SCALING_TABLE.acqDiscountPct[curChar.stats.acqDc]}%)`,
+        lv: curChar.stats.acqDc,
+        color: '#facc15',
+      },
+      {
+        label: `🛡️ Toll Discount (-${STAT_SCALING_TABLE.tollDiscountPct[curChar.stats.tollDc]}%)`,
+        lv: curChar.stats.tollDc,
+        color: '#f59e0b',
+      },
+      {
+        label: `🍀 Salary/Luck (+${STAT_SCALING_TABLE.salLuckBonusPct[curChar.stats.salLuck]}%)`,
+        lv: curChar.stats.salLuck,
+        color: '#4ade80',
+      },
     ];
 
-    const statBarsHtml = statsList.map((s) => {
-      let segs = '';
-      for (let i = 1; i <= 5; i++) {
-        segs += `<div style="flex:1; height:12px; border-radius:999px; background:${i <= s.lv ? s.color : '#F3E5C8'}; border:2px solid #1E1612; box-shadow:${i <= s.lv ? 'inset 0 2px 0 rgba(255,255,255,0.7), 0 2px 0 #1E1612' : 'none'};"></div>`;
-      }
-      return `
-        <div>
-          <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:900; color:#141413; margin-bottom:2px;">
-            <span>${s.label} (${s.pct})</span>
-            <span style="color:#B45309; font-weight:900;">+${s.lv}/5</span>
-          </div>
-          <div style="display:flex; gap:3px;">${segs}</div>
-        </div>
-      `;
-    }).join('');
-
-    // High-Legibility 3-Treasure Cards (Main + Sub each, 6 Skills total)
-    const trCardsHtml = curTrIds.map((tid, idx) => {
-      const tr = getTreasureDef(tid);
-      const mDef = getSkillDef(tr.mainSkill.skillId);
-      const sDef = getSkillDef(tr.subSkill.skillId);
-      const isConflict = isMainSkillConflict(tr.mainSkill.skillId, curChar.mainSkill.skillId);
-      return `
-        <div style="background:${isConflict ? '#FEE2E2' : '#FFF9EB'}; border:2.5px solid ${isConflict ? '#DC2626' : '#1E1612'}; border-radius:12px; padding:6px 8px; box-shadow:0 3px 0 ${isConflict ? '#991B1B' : '#1E1612'}; display:flex; flex-direction:column; justify-content:space-between; gap:4px; flex:1; min-height:0;">
-          <!-- Header -->
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid ${isConflict ? '#FCA5A5' : '#E5D6B8'}; padding-bottom:3px;">
-            <span style="font-weight:900; font-size:11.5px; color:#141413; display:flex; align-items:center; gap:4px;">
-              <span style="font-size:16px;">${tr.iconEmoji}</span>
-              <span>#${idx + 1} ${tr.name}</span>
-            </span>
-            ${isConflict ? `<span style="background:#DC2626; color:#FFF; font-weight:900; font-size:9.5px; padding:1px 6px; border-radius:999px;">⛔ซ้ำ Main</span>` : ''}
-          </div>
-
-          <!-- Main Skill -->
-          <div style="background:#FFFDF7; border:1.5px solid #E5D6B8; border-radius:8px; padding:4px 6px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:900; font-size:10.5px; color:#1E3A8A;">⚡ Main: ${mDef.name}</span>
-              <span style="background:#2563EB; color:#FFF; font-weight:900; font-size:9.5px; padding:1px 6px; border-radius:999px; font-variant-numeric:tabular-nums;">${tr.mainSkill.procPct}%</span>
-            </div>
-            <div style="font-size:10px; color:#141413; font-weight:700; line-height:1.25; margin-top:2px;">
-              ${mDef.effectDesc}
-            </div>
-          </div>
-
-          <!-- Sub Skill -->
-          <div style="background:#FFFDF7; border:1.5px solid #E5D6B8; border-radius:8px; padding:4px 6px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:900; font-size:10.5px; color:#166534;">🛡️ Sub: ${sDef.name}</span>
-              <span style="background:#16A34A; color:#FFF; font-weight:900; font-size:9.5px; padding:1px 6px; border-radius:999px; font-variant-numeric:tabular-nums;">+${tr.subSkill.procPct}%</span>
-            </div>
-            <div style="font-size:10px; color:#141413; font-weight:700; line-height:1.25; margin-top:2px;">
-              ${sDef.effectDesc}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    const activeHumans = this.state.players.filter((p, i) => (isTeamMode || i < ffaCount) && p.controlType === 'HUMAN').length;
-
-    // Assemble Full Screen
-    container.innerHTML = `
-      <div style="display:flex; flex-direction:column; height:100%; gap:8px;">
-        <!-- 1. TOPBAR -->
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#FFF9EB; border:3px solid #1E1612; border-radius:14px; padding:6px 14px; flex-shrink:0; box-shadow:0 4px 0 #1E1612;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="cartoon-title" style="font-size:18px; color:#FFD43B;">🎲 LINE LET'S GET RICH</span>
-            <span style="font-size:11px; color:#1E1612; font-weight:900; background:#FFD43B; padding:2px 8px; border-radius:999px; border:2px solid #1E1612; box-shadow:0 2px 0 #1E1612;">PEAK ERA (3D)</span>
-
-            <!-- Single vs 2v2 Team Only -->
-            <div style="background:#F3E5C8; border:2px solid #1E1612; border-radius:999px; padding:2px; display:flex; gap:3px; margin-left:6px;">
-              <button id="lobbyModeSingle" class="tab-pill ${!isTeamMode ? 'active' : ''}" style="border-radius:999px; padding:3px 12px; font-size:11px; font-weight:900; ${!isTeamMode ? 'background:#1B65C6; color:#fff;' : ''}">
-                👑 Single (FFA)
-              </button>
-              <button id="lobbyModeTeam" class="tab-pill ${isTeamMode ? 'active' : ''}" style="border-radius:999px; padding:3px 12px; font-size:11px; font-weight:900; ${isTeamMode ? 'background:#1B65C6; color:#fff;' : ''}">
-                🤝 2v2 Team Match
-              </button>
-            </div>
-
-            <!-- Pass 'n Play status badge -->
-            <span style="background:${activeHumans >= 2 ? 'linear-gradient(180deg,#DCFCE7 0%,#BBF7D0 100%)' : '#F1F5F9'}; color:${activeHumans >= 2 ? '#15803D' : '#475569'}; border:2px solid #1E1612; font-size:11px; font-weight:900; padding:2px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1.5px 0 #1E1612;">
-              ${activeHumans >= 2 ? `🎮 Pass 'n Play (${activeHumans}P Local)` : '👤 Solo vs Bots'}
-            </span>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:10px;">
-            <a href="/" style="text-decoration:none;">
-              <button class="tab-pill" style="padding:6px 14px; font-size:11px; border-radius:10px; font-weight:900; cursor:pointer;">
-                ⬅ Tabletop Lounge
-              </button>
-            </a>
-            <button class="gold-btn" id="btnStartMatchNow" style="padding:8px 24px; font-size:14px; font-weight:900; cursor:pointer; border-radius:12px; border:3px solid #1E1612; box-shadow: inset 0 3px 0 rgba(255,255,255,0.7), 0 5px 0 #B45309, 0 8px 0 #1E1612;">
-              🎲 START MATCH (${isTeamMode ? '2v2' : `${ffaCount}P`})
-            </button>
-          </div>
-        </div>
-
-        <!-- 2. PLAYER BANNERS 4X (HORIZONTAL ROW) -->
-        <div class="lobby-banners-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; flex-shrink:0;">
-          ${playerBannersHtml}
-        </div>
-
-        <!-- 3. LOWER SPLIT VIEW (1/3 | 2/3) -->
-        <div class="lobby-lower-split" style="display:grid; grid-template-columns: 32% 68%; gap:10px; flex:1; min-height:0;">
-          <!-- LEFT COLUMN (1/3 Width): Pick Char + Pick Treasure -->
-          <div style="display:flex; flex-direction:column; gap:8px; height:100%; min-height:0;">
-            <!-- Pick Char -->
-            <div class="royal-panel" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
-              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
-                <span>👤 1. PICK CHARACTER</span>
-                <span style="color:#B45309; font-weight:900;">8 S+ ROSTER</span>
-              </div>
-              <div class="lgr-scroll" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; padding:6px; overflow-y:auto; flex:1;">
-                ${charPickerCardsHtml}
-              </div>
-            </div>
-
-            <!-- Pick Treasure -->
-            <div class="royal-panel" style="flex:1.15; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
-              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
-                <span>💎 2. PICK 3 TREASURES</span>
-                <span style="color:#B45309; font-weight:900;">SLOT ${this.selectedTreasureSlotIndex + 1} ACTIVE</span>
-              </div>
-              <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; padding:4px 6px; flex-shrink:0;">
-                ${equippedTrSlotsHtml}
-              </div>
-              <div class="lgr-scroll" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; padding:4px 6px; overflow-y:auto; flex:1;">
-                ${treasurePoolCardsHtml}
-              </div>
-            </div>
-          </div>
-
-          <!-- RIGHT COLUMN (2/3 Width): See Abilities + See Sum Stat and Skills -->
-          <div style="display:flex; flex-direction:column; gap:8px; height:100%; min-height:0;">
-            <!-- See Abilities -->
-            <div class="royal-panel" style="flex:0.8; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
-              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
-                <span>⚡ CHARACTER ABILITIES & PROFILE</span>
-                <span style="color:#B45309; font-weight:900;">${curChar.name} (${curChar.rank}) • ${curChar.title}</span>
-              </div>
-              <div style="display:flex; gap:14px; padding:8px 14px; align-items:center; flex:1;">
-                <div style="width:72px; height:72px; border-radius:14px; background:linear-gradient(180deg, #FFF9EB 0%, #FDE047 100%); border:3px solid #1E1612; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 0 #1E1612;">
-                  ${getMascotSvg(curChar.id, 50)}
-                  <div style="font-size:10px; font-weight:900; color:#141413; margin-top:2px;">${curChar.name}</div>
-                </div>
-                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                  <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <span style="font-size:14px; font-weight:900; color:#141413;">${charMainDef.name} <span style="font-size:11px; color:#475569;">(${charMainDef.code})</span></span>
-                    <span style="background:linear-gradient(180deg,#FF5A5F 0%,#DC2626 100%); color:#fff; font-weight:900; font-size:11px; padding:2px 10px; border-radius:999px; border:2px solid #1E1612; box-shadow:0 2px 0 #7F1D1D; font-variant-numeric:tabular-nums;">
-                      โอกาสติด ${curChar.mainSkill.procPct}%
-                    </span>
-                  </div>
-                  <div style="font-size:12px; color:#141413; font-weight:800; line-height:1.35;">${charMainDef.effectDesc}</div>
-                  <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:800; margin-top:2px;">
-                    <span style="color:#0369A1;">🎯 เงื่อนไข: ${charMainDef.trigger}</span>
-                    <span style="color:#7E22CE; font-weight:900;">⚡ ${CHARACTER_SYNERGIES[curChar.id]?.archetypeTh || ''}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- See Sum Stat and Skills -->
-            <div class="royal-panel" style="flex:1.2; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
-              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
-                <span>📊 STATS & 3 EQUIPPED TREASURES (6 SKILLS) • MAIN SKILL ABOVE</span>
-                <span style="color:#B45309; font-weight:900;">${targetPlayer.name} (${targetPlayer.id})</span>
-              </div>
-              <div style="display:grid; grid-template-columns: 28% 72%; gap:10px; padding:6px 10px; flex:1; min-height:0; align-items:center;">
-                <div style="display:flex; flex-direction:column; gap:4px; justify-content:space-around;">
-                  ${statBarsHtml}
-                </div>
-                <div style="display:flex; gap:8px; height:100%; min-height:0;">
-                  ${trCardsHtml}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Event Listeners:
-    // Mode Toggles
-    container.querySelector('#lobbyModeSingle')?.addEventListener('click', () => {
-      soundManager.playClick();
-      this.state.mode = 'FFA_4P';
-      this.callbacks.onModeChange?.('FFA_4P');
-      this.renderLobbyScreen();
-    });
-
-    container.querySelector('#lobbyModeTeam')?.addEventListener('click', () => {
-      soundManager.playClick();
-      this.state.mode = 'TEAM_2V2';
-      this.callbacks.onModeChange?.('TEAM_2V2');
-      this.renderLobbyScreen();
-    });
-
-    // Start Match
-    container.querySelector('#btnStartMatchNow')?.addEventListener('click', () => {
-      this.callbacks.onStartMatch?.();
-    });
-
-    // Player Banners (Click to select loadout target)
-    container.querySelectorAll('.lobby-player-banner').forEach((el) => {
-      el.addEventListener('click', (e) => {
-        if (
-          (e.target as HTMLElement).closest('.btn-lobby-kick') ||
-          (e.target as HTMLElement).closest('.btn-lobby-randomize') ||
-          (e.target as HTMLElement).closest('.btn-lobby-toggle-control')
-        ) {
-          return;
+    const statBarsHtml = statsList
+      .map((s) => {
+        let segs = '';
+        for (let i = 1; i <= 5; i++) {
+          segs += `<div style="flex:1; height:10px; border-radius:3px; background:${
+            i <= s.lv ? s.color : '#0f172a'
+          }; border:1px solid #334155; box-shadow:${
+            i <= s.lv ? `0 0 6px ${s.color}88` : 'none'
+          };"></div>`;
         }
-        const pid = (el as HTMLElement).dataset.pid as PlayerId;
-        if (pid) {
-          soundManager.playClick();
-          this.selectedLoadoutPlayerId = pid;
-          this.renderLobbyScreen();
-        }
-      });
-    });
-
-    // Toggle Player Control (Human Pass 'n Play vs AI Bot)
-    container.querySelectorAll('.btn-lobby-toggle-control').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        soundManager.playClick();
-        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
-        this.callbacks.onTogglePlayerControl?.(pid);
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Synergize / Randomize Slot
-    container.querySelectorAll('.btn-lobby-randomize').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        soundManager.playClick();
-        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
-        this.callbacks.onRandomizePlayerLoadout?.(pid);
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Kick Slot
-    container.querySelectorAll('.btn-lobby-kick').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        soundManager.playClick();
-        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
-        this.callbacks.onKickPlayerSlot?.(pid);
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Add AI Slot
-    container.querySelectorAll('.btn-lobby-add-ai').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        soundManager.playClick();
-        const slotIdx = Number((btn as HTMLElement).dataset.idx);
-        this.callbacks.onAddAiSlot?.(slotIdx);
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Add Human Slot
-    container.querySelectorAll('.btn-lobby-add-human').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        soundManager.playClick();
-        const slotIdx = Number((btn as HTMLElement).dataset.idx);
-        this.callbacks.onAddHumanSlot?.(slotIdx);
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Pick Character
-    container.querySelectorAll('.lobby-char-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        soundManager.playClick();
-        const charId = (btn as HTMLElement).dataset.charId;
-        if (!charId) return;
-        this.callbacks.onUpdatePlayerLoadout?.(
-          targetPlayer.id,
-          charId,
-          targetPlayer.treasureIds
-        );
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Pick Treasure Slot Index
-    container.querySelectorAll('.lobby-tr-slot-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        soundManager.playClick();
-        const slotIdx = Number((btn as HTMLElement).dataset.slotIdx) as 0 | 1 | 2;
-        this.selectedTreasureSlotIndex = slotIdx;
-        this.renderLobbyScreen();
-      });
-    });
-
-    // Pick Treasure from Pool
-    container.querySelectorAll('.lobby-tr-pool-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        soundManager.playClick();
-        const trId = (btn as HTMLElement).dataset.trId;
-        if (!trId) return;
-        const curCharDef = getCharacterDef(targetPlayer.characterId);
-        const trDef = getTreasureDef(trId);
-        if (isMainSkillConflict(trDef.mainSkill.skillId, curCharDef.mainSkill.skillId)) {
-          // Conflict guard
-          return;
-        }
-
-        const newTrIds = [...targetPlayer.treasureIds];
-        newTrIds[this.selectedTreasureSlotIndex] = trId;
-        // Advance slot
-        this.selectedTreasureSlotIndex = ((this.selectedTreasureSlotIndex + 1) % 3) as 0 | 1 | 2;
-        this.callbacks.onUpdatePlayerLoadout?.(
-          targetPlayer.id,
-          targetPlayer.characterId,
-          newTrIds as [string, string, string]
-        );
-        this.renderLobbyScreen();
-      });
-    });
-  }
-  // ==========================================================================
-  // SCREEN 4: IN-GAME OVERLAY (Reference Image 1 — 4 Corner HUDs + Center Arc Gauge)
-  // ==========================================================================
-  private buildInGameStaticHUD(): void {
-    const container = this.stageEl.querySelector(
-      '#screen_IN_GAME'
-    ) as HTMLElement;
-    if (!container) return;
-
-    // Build Rainbow Gauge Arc SVG Paths (2..12)
-    const nums = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-    const colors = [
-      '#ef4444',
-      '#f97316',
-      '#f59e0b',
-      '#eab308',
-      '#84cc16',
-      '#22c55e',
-      '#06b6d4',
-      '#3b82f6',
-      '#6366f1',
-      '#8b5cf6',
-      '#d946ef',
-    ];
-    const rOuter = 148;
-    const rInner = 112;
-    const startDeg = -168;
-    const endDeg = -12;
-    const stepDeg = (endDeg - startDeg) / nums.length;
-
-    let arcHtml = '';
-    nums.forEach((num, i) => {
-      const a1 = ((startDeg + i * stepDeg) * Math.PI) / 180;
-      const a2 = ((startDeg + (i + 1) * stepDeg) * Math.PI) / 180;
-      const x1o = Math.cos(a1) * rOuter;
-      const y1o = Math.sin(a1) * rOuter;
-      const x2o = Math.cos(a2) * rOuter;
-      const y2o = Math.sin(a2) * rOuter;
-      const x2i = Math.cos(a2) * rInner;
-      const y2i = Math.sin(a2) * rInner;
-      const x1i = Math.cos(a1) * rInner;
-      const y1i = Math.sin(a1) * rInner;
-
-      const path = `M ${x1o} ${y1o} A ${rOuter} ${rOuter} 0 0 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${rInner} ${rInner} 0 0 0 ${x1i} ${y1i} Z`;
-      const midA = (a1 + a2) / 2;
-      const tx = Math.cos(midA) * ((rOuter + rInner) / 2);
-      const ty = Math.sin(midA) * ((rOuter + rInner) / 2) + 4;
-
-      arcHtml += `<path d="${path}" fill="${colors[i]}" stroke="#0f172a" stroke-width="2" />`;
-      arcHtml += `<text x="${tx}" y="${ty}" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" style="text-shadow:0 1px 2px #000;">${num}</text>`;
-    });
-
-    container.innerHTML = `
-      <!-- Top Skill Cut-In Toast Banner -->
-      <div id="liveBanner" class="skill-cutin-banner">
-        ⚡ กดปุ่ม ROLL ค้างไว้ (หรือกด Spacebar ค้าง) เพื่อวิ่งเข็มเกจโค้ง 2..12 | คลิกที่การ์ดผู้เล่นมุมจอเพื่อดูสแตท & สกิล
-      </div>
-
-      <!-- Monopoly Danger Alert Banner Slot -->
-      <div id="monopolyDangerBannerSlot"></div>
-
-      <!-- 3D Tile Hover Card Inspector -->
-      <div id="tileHoverCard" class="tile-hover-card"></div>
-
-      <!-- Human Bankrupt Fast-Exit Box -->
-      <div id="humanBankruptExitBox" style="display:none; position:absolute; bottom:114px; left:50%; transform:translateX(-50%); background:rgba(127,29,29,0.92); border:2px solid #f87171; border-radius:99px; padding:4px 16px; align-items:center; gap:10px; z-index:36; box-shadow:0 6px 18px rgba(0,0,0,0.6);">
-        <span style="font-size:11px; font-weight:800; color:#fecaca;">💀 คุณล้มละลายแล้ว (บอทกำลังแข่งต่อ)</span>
-        <button class="red-btn" id="btnFastExitBankrupt" style="padding:3px 12px; font-size:11px;">🚪 ออกสู่ล็อบบี้</button>
-      </div>
-
-      <!-- Board Target Picker Drawer (Shown during BOARD_TARGET_PICK phase) -->
-      <div id="boardTargetPickerDrawer" class="interactive-hud" style="position:absolute; top:48px; left:50%; z-index:48; width:820px; background:rgba(15, 23, 42, 0.94); border:2.5px solid #fde047; border-radius:14px; padding:10px 16px; box-shadow:0 10px 28px rgba(0,0,0,0.65);"></div>
-
-      <!-- 4 Corner Player HUDs -->
-      <div id="cornerHudContainer"></div>
-
-      <!-- Center-Board Plaza Controls (Turn Badge, Speed/Menu, Spotted Dice Readout, Rainbow Gauge Arc) -->
-      <svg viewBox="0 0 1280 720" style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:22;">
-        <!-- Turn Counter Badge Inside Board -->
-        <g transform="translate(760, 314)">
-          <rect x="0" y="0" width="128" height="48" rx="10" fill="rgba(15,23,42,0.88)" stroke="#94a3b8" stroke-width="2.5" />
-          <rect x="26" y="-10" width="76" height="17" rx="5" fill="#f59e0b" id="turnHeaderPill" />
-          <text x="64" y="2" text-anchor="middle" fill="#1e1b4b" font-size="10" font-weight="900" id="turnHeaderLabel">TURN</text>
-          <text x="64" y="32" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="900" id="turnCounterText">01 / 20</text>
-        </g>
-
-        <!-- Center Spotted Dice Readout Group -->
-        <g id="diceReadoutSvgGroup" transform="translate(590, 305)"></g>
-
-        <!-- Curved Rainbow Gauge Arc (2 .. 12) Inside Bottom Plaza -->
-        <g id="rainbowArcGroup" transform="translate(640, 650)">
-          ${arcHtml}
-        </g>
-
-        <!-- Rotating Gauge Needle -->
-        <g id="arcNeedleGroup" transform="translate(640, 650) rotate(0)">
-          <polygon points="-5,0 0,-134 5,0" fill="#ffffff" stroke="#0f172a" stroke-width="2" />
-          <circle cx="0" cy="-126" r="5.5" fill="#fde047" stroke="#0f172a" stroke-width="1.8" />
-        </g>
-      </svg>
-
-      <!-- Top-Center Mini Utility Bar (Sound, Speed 1x/2x/3x, Rules, Lobby/Menu) -->
-      <div class="interactive-hud top-util-bar" style="position:absolute; top:48px; right:268px; z-index:35; display:flex; gap:6px;">
-        <button class="tab-pill" id="btnSoundToggle" style="padding:4px 10px; font-size:11px;">🔊 Sound <span class="kbd-hint">M</span></button>
-        <button class="tab-pill" id="btnInGameSpeed" style="padding:4px 10px; font-size:11px;">⚡ 1x Speed</button>
-        <button class="tab-pill" id="btnInGameRules" style="padding:4px 10px; font-size:11px;">📊 Odds</button>
-        <button class="tab-pill" id="btnInGameLobby" style="padding:4px 10px; font-size:11px;">🏠 Lobby</button>
-      </div>
-
-      <!-- Bottom-Center Roll Button, ODD/EVEN Capsules & Island Bail Button -->
-      <div class="interactive-hud bottom-roll-bar" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; align-items:flex-end; gap:14px; z-index:35;">
-        <button class="gold-btn" id="btnEscapeIslandBail" style="display:none; padding:6px 12px; font-size:11px; margin-bottom:14px;">
-          🏝️ จ่ายประกัน 200K
-        </button>
-
-        <div class="oe-capsule" id="oeOddBtn">
-          <span>ODD (คี่)</span>
-          <span id="oeOddCharges" style="font-size:9px; color:#fde047;">3/3</span>
-          <div class="led"></div>
-        </div>
-
-        <button class="roll-circle-btn" id="btnCenterRoll">
-          <span>ROLL</span>
-          <span id="rollGaugeLiveText" style="font-size:10px; font-weight:800; color:#fef08a;">HOLD [Space]</span>
-        </button>
-
-        <div class="oe-capsule" id="oeEvenBtn">
-          <span>EVEN (คู่)</span>
-          <span id="oeEvenCharges" style="font-size:9px; color:#fde047;">3/3</span>
-          <div class="led"></div>
-        </div>
-      </div>
-    `;
-
-    // Wire Roll Hold & Release
-    const rollBtn = container.querySelector(
-      '#btnCenterRoll'
-    ) as HTMLButtonElement;
-    const startHold = (e: Event): void => {
-      e.preventDefault();
-      if (!this.canHumanRollNow()) return;
-      this.startArcCharge();
-    };
-    const endHold = (e: Event): void => {
-      if (!this.isChargingGauge) return;
-      e.preventDefault();
-      this.stopArcCharge();
-    };
-    rollBtn.addEventListener('mousedown', startHold);
-    rollBtn.addEventListener('touchstart', startHold, { passive: false });
-    window.addEventListener('mouseup', endHold);
-    window.addEventListener('touchend', endHold, { passive: false });
-    window.addEventListener('touchcancel', endHold, { passive: false });
-
-    // Wire ODD / EVEN Capsules
-    container.querySelector('#oeOddBtn')?.addEventListener('click', () => {
-      const activeP = this.getActivePlayer();
-      if (!activeP || activeP.oddEvenCharges <= 0) return;
-      soundManager.playClick();
-      this.callbacks.onSetOddEven?.('ODD');
-    });
-
-    container.querySelector('#oeEvenBtn')?.addEventListener('click', () => {
-      const activeP = this.getActivePlayer();
-      if (!activeP || activeP.oddEvenCharges <= 0) return;
-      soundManager.playClick();
-      this.callbacks.onSetOddEven?.('EVEN');
-    });
-
-    // Wire Island Bail Button
-    container
-      .querySelector('#btnEscapeIslandBail')
-      ?.addEventListener('click', () => {
-        this.callbacks.onPayIslandBail?.();
-      });
-
-    // Wire Utility Buttons
-    const soundBtn = container.querySelector(
-      '#btnSoundToggle'
-    ) as HTMLButtonElement | null;
-    soundBtn?.addEventListener('click', () => {
-      const isMuted = soundManager.toggleMute();
-      soundBtn.innerHTML = `${isMuted ? '🔇 Muted' : '🔊 Sound'} <span class="kbd-hint">M</span>`;
-      if (!isMuted) soundManager.playClick();
-    });
-
-    const speedBtn = container.querySelector(
-      '#btnInGameSpeed'
-    ) as HTMLButtonElement;
-    speedBtn?.addEventListener('click', () => {
-      soundManager.playClick();
-      this.speedMultiplier = ((this.speedMultiplier % 3) + 1) as 1 | 2 | 3;
-      speedBtn.textContent = `⚡ ${this.speedMultiplier}x ${
-        this.speedMultiplier === 3 ? 'Turbo' : 'Speed'
-      }`;
-      this.callbacks.onToggleSpeed?.(this.speedMultiplier);
-    });
-
-    container
-      .querySelector('#btnInGameRules')
-      ?.addEventListener('click', () => {
-        soundManager.playClick();
-        this.openRulesModal();
-      });
-
-    container
-      .querySelector('#btnInGameLobby')
-      ?.addEventListener('click', () => {
-        soundManager.playClick();
-        this.state.victoryResult = null;
-        if (this.callbacks.onReturnToLobby) {
-          this.callbacks.onReturnToLobby();
-        } else {
-          this.showScreen('LOBBY');
-        }
-      });
-
-    container
-      .querySelector('#btnFastExitBankrupt')
-      ?.addEventListener('click', () => {
-        soundManager.playClick();
-        this.callbacks.onReturnToLobby?.();
-      });
-
-    this.updateNeedleVisual();
-    this.renderCenterDiceReadout();
-  }
-
-  private getActivePlayer(): PlayerState | undefined {
-    return this.state.players[this.state.activePlayerIndex];
-  }
-
-  private canHumanRollNow(): boolean {
-    const activeP = this.getActivePlayer();
-    if (!activeP || activeP.isBankrupt) return false;
-    if (activeP.controlType !== 'HUMAN') return false;
-    if (!this.canControlSlotLocally(activeP.id)) return false;
-    return (
-      this.state.phase === 'IDLE_ROLL' || this.state.phase === 'GAUGE_CHARGING'
-    );
-  }
-
-  private startArcCharge(): void {
-    if (this.isChargingGauge) return;
-    this.isChargingGauge = true;
-    const rollBtn = this.stageEl.querySelector('#btnCenterRoll');
-    rollBtn?.classList.add('charging');
-
-    const activeP = this.getActivePlayer();
-    const dcLevel = activeP
-      ? getCharacterDef(activeP.characterId).stats.dc
-      : 2;
-    // Subtle gauge speed reduction (-1.8% per DC level) so high DC characters are smoother to time
-    const speedScale = 1 - dcLevel * 0.018;
-
-    if (activeP) {
-      this.callbacks.onGaugeStepChange?.(activeP.tileIndex, Math.round(this.gaugeVal));
-    }
-
-    this.lastGaugeFrameTime = performance.now();
-    this.lastTickSoundTime = performance.now();
-    const step = (now: number): void => {
-      if (!this.isChargingGauge) return;
-      const dt = Math.min(50, now - this.lastGaugeFrameTime) / 1000;
-      this.lastGaugeFrameTime = now;
-
-      if (now - this.lastTickSoundTime > 80) {
-        this.lastTickSoundTime = now;
-        soundManager.playRollGaugeTick((this.gaugeVal - 2) / 10);
-      }
-
-      this.gaugeVal += this.gaugeDir * 10.5 * speedScale * dt;
-      if (this.gaugeVal >= 12) {
-        this.gaugeVal = 12;
-        this.gaugeDir = -1;
-      } else if (this.gaugeVal <= 2) {
-        this.gaugeVal = 2;
-        this.gaugeDir = 1;
-      }
-      this.updateNeedleVisual();
-      this.gaugeRafId = requestAnimationFrame(step);
-    };
-    this.gaugeRafId = requestAnimationFrame(step);
-  }
-
-  private stopArcCharge(): void {
-    if (!this.isChargingGauge) return;
-    this.isChargingGauge = false;
-    soundManager.playDiceStop();
-    if (this.gaugeRafId !== null) {
-      cancelAnimationFrame(this.gaugeRafId);
-      this.gaugeRafId = null;
-    }
-    const rollBtn = this.stageEl.querySelector('#btnCenterRoll');
-    rollBtn?.classList.remove('charging');
-
-    const finalGauge = Number(this.gaugeVal.toFixed(2));
-    const activeP = this.getActivePlayer();
-    const lockedStep = Math.max(2, Math.min(12, Math.round(this.gaugeVal)));
-    if (activeP) {
-      this.callbacks.onGaugeStepChange?.(activeP.tileIndex, lockedStep);
-      setTimeout(() => {
-        this.callbacks.onGaugeStepChange?.(null, null);
-      }, 1000);
-    }
-    this.callbacks.onGaugeReleaseRoll?.(finalGauge);
-  }
-
-  private updateNeedleVisual(): void {
-    const needle = this.stageEl.querySelector('#arcNeedleGroup');
-    if (needle) {
-      const deg = ((this.gaugeVal - 7) / 5) * 75;
-      needle.setAttribute('transform', `translate(640, 650) rotate(${deg})`);
-    }
-
-    const activeP = this.getActivePlayer();
-    const activeStep = Math.max(2, Math.min(12, Math.round(this.gaugeVal)));
-    const targetIdx = activeP ? (activeP.tileIndex + activeStep) % 32 : 0;
-    const targetTileDef = WORLD_MAP_TILES[targetIdx];
-
-    const liveTxt = this.stageEl.querySelector('#rollGaugeLiveText');
-    if (liveTxt) {
-      liveTxt.textContent = this.isChargingGauge
-        ? `🎯 ${activeStep} ➔ #${targetIdx} ${targetTileDef?.nameTh ?? ''}`
-        : `🎯 ${activeStep}`;
-    }
-
-    if (activeP && this.isChargingGauge) {
-      this.callbacks.onGaugeStepChange?.(activeP.tileIndex, activeStep);
-    }
-  }
-
-  private renderCenterDiceReadout(): void {
-    const grp = this.stageEl.querySelector('#diceReadoutSvgGroup');
-    if (!grp) return;
-
-    const d = this.state.lastDice ?? { d1: 5, d2: 6, sum: 11, isDouble: false };
-    const activeP = this.getActivePlayer();
-    const streak = activeP?.consecutiveDoubles ?? 0;
-    const pipPositions: Record<number, [number, number][]> = {
-      1: [[0, 0]],
-      2: [
-        [-10, -10],
-        [10, 10],
-      ],
-      3: [
-        [-10, -10],
-        [0, 0],
-        [10, 10],
-      ],
-      4: [
-        [-10, -10],
-        [10, -10],
-        [-10, 10],
-        [10, 10],
-      ],
-      5: [
-        [-10, -10],
-        [10, -10],
-        [0, 0],
-        [-10, 10],
-        [10, 10],
-      ],
-      6: [
-        [-10, -10],
-        [10, -10],
-        [-10, 0],
-        [10, 0],
-        [-10, 10],
-        [10, 10],
-      ],
-    };
-
-    const renderDieFace = (val: number, tx: number, ty: number, rot: number) => {
-      const pips = (pipPositions[val] ?? pipPositions[1])
-        .map(
-          ([px, py]) =>
-            `<circle cx="${px}" cy="${py}" r="${
-              val === 1 ? 5.2 : 3.6
-            }" fill="${val === 1 || (px === 0 && py === 0) ? '#ef4444' : '#1e293b'}" />`
-        )
-        .join('');
-      return `
-        <g transform="translate(${tx}, ${ty}) rotate(${rot})">
-          <rect x="-22" y="-22" width="44" height="44" rx="9" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5" />
-          ${pips}
-        </g>
-      `;
-    };
-
-    grp.innerHTML = `
-      ${renderDieFace(d.d1, -28, -4, -12)}
-      ${renderDieFace(d.d2, 28, 6, 15)}
-      ${
-        d.isDouble || streak > 0
-          ? `<g transform="translate(0, -38)">
-              <rect x="-48" y="-12" width="96" height="22" rx="10" fill="#dc2626" stroke="#fde047" stroke-width="2" />
-              <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900">${d.isDouble ? `DOUBLE ${d.sum}!` : 'DOUBLE'}</text>
-              <g transform="translate(-16, 17)">
-                <circle cx="0" cy="0" r="3.5" fill="${streak >= 1 ? '#fde047' : '#334155'}" stroke="#f8fafc" stroke-width="0.8"/>
-                <circle cx="16" cy="0" r="3.5" fill="${streak >= 2 ? '#f97316' : '#334155'}" stroke="#f8fafc" stroke-width="0.8"/>
-                <circle cx="32" cy="0" r="3.5" fill="${streak >= 3 ? '#ef4444' : '#334155'}" stroke="#f8fafc" stroke-width="0.8"/>
-              </g>
-            </g>`
-          : ''
-      }
-    `;
-  }
-
-  private renderInGameHUD(): void {
-    const cornerBox = this.stageEl.querySelector(
-      '#cornerHudContainer'
-    ) as HTMLElement | null;
-    if (!cornerBox) return;
-
-    const activePlayer = this.getActivePlayer();
-
-    // Update Banner if provided
-    if (this.state.bannerText) {
-      const banner = this.stageEl.querySelector('#liveBanner');
-      if (banner && banner.innerHTML !== this.state.bannerText) {
-        banner.innerHTML = this.state.bannerText;
-      }
-    }
-
-    // Update Turn Counter & Late-Game x1.5 Indicator
-    const turnText = this.stageEl.querySelector('#turnCounterText');
-    const turnPill = this.stageEl.querySelector('#turnHeaderPill');
-    const turnLabel = this.stageEl.querySelector('#turnHeaderLabel');
-    if (turnText) {
-      const tStr = String(this.state.turnNumber).padStart(2, '0');
-      turnText.textContent = `${tStr} / ${this.state.maxTurns}`;
-    }
-    const isLateGame =
-      this.state.turnNumber >= MATCH_CONFIG.lateGameTurnThreshold;
-    if (turnPill && turnLabel) {
-      turnPill.setAttribute('fill', isLateGame ? '#ef4444' : '#f59e0b');
-      turnLabel.textContent = isLateGame ? '🔥 x1.5 TOLL' : 'TURN';
-      turnLabel.setAttribute('fill', isLateGame ? '#ffffff' : '#1e1b4b');
-    }
-
-    // Render 4 Corner Player HUD Cards
-    // In Pass 'n Play: If active player is currently a local human, place them at bottom-right!
-    const activeP = this.getActivePlayer();
-    const myPlayer =
-      (activeP && activeP.controlType === 'HUMAN' && this.canControlSlotLocally(activeP.id))
-        ? activeP
-        : (this.state.players.find(
-            (p) => p.isSlotActive !== false && p.id === this.youPlayerId
-          ) ??
-          this.state.players.find(
-            (p) => p.isSlotActive !== false && p.controlType === 'HUMAN'
-          ) ??
-          this.state.players[0]);
-    const myPlayerId = myPlayer?.id ?? 'P1';
-
-    const opponents = this.state.players.filter(
-      (p) => p.isSlotActive !== false && p.id !== myPlayerId
-    );
-
-    const getCornerPosClass = (p: PlayerState): string => {
-      if (p.id === myPlayerId) {
-        return 'pos-bottom-right';
-      }
-      const oppIdx = opponents.findIndex((o) => o.id === p.id);
-      if (oppIdx === 0) return 'pos-top-left';
-      if (oppIdx === 1) return 'pos-top-right';
-      if (oppIdx === 2) return 'pos-bottom-left';
-      return 'pos-top-left';
-    };
-
-    const numColors = ['#e11d48', '#0284c7', '#16a34a', '#d97706'];
-
-    cornerBox.innerHTML = this.state.players
-      .map((p, idx) => {
-        if (p.isSlotActive === false) return '';
-        const charDef = getCharacterDef(p.characterId);
-        const isTurn = idx === this.state.activePlayerIndex && !p.isBankrupt;
-        const isHuman = p.controlType === 'HUMAN';
-        const isMe = p.id === myPlayerId;
-        const posClass = getCornerPosClass(p);
-
-        const treasuresHtml = p.treasureIds
-          .map((tid) => {
-            const tr = getTreasureDef(tid);
-            const mDef = getSkillDef(tr.mainSkill.skillId);
-            const sDef = getSkillDef(tr.subSkill.skillId);
+        return `
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800; margin-bottom:3px;">
+              <span>${s.label}</span>
+              <span style="color:#93c5fd;">+${s.lv} / +5</span>
+            </div>
+            <div style="display:flex; gap:4px;">${segs}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const equippedSlotsHtml = curTrIds
+      .map((tid, idx) => {
+        const tr = getTreasureDef(tid);
+        const mSkill = getSkillDef(tr.mainSkill.skillId);
+        const sSkill = getSkillDef(tr.subSkill.skillId);
+        return `
+          <div style="background:linear-gradient(180deg,#1e3a8a,#0f172a); border:2px solid #fde047; border-radius:10px; padding:6px 5px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="font-size:10px; color:#fde047; font-weight:900;">SLOT ${idx + 1}</div>
+            <div style="font-size:26px; line-height:1.1;">${tr.iconEmoji}</div>
+            <div style="font-size:11px; font-weight:900; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tr.name}</div>
+            <div style="font-size:10px; color:#93c5fd;">${mSkill.code} (${tr.mainSkill.procPct}%) + ${sSkill.code} (+${tr.subSkill.procPct}%)</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const charMainDef = getSkillDef(curChar.mainSkill.skillId);
+    const charSub1Def = getSkillDef(curChar.subSkills[0].skillId);
+    const charSub2Def = getSkillDef(curChar.subSkills[1].skillId);
+
+    const stackedSubsHtml = combinedSkills.subSkills
+      .map(
+        (sub) => `
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:3px 7px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+            <span><strong style="color:#7dd3fc;">${sub.skill.code}</strong> ${sub.skill.name}</span>
+            <strong style="color:#4ade80;">${sub.breakdown}</strong>
+          </div>
+        `
+      )
+      .join('');
+
+    const inventoryGridHtml =
+      this.loadoutInvTab === 'CHAR'
+        ? CHARACTER_ROSTER.map((c) => {
+            const isSelected = c.id === curChar.id;
+            const mDef = getSkillDef(c.mainSkill.skillId);
             return `
-              <div class="p-tr-slot" data-pid="${p.id}" data-tid="${tid}" title="${tr.name} (${tr.nameEn})">
-                ${tr.iconEmoji}
-                <div class="treasure-hover-popover">
-                  <div class="tr-pop-header">
-                    <span class="tr-pop-icon">${tr.iconEmoji}</span>
-                    <div class="tr-pop-title-box">
-                      <span class="tr-pop-name">${tr.name}</span>
-                      <span class="tr-pop-rank">RANK S+ • ${tr.nameEn}</span>
-                    </div>
-                  </div>
-                  <div class="tr-pop-skill main">
-                    <div class="tr-pop-skill-badge">
-                      <span>⚡ MAIN (${mDef.code})</span>
-                      <strong class="tr-proc-rate">${tr.mainSkill.procPct}%</strong>
-                    </div>
-                    <div class="tr-pop-skill-name">${mDef.name}</div>
-                    <div class="tr-pop-skill-desc">${mDef.effectDesc}</div>
-                    <div class="tr-pop-skill-trigger">🎯 เงื่อนไข: ${mDef.trigger}</div>
-                  </div>
-                  <div class="tr-pop-skill sub">
-                    <div class="tr-pop-skill-badge">
-                      <span>🛡️ SUB (${sDef.code})</span>
-                      <strong class="tr-proc-rate">+${tr.subSkill.procPct}%</strong>
-                    </div>
-                    <div class="tr-pop-skill-name">${sDef.name}</div>
-                    <div class="tr-pop-skill-desc">${sDef.effectDesc}</div>
-                  </div>
-                  <div class="tr-pop-hint">💡 คลิกการ์ดเพื่อดูรายละเอียดและสแตททั้งหมด</div>
+              <div class="inv-char-card" data-char-id="${c.id}" style="background:linear-gradient(180deg,#3b82f6,#1d4ed8); border:2.5px solid ${
+                isSelected ? '#fde047' : '#60a5fa'
+              }; border-radius:10px; padding:7px 5px; text-align:center; cursor:pointer; position:relative; box-shadow:${
+                isSelected ? '0 0 12px rgba(250,204,21,0.65)' : 'none'
+              };">
+                <span style="position:absolute; top:3px; left:5px; font-size:11px; font-weight:900; color:#fde047;">${c.rank}</span>
+                <div style="font-size:30px; line-height:1.15;">${c.avatarEmoji}</div>
+                <div style="font-size:12px; font-weight:900; color:#ffffff;">${c.name}</div>
+                <div style="font-size:10px; color:#fef08a; font-weight:800;">${mDef.code}: ${c.mainSkill.procPct}%</div>
+              </div>
+            `;
+          }).join('')
+        : TREASURE_POOL.map((t) => {
+            const isConflict = isMainSkillConflict(t.mainSkill.skillId, curChar.mainSkill.skillId);
+            const isEquipped = curTrIds.includes(t.id);
+            const mDef = getSkillDef(t.mainSkill.skillId);
+            const sDef = getSkillDef(t.subSkill.skillId);
+            return `
+              <div class="inv-tr-card" data-tr-id="${t.id}" style="background:linear-gradient(180deg,#1e293b,#0f172a); border:2.5px solid ${
+                isConflict
+                  ? '#ef4444'
+                  : isEquipped
+                    ? '#fde047'
+                    : '#475569'
+              }; opacity:${
+                isConflict ? 0.45 : 1
+              }; border-radius:10px; padding:6px 5px; text-align:center; cursor:${
+                isConflict ? 'not-allowed' : 'pointer'
+              }; position:relative;">
+                ${
+                  isEquipped
+                    ? `<span style="position:absolute; top:2px; right:4px; font-size:10px; font-weight:900; color:#4ade80;">✔</span>`
+                    : ''
+                }
+                <div style="font-size:26px; line-height:1.15;">${t.iconEmoji}</div>
+                <div style="font-size:11px; font-weight:900; color:#fde047; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.name}</div>
+                <div style="font-size:10px; color:${
+                  isConflict ? '#fca5a5' : '#93c5fd'
+                }; font-weight:800;">
+                  ${
+                    isConflict
+                      ? '⛔ ซ้ำ Main ตลค'
+                      : `${mDef.code}(${t.mainSkill.procPct}%) + ${sDef.code}(+${t.subSkill.procPct}%)`
+                  }
                 </div>
               </div>
             `;
-          })
-          .join('');
+          }).join('');
 
-        const statusBadge = p.isBankrupt
-          ? `<span class="p-lap-pill" style="background:#7f1d1d; color:#fecaca;">💀 ล้มละลาย</span>`
-          : p.islandTurnsLeft > 0
-            ? `<span class="p-lap-pill" style="background:#9a3412; color:#fed7aa;">🏝️ เกาะ (${p.islandTurnsLeft})</span>`
-            : p.isWaitingTravel
-              ? `<span class="p-lap-pill" style="background:#0369a1; color:#e0f2fe;">✈️ รอบิน</span>`
-              : `<span class="p-lap-pill">Lap ${p.lapCount + 1}</span>`;
-
-        const teamTag =
-          this.state.mode === 'TEAM_2V2' && p.teamId
-            ? `<span class="p-team-mini-tag">TEAM ${p.teamId === 'ALPHA' ? 'A' : 'B'}</span>`
-            : '';
-
-        const turnBannerHtml = isTurn
-          ? `<div class="p-turn-banner" style="animation:floatBob 1.5s ease-in-out infinite;">
-               <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#1E1612; animation:turnBannerBounce 0.8s infinite;"></span>
-               <span>${isHuman ? '🎲 YOUR TURN (ตาคุณ!)' : `🎲 ตาของ ${p.name}`}</span>
-               <span style="font-size:12px;">👉</span>
-             </div>`
-          : '';
-
-        const youBadge = isMe
-          ? `<span class="p-you-badge" style="transform:rotate(-3deg); display:inline-block;">★ YOU</span>`
-          : '';
-
+    const playerSwitcherHtml = this.state.players
+      .map((p) => {
+        const pChar = getCharacterDef(p.characterId);
+        const active = p.id === this.selectedLoadoutPlayerId;
         return `
-          <div id="hudCard_${p.id}" class="p-corner-card theme-p${idx + 1} ${posClass} ${
-            isTurn ? 'active-turn' : ''
-          } ${p.isBankrupt ? 'bankrupt' : ''}" data-pid="${p.id}">
-            ${turnBannerHtml}
-            <div class="p-avatar-box">
-              ${getMascotSvg(p.characterId, 46)}
-              <div class="p-num-badge" style="background:${numColors[idx]}; border:2px solid #1E1612;">${idx + 1}</div>
-              ${teamTag}
-            </div>
-            <div class="p-info-col">
-              <div class="p-name-line">
-                <span style="font-weight:900;">${p.name} (${charDef.name})</span>
-                ${youBadge}
-                ${statusBadge}
-                <span style="font-size:11px; opacity:0.85; margin-left:2px; font-weight:900;">ⓘ</span>
-              </div>
-              <div class="p-cash-pill">
-                ${getMarbleGemSvg(15)} <span style="font-family:var(--font-num);">${formatMarbleFull(p.marble)}</span>
-              </div>
-              <div class="p-treasures-row">
-                ${treasuresHtml}
-                ${p.hasDiscountCoupon ? `<span title="คูปองลด 50%" style="font-size:13px;">🎟️</span>` : ''}
-              </div>
-            </div>
-            <div class="p-face-up-slot">
-              ${
-                p.hasAngelCard
-                  ? `<div class="fup-card angel" title="การ์ดนางฟ้าคุ้มครอง: ป้องกันค่าผ่านทาง 100% หรือป้องกันการโจมตี">
-                      <div class="fup-body">
-                        <span class="fup-icon">👼</span>
-                        <span class="fup-text">ANGEL</span>
-                      </div>
-                    </div>`
-                  : `<div class="fup-card spent" title="ไม่มีการ์ดนางฟ้า (ใช้ไปแล้วหรือยังไม่ได้รับ)">
-                      <div class="fup-body">
-                        <span class="fup-icon">👼</span>
-                        <span class="fup-text">USED</span>
-                      </div>
-                    </div>`
-              }
-            </div>
-          </div>
-        `;
-      })
-      .join('');
-
-    cornerBox.querySelectorAll('.p-corner-card').forEach((card) => {
-      const pid = (card as HTMLElement).dataset.pid as PlayerId;
-      card.addEventListener('mouseenter', () => {
-        this.callbacks.onPlayerCardHover?.(pid);
-      });
-      card.addEventListener('mouseleave', () => {
-        this.callbacks.onPlayerCardHover?.(null);
-      });
-      card.addEventListener('click', (e) => {
-        // If clicking a treasure slot directly, handled separately
-        if ((e.target as HTMLElement).closest('.p-tr-slot')) return;
-        this.openPlayerInspector(pid);
-      });
-    });
-
-    cornerBox.querySelectorAll('.p-tr-slot').forEach((slot) => {
-      slot.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const pid = (slot as HTMLElement).dataset.pid as PlayerId;
-        this.openPlayerInspector(pid);
-      });
-    });
-
-    // Update Center Roll + ODD/EVEN + Island Bail Controls
-    const oddBtn = this.stageEl.querySelector('#oeOddBtn');
-    const evenBtn = this.stageEl.querySelector('#oeEvenBtn');
-    const oddCharges = this.stageEl.querySelector('#oeOddCharges');
-    const evenCharges = this.stageEl.querySelector('#oeEvenCharges');
-    const rollBtn = this.stageEl.querySelector(
-      '#btnCenterRoll'
-    ) as HTMLButtonElement | null;
-    const bailBtn = this.stageEl.querySelector(
-      '#btnEscapeIslandBail'
-    ) as HTMLButtonElement | null;
-
-    if (activePlayer) {
-      const charges = activePlayer.oddEvenCharges;
-      if (oddCharges) oddCharges.textContent = `${charges}/3`;
-      if (evenCharges) evenCharges.textContent = `${charges}/3`;
-      oddBtn?.classList.toggle(
-        'active',
-        activePlayer.selectedOddEven === 'ODD'
-      );
-      evenBtn?.classList.toggle(
-        'active',
-        activePlayer.selectedOddEven === 'EVEN'
-      );
-      oddBtn?.classList.toggle('disabled', charges <= 0);
-      evenBtn?.classList.toggle('disabled', charges <= 0);
-
-      if (rollBtn) {
-        rollBtn.disabled = !this.canHumanRollNow();
-      }
-      if (bailBtn) {
-        const showBail =
-          this.canHumanRollNow() &&
-          activePlayer.islandTurnsLeft > 0 &&
-          activePlayer.marble >= MATCH_CONFIG.desertIslandBailCost;
-        bailBtn.style.display = showBail ? 'inline-block' : 'none';
-      }
-    }
-
-    // Update Monopoly Danger Alert Banners
-    const alertSlot = this.stageEl.querySelector('#monopolyDangerBannerSlot');
-    if (alertSlot) {
-      const alerts = this.state.monopolyAlerts ?? [];
-      if (alerts.length > 0) {
-        const topAlert = alerts[0];
-        const owner = this.state.players.find(
-          (p) => p.id === topAlert.ownerPlayerId
-        );
-        const missingTile = WORLD_MAP_TILES[topAlert.missingTileIndex];
-        alertSlot.innerHTML = `
-          <div class="monopoly-danger-banner">
-            <span>🚨 DANGER!</span>
-            <span style="color:#ffffff;">${owner ? owner.name : topAlert.ownerPlayerId}</span>
-            <span>ขาดอีก 1 ช่อง (${
-              missingTile ? missingTile.nameTh : '#' + topAlert.missingTileIndex
-            }) ชนะ</span>
-            <span style="color:#fde047; text-decoration:underline;">${
-              topAlert.labelTh
-            }</span>
-          </div>
-        `;
-      } else {
-        alertSlot.innerHTML = '';
-      }
-    }
-
-    // Toggle Human Bankrupt Fast-Exit Box
-    const humanExitBox = this.stageEl.querySelector(
-      '#humanBankruptExitBox'
-    ) as HTMLElement | null;
-    if (humanExitBox) {
-      const humanPlayer = this.state.players.find(
-        (p) => p.isSlotActive !== false && p.controlType === 'HUMAN'
-      );
-      const isHumanBankrupt = humanPlayer?.isBankrupt ?? false;
-      const isGameOver = !!this.state.victoryResult;
-      humanExitBox.style.display =
-        isHumanBankrupt && !isGameOver ? 'flex' : 'none';
-    }
-
-    this.renderCenterDiceReadout();
-    this.renderBoardPickerDrawer();
-  }
-
-  // ==========================================================================
-  // SCREEN 5: PLAYER INFO & SKILL INSPECTOR MODAL (Reference Image 5)
-  // ==========================================================================
-  public openPlayerInspector(playerId: PlayerId): void {
-    this.inspectedPlayerId = playerId;
-    const modal = this.stageEl.querySelector(
-      '#modal_PLAYER_INSPECTOR'
-    ) as HTMLElement;
-    if (!modal) return;
-
-    const p =
-      this.state.players.find((x) => x.id === this.inspectedPlayerId) ??
-      this.state.players[0];
-    if (!p) return;
-
-    const charDef = getCharacterDef(p.characterId);
-    const charMainDef = getSkillDef(charDef.mainSkill.skillId);
-
-    const switcherHtml = this.state.players
-      .filter((pl) => pl.isSlotActive !== false)
-      .map((pl) => {
-        const c = getCharacterDef(pl.characterId);
-        return `
-          <button class="tab-pill inspector-p-tab ${
-            pl.id === p.id ? 'active' : ''
-          }" data-pid="${pl.id}" style="padding:4px 10px; font-size:11px; font-weight:900;">
-            ${c.name}
+          <button class="tab-pill loadout-p-switch ${active ? 'active' : ''}" data-pid="${p.id}" style="padding:5px 12px; font-size:12px; display:flex; align-items:center; gap:5px;">
+            <span>${pChar.avatarEmoji}</span>
+            <span>${p.id} (${pChar.name})</span>
           </button>
         `;
       })
       .join('');
 
-    const getCategoryBadge = (text: string): string => {
-      if (text.includes('หลุมดำ') || text.includes('แม่เหล็ก') || text.includes('บังคับขาย') || text.includes('สลาย')) {
-        return `<span style="background:#EF4444; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">💥 TRAP</span>`;
-      }
-      if (text.includes('บิน') || text.includes('วาร์ป') || text.includes('เที่ยวบิน') || text.includes('แท็กซี่') || text.includes('สร้าง')) {
-        return `<span style="background:#0EA5E9; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">✈️ WARP</span>`;
-      }
-      if (text.includes('ลดค่าผ่านทาง') || text.includes('คูณ') || text.includes('เงิน') || text.includes('โบนัส')) {
-        return `<span style="background:#10B981; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">💰 TOLL</span>`;
-      }
-      return `<span style="background:#F59E0B; color:#1E1612; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">🛡️ DEFENSE</span>`;
-    };
-
-    const renderGoldenSkillCard = (
-      iconHtml: string,
-      procPct: number,
-      textDesc: string,
-      title?: string,
-      subSkillHtml?: string
-    ): string => `
-      <div class="lgr-skill-golden-row" style="
-        background: #FFF9EB;
+    container.innerHTML = `
+      <!-- Top Clean Bar: Back/Home + Title on Left | Player Switcher P1..
