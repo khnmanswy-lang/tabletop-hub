@@ -1,0 +1,487 @@
+ign-items:center;">
+                <span style="font-size:16px; font-weight:900; color:#141413;">${tr.iconEmoji} #${idx + 1} ${tr.name}</span>
+                <span style="font-size:13px; font-weight:900; color:#1E3A8A;">⚡ ${mDef.name} (${tr.mainSkill.procPct}%) | 🛡️ +${tr.subSkill.procPct}%</span>
+              </div>
+              <div style="font-size:14px; font-weight:800; color:#1E3A8A; line-height:1.3;">
+                • <strong>Main (${tr.mainSkill.procPct}%):</strong> ${mDef.effectDesc}
+              </div>
+              <div style="font-size:13.5px; font-weight:800; color:#166534; line-height:1.3;">
+                • <strong>Sub (+${tr.subSkill.procPct}%):</strong> ${sDef.effectDesc}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        tabBodyHtml = `
+          <div style="display:flex; flex-direction:column; gap:10px; flex:1; min-height:0;">
+            <!-- Player Switcher Bar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#FFF9EB; border:3px solid #1E1612; border-radius:14px; padding:6px 14px; box-shadow:0 4px 0 #1E1612; flex-shrink:0;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:15px; font-weight:900; color:#1E1612;">จัดสมบัติให้:</span>
+                ${playerSwitcherPillsHtml}
+              </div>
+              <button class="btn-lobby-randomize gold-btn" data-pid="${targetPlayer.id}" style="padding:7px 16px; font-size:14.5px; font-weight:900; border-radius:12px;">
+                🎲 สุ่มเซ็ตคอมโบแนะนำ
+              </button>
+            </div>
+
+            <!-- 3 Big Equipped Slots -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; flex-shrink:0;">
+              ${bigEquippedSlotsHtml}
+            </div>
+
+            <!-- Lower Split: 10 Treasure Pool | 3 Equipped Treasure Full Descriptions -->
+            <div style="display:grid; grid-template-columns: 48% 52%; gap:12px; flex:1; min-height:0;">
+              <div class="royal-panel" style="display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+                <div class="royal-header" style="padding:6px 12px; font-size:14.5px;">
+                  <span>💎 แตะเลือกสมบัติใส่ช่องที่ ${this.selectedTreasureSlotIndex + 1}</span>
+                  <span style="color:#B45309; font-weight:900;">10 ชิ้น</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(5, 1fr); grid-template-rows:repeat(2, 1fr); gap:6px; padding:8px; flex:1; min-height:0;">
+                  ${bigPoolCardsHtml}
+                </div>
+              </div>
+
+              <div class="royal-panel" style="display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+                <div class="royal-header" style="padding:6px 12px; font-size:14.5px;">
+                  <span>📜 ความสามารถสมบัติทั้ง 3 ชิ้นของ ${targetPlayer.name}</span>
+                  <span style="color:#B45309; font-weight:900;">Main + Sub</span>
+                </div>
+                <div class="lgr-scroll" style="padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; gap:6px; flex:1; overflow-y:auto;">
+                  ${bigTrDetailCardsHtml}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div style="display:flex; flex-direction:column; height:100%; gap:10px;">
+          <!-- MOBILE 3-TAB TOPBAR -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#FFF9EB; border:3.5px solid #1E1612; border-radius:16px; padding:8px 14px; flex-shrink:0; box-shadow:0 5px 0 #1E1612;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <a href="/" style="text-decoration:none;">
+                <button class="tab-pill" style="padding:9px 14px; font-size:14.5px; border-radius:12px; font-weight:900; cursor:pointer;">
+                  ⬅ Lounge
+                </button>
+              </a>
+
+              <!-- 3 Large Step Tabs -->
+              <div style="background:#F3E5C8; border:2.5px solid #1E1612; border-radius:14px; padding:3px; display:flex; gap:6px;">
+                <button class="tab-pill mobile-lobby-tab-btn ${this.mobileLobbyTab === 'PLAYERS' ? 'active' : ''}" data-tab="PLAYERS" style="border-radius:11px; padding:8px 18px; font-size:16px; font-weight:900; ${this.mobileLobbyTab === 'PLAYERS' ? 'background:#1B65C6; color:#fff;' : ''}">
+                  👥 1. ผู้เล่น (${activeSlotCount}P)
+                </button>
+                <button class="tab-pill mobile-lobby-tab-btn ${this.mobileLobbyTab === 'CHAR' ? 'active' : ''}" data-tab="CHAR" style="border-radius:11px; padding:8px 18px; font-size:16px; font-weight:900; ${this.mobileLobbyTab === 'CHAR' ? 'background:#1B65C6; color:#fff;' : ''}">
+                  🧙‍♀️ 2. ตัวละคร (${curChar.name})
+                </button>
+                <button class="tab-pill mobile-lobby-tab-btn ${this.mobileLobbyTab === 'TREASURES' ? 'active' : ''}" data-tab="TREASURES" style="border-radius:11px; padding:8px 18px; font-size:16px; font-weight:900; ${this.mobileLobbyTab === 'TREASURES' ? 'background:#1B65C6; color:#fff;' : ''}">
+                  💎 3. สมบัติ (${curTrIds.map(id => getTreasureDef(id).iconEmoji).join('')})
+                </button>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="tab-pill" id="btnToggleLobbyUiMode" style="padding:8px 12px; font-size:13px; border-radius:10px; font-weight:900;">
+                🖥️ PC UI
+              </button>
+              <button class="gold-btn" id="btnStartMatchNow" ${activeSlotCount < 2 ? 'disabled' : ''} style="padding:10px 26px; font-size:18px; font-weight:900; cursor:${activeSlotCount < 2 ? 'not-allowed' : 'pointer'}; opacity:${activeSlotCount < 2 ? '0.6' : '1'}; border-radius:14px; border:3.5px solid #1E1612;">
+                ${activeSlotCount < 2 ? '⚠️ ต้องมี 2+ คน' : `🎲 เริ่มเกม (${isTeamMode ? '2v2' : `${activeSlotCount}P`})`}
+              </button>
+            </div>
+          </div>
+
+          ${tabBodyHtml}
+        </div>
+      `;
+    } else {
+    // Assemble Full Screen (PC All-in-One Layout)
+    container.innerHTML = `
+      <div style="display:flex; flex-direction:column; height:100%; gap:8px;">
+        <!-- 1. TOPBAR -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#FFF9EB; border:3px solid #1E1612; border-radius:14px; padding:6px 14px; flex-shrink:0; box-shadow:0 4px 0 #1E1612;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="cartoon-title" style="font-size:18px; color:#FFD43B;">🎲 LINE LET'S GET RICH</span>
+            <span style="font-size:11px; color:#1E1612; font-weight:900; background:#FFD43B; padding:2px 8px; border-radius:999px; border:2px solid #1E1612; box-shadow:0 2px 0 #1E1612;">PEAK ERA (3D)</span>
+
+            <!-- Single vs 2v2 Team Only -->
+            <div style="background:#F3E5C8; border:2px solid #1E1612; border-radius:999px; padding:2px; display:flex; gap:3px; margin-left:6px;">
+              <button id="lobbyModeSingle" class="tab-pill ${!isTeamMode ? 'active' : ''}" style="border-radius:999px; padding:3px 12px; font-size:11px; font-weight:900; ${!isTeamMode ? 'background:#1B65C6; color:#fff;' : ''}">
+                👑 Single (FFA)
+              </button>
+              <button id="lobbyModeTeam" class="tab-pill ${isTeamMode ? 'active' : ''}" style="border-radius:999px; padding:3px 12px; font-size:11px; font-weight:900; ${isTeamMode ? 'background:#1B65C6; color:#fff;' : ''}">
+                🤝 2v2 Team Match
+              </button>
+            </div>
+
+            ${
+              !isTeamMode
+                ? `<div style="background:#F3E5C8; border:2px solid #1E1612; border-radius:999px; padding:2px; display:flex; gap:3px;">
+                    ${([2, 3, 4] as const)
+                      .map(
+                        (cnt) => `
+                      <button class="tab-pill btn-lobby-ffa-count ${activeSlotCount === cnt ? 'active' : ''}" data-count="${cnt}" style="border-radius:999px; padding:3px 10px; font-size:11px; font-weight:900; ${activeSlotCount === cnt ? 'background:#D97706; color:#fff;' : ''}">
+                        ${cnt}P
+                      </button>
+                    `
+                      )
+                      .join('')}
+                  </div>`
+                : ''
+            }
+
+            <!-- Pass 'n Play status badge -->
+            <span style="background:${activeHumans >= 2 ? 'linear-gradient(180deg,#DCFCE7 0%,#BBF7D0 100%)' : '#F1F5F9'}; color:${activeHumans >= 2 ? '#15803D' : '#475569'}; border:2px solid #1E1612; font-size:11px; font-weight:900; padding:2px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1.5px 0 #1E1612;">
+              ${activeHumans >= 2 ? `🎮 Pass 'n Play (${activeHumans}P Local)` : `👤 ${activeSlotCount}P Match`}
+            </span>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button class="tab-pill" id="btnToggleLobbyUiMode" style="padding:6px 12px; font-size:11px; border-radius:10px; font-weight:900; cursor:pointer;">
+              📱 Mobile UI
+            </button>
+            <a href="/" style="text-decoration:none;">
+              <button class="tab-pill" style="padding:6px 14px; font-size:11px; border-radius:10px; font-weight:900; cursor:pointer;">
+                ⬅ Tabletop Lounge
+              </button>
+            </a>
+            <button class="gold-btn" id="btnStartMatchNow" ${activeSlotCount < 2 ? 'disabled' : ''} style="padding:8px 24px; font-size:14px; font-weight:900; cursor:${activeSlotCount < 2 ? 'not-allowed' : 'pointer'}; opacity:${activeSlotCount < 2 ? '0.6' : '1'}; border-radius:12px; border:3px solid #1E1612; box-shadow: inset 0 3px 0 rgba(255,255,255,0.7), 0 5px 0 #B45309, 0 8px 0 #1E1612;">
+              ${activeSlotCount < 2 ? '⚠️ NEED 2+ PLAYERS' : `🎲 START MATCH (${isTeamMode ? '2v2' : `${activeSlotCount}P`})`}
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. PLAYER BANNERS 4X (HORIZONTAL ROW) -->
+        <div class="lobby-banners-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; flex-shrink:0;">
+          ${playerBannersHtml}
+        </div>
+
+        <!-- 3. LOWER SPLIT VIEW (1/3 | 2/3) -->
+        <div class="lobby-lower-split" style="display:grid; grid-template-columns: 32% 68%; gap:10px; flex:1; min-height:0;">
+          <!-- LEFT COLUMN (1/3 Width): Pick Char + Pick Treasure -->
+          <div style="display:flex; flex-direction:column; gap:8px; height:100%; min-height:0;">
+            <!-- Pick Char -->
+            <div class="royal-panel" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
+                <span>👤 1. PICK CHARACTER</span>
+                <span style="color:#B45309; font-weight:900;">8 S+ ROSTER</span>
+              </div>
+              <div class="lgr-scroll" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; padding:6px; overflow-y:auto; flex:1;">
+                ${charPickerCardsHtml}
+              </div>
+            </div>
+
+            <!-- Pick Treasure -->
+            <div class="royal-panel" style="flex:1.15; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
+                <span>💎 2. PICK 3 TREASURES</span>
+                <span style="color:#B45309; font-weight:900;">SLOT ${this.selectedTreasureSlotIndex + 1} ACTIVE</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; padding:4px 6px; flex-shrink:0;">
+                ${equippedTrSlotsHtml}
+              </div>
+              <div class="lgr-scroll" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; padding:4px 6px; overflow-y:auto; flex:1;">
+                ${treasurePoolCardsHtml}
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN (2/3 Width): See Abilities + See Sum Stat and Skills -->
+          <div style="display:flex; flex-direction:column; gap:8px; height:100%; min-height:0;">
+            <!-- See Abilities -->
+            <div class="royal-panel" style="flex:0.8; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
+                <span>⚡ CHARACTER ABILITIES & PROFILE</span>
+                <span style="color:#B45309; font-weight:900;">${curChar.name} (${curChar.rank}) • ${curChar.title}</span>
+              </div>
+              <div style="display:flex; gap:14px; padding:8px 14px; align-items:center; flex:1;">
+                <div style="width:72px; height:72px; border-radius:14px; background:linear-gradient(180deg, #FFF9EB 0%, #FDE047 100%); border:3px solid #1E1612; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 0 #1E1612;">
+                  ${getMascotSvg(curChar.id, 50)}
+                  <div style="font-size:10px; font-weight:900; color:#141413; margin-top:2px;">${curChar.name}</div>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:14px; font-weight:900; color:#141413;">${charMainDef.name} <span style="font-size:11px; color:#475569;">(${charMainDef.code})</span></span>
+                    <span style="background:linear-gradient(180deg,#FF5A5F 0%,#DC2626 100%); color:#fff; font-weight:900; font-size:11px; padding:2px 10px; border-radius:999px; border:2px solid #1E1612; box-shadow:0 2px 0 #7F1D1D; font-variant-numeric:tabular-nums;">
+                      โอกาสติด ${curChar.mainSkill.procPct}%
+                    </span>
+                  </div>
+                  <div style="font-size:12px; color:#141413; font-weight:800; line-height:1.35;">${charMainDef.effectDesc}</div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:800; margin-top:2px;">
+                    <span style="color:#0369A1;">🎯 เงื่อนไข: ${charMainDef.trigger}</span>
+                    <span style="color:#7E22CE; font-weight:900;">⚡ ${CHARACTER_SYNERGIES[curChar.id]?.archetypeTh || ''}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- See Sum Stat and Skills -->
+            <div class="royal-panel" style="flex:1.2; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+              <div class="royal-header" style="padding:4px 8px; font-size:11.5px;">
+                <span>📊 STATS & 3 EQUIPPED TREASURES (6 SKILLS) • MAIN SKILL ABOVE</span>
+                <span style="color:#B45309; font-weight:900;">${targetPlayer.name} (${targetPlayer.id})</span>
+              </div>
+              <div style="display:grid; grid-template-columns: 28% 72%; gap:10px; padding:6px 10px; flex:1; min-height:0; align-items:center;">
+                <div style="display:flex; flex-direction:column; gap:4px; justify-content:space-around;">
+                  ${statBarsHtml}
+                </div>
+                <div style="display:flex; gap:8px; height:100%; min-height:0;">
+                  ${trCardsHtml}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    }
+
+    // Mobile Tab & Helper Listeners
+    container.querySelector('#btnToggleLobbyUiMode')?.addEventListener('click', () => {
+      soundManager.playClick();
+      this.forceMobileLobbyOverride = !this.isMobileLobbyMode();
+      this.renderLobbyScreen();
+    });
+
+    container.querySelectorAll('.mobile-lobby-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const tab = (btn as HTMLElement).dataset.tab as 'PLAYERS' | 'CHAR' | 'TREASURES';
+        if (tab) {
+          this.mobileLobbyTab = tab;
+          this.renderLobbyScreen();
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-mobile-edit-loadout').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundManager.playClick();
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        if (pid) {
+          this.selectedLoadoutPlayerId = pid;
+          this.mobileLobbyTab = 'CHAR';
+          this.renderLobbyScreen();
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-mobile-switch-pid').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        if (pid) {
+          this.selectedLoadoutPlayerId = pid;
+          this.renderLobbyScreen();
+        }
+      });
+    });
+
+    // Event Listeners:
+    // Mode Toggles
+    container.querySelector('#lobbyModeSingle')?.addEventListener('click', () => {
+      soundManager.playClick();
+      this.state.mode = 'FFA_4P';
+      this.callbacks.onModeChange?.('FFA_4P');
+      this.renderLobbyScreen();
+    });
+
+    container.querySelector('#lobbyModeTeam')?.addEventListener('click', () => {
+      soundManager.playClick();
+      this.state.mode = 'TEAM_2V2';
+      this.callbacks.onModeChange?.('TEAM_2V2');
+      this.renderLobbyScreen();
+    });
+
+    // FFA Player Count Quick Selector (2P / 3P / 4P)
+    container.querySelectorAll('.btn-lobby-ffa-count').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const cnt = Number((btn as HTMLElement).dataset.count) as 2 | 3 | 4;
+        if (cnt === 2 || cnt === 3 || cnt === 4) {
+          this.state.ffaPlayerCount = cnt;
+          this.callbacks.onFfaPlayerCountChange?.(cnt);
+          this.renderLobbyScreen();
+        }
+      });
+    });
+
+    // Start Match
+    container.querySelector('#btnStartMatchNow')?.addEventListener('click', () => {
+      this.callbacks.onStartMatch?.();
+    });
+
+    // Player Banners (Click to select loadout target)
+    container.querySelectorAll('.lobby-player-banner').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        if (
+          (e.target as HTMLElement).closest('.btn-lobby-kick') ||
+          (e.target as HTMLElement).closest('.btn-lobby-randomize') ||
+          (e.target as HTMLElement).closest('.btn-lobby-toggle-control')
+        ) {
+          return;
+        }
+        const pid = (el as HTMLElement).dataset.pid as PlayerId;
+        if (pid) {
+          soundManager.playClick();
+          this.selectedLoadoutPlayerId = pid;
+          this.renderLobbyScreen();
+        }
+      });
+    });
+
+    // Toggle Player Control (Human Pass 'n Play vs AI Bot)
+    container.querySelectorAll('.btn-lobby-toggle-control').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundManager.playClick();
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        this.callbacks.onTogglePlayerControl?.(pid);
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Synergize / Randomize Slot
+    container.querySelectorAll('.btn-lobby-randomize').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundManager.playClick();
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        this.callbacks.onRandomizePlayerLoadout?.(pid);
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Kick Slot
+    container.querySelectorAll('.btn-lobby-kick').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundManager.playClick();
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        this.callbacks.onKickPlayerSlot?.(pid);
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Add AI Slot
+    container.querySelectorAll('.btn-lobby-add-ai').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const slotIdx = Number((btn as HTMLElement).dataset.idx);
+        this.callbacks.onAddAiSlot?.(slotIdx);
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Add Human Slot
+    container.querySelectorAll('.btn-lobby-add-human').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const slotIdx = Number((btn as HTMLElement).dataset.idx);
+        this.callbacks.onAddHumanSlot?.(slotIdx);
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Pick Character
+    container.querySelectorAll('.lobby-char-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const charId = (btn as HTMLElement).dataset.charId;
+        if (!charId) return;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          charId,
+          targetPlayer.treasureIds
+        );
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Pick Treasure Slot Index
+    container.querySelectorAll('.lobby-tr-slot-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const slotIdx = Number((btn as HTMLElement).dataset.slotIdx) as 0 | 1 | 2;
+        this.selectedTreasureSlotIndex = slotIdx;
+        this.renderLobbyScreen();
+      });
+    });
+
+    // Pick Treasure from Pool
+    container.querySelectorAll('.lobby-tr-pool-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        soundManager.playClick();
+        const trId = (btn as HTMLElement).dataset.trId;
+        if (!trId) return;
+        const curCharDef = getCharacterDef(targetPlayer.characterId);
+        const trDef = getTreasureDef(trId);
+        if (isMainSkillConflict(trDef.mainSkill.skillId, curCharDef.mainSkill.skillId)) {
+          // Conflict guard
+          return;
+        }
+
+        const newTrIds = [...targetPlayer.treasureIds];
+        newTrIds[this.selectedTreasureSlotIndex] = trId;
+        // Advance slot
+        this.selectedTreasureSlotIndex = ((this.selectedTreasureSlotIndex + 1) % 3) as 0 | 1 | 2;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          targetPlayer.characterId,
+          newTrIds as [string, string, string]
+        );
+        this.renderLobbyScreen();
+      });
+    });
+  }
+  // ==========================================================================
+  // SCREEN 4: IN-GAME OVERLAY (Reference Image 1 — 4 Corner HUDs + Center Arc Gauge)
+  // ==========================================================================
+  private buildInGameStaticHUD(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_IN_GAME'
+    ) as HTMLElement;
+    if (!container) return;
+
+    // Build Rainbow Gauge Arc SVG Paths (2..12)
+    const nums = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const colors = [
+      '#ef4444',
+      '#f97316',
+      '#f59e0b',
+      '#eab308',
+      '#84cc16',
+      '#22c55e',
+      '#06b6d4',
+      '#3b82f6',
+      '#6366f1',
+      '#8b5cf6',
+      '#d946ef',
+    ];
+    const rOuter = 148;
+    const rInner = 112;
+    const startDeg = -168;
+    const endDeg = -12;
+    const stepDeg = (endDeg - startDeg) / nums.length;
+
+    let arcHtml = '';
+    nums.forEach((num, i) => {
+      const a1 = ((startDeg + i * stepDeg) * Math.PI) / 180;
+      const a2 = ((startDeg + (i + 1) * stepDeg) * Math.PI) / 180;
+      const x1o = Math.cos(a1) * rOuter;
+      const y1o = Math.sin(a1) * rOuter;
+      const x2o = Math.cos(a2) * rOuter;
+      const y2o = Math.sin(a2) * rOuter;
+      const x2i = Math.cos(a2) * rInner;
+      const y2i = Math.sin(a2) * rInner;
+      const x1i = Math.cos(a1) * rInner;
+      const y1i = Math.sin(a1) * rInner;
+
+      const path = `M ${x1o} ${y1o} A ${rOuter} ${rOuter} 0 0 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${rInner} ${rInner} 0 0 0 ${x1i} ${y1i} Z`;
+      const midA = (a1 + a2) / 2;
+      const tx = Math.cos(midA) * ((rOuter + rInner) / 2);
+      const ty = Math.sin(midA) * ((rOuter + rInner) / 2) + 4;
+
+      arcHtml += `<path d="${path}" fill="${colors[i]}" stroke="#0f172a" stroke-width="2" />`;
+      arcHtml += `<text x="${tx}" y="${ty}" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900" style="text
