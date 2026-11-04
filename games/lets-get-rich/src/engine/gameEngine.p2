@@ -1,0 +1,677 @@
+------------
+  // SCREEN & LOBBY MANAGEMENT
+  // --------------------------------------------------------------------------
+
+  public getScreenState(): ScreenState {
+    return this.screenState;
+  }
+
+  public setScreenState(screen: ScreenState): void {
+    this.screenState = screen;
+    if (screen !== 'IN_GAME' && this.matchState) {
+      this.matchState.victoryResult = null;
+      this.matchState.activePrompt = null;
+      this.matchState.pendingDebt = null;
+    }
+    this.emitStateChange();
+  }
+
+  public getLobbyConfig(): LobbyConfig {
+    return this.lobbyConfig;
+  }
+
+  public getMatchState(): MatchState | null {
+    return this.matchState;
+  }
+
+  public setGameMode(mode: GameMode): void {
+    this.lobbyConfig.gameMode = mode;
+    for (const pid of PLAYER_IDS) {
+      const slot = this.lobbyConfig.players[pid];
+      if (mode === 'TEAM_2V2') {
+        slot.teamId = pid === 'P1' || pid === 'P3' ? 'ALPHA' : 'BRAVO';
+        slot.isSlotActive = true;
+      } else {
+        slot.teamId = null;
+      }
+    }
+    this.syncFfaPlayerCountFromActiveSlots();
+    this.emitStateChange();
+  }
+
+  private syncFfaPlayerCountFromActiveSlots(): void {
+    const activeCount = PLAYER_IDS.filter(
+      (pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false
+    ).length;
+    this.lobbyConfig.ffaPlayerCount = Math.min(4, Math.max(2, activeCount)) as 2 | 3 | 4;
+  }
+
+  public setFfaPlayerCount(count: 2 | 3 | 4): void {
+    this.lobbyConfig.ffaPlayerCount = count;
+    PLAYER_IDS.forEach((pid, idx) => {
+      const slot = this.lobbyConfig.players[pid];
+      if (slot) {
+        slot.isSlotActive = idx < count;
+      }
+    });
+    const activeIds = PLAYER_IDS.filter(
+      (pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false
+    );
+    if (!activeIds.includes(this.lobbyConfig.loadoutInspectPlayerId)) {
+      this.lobbyConfig.loadoutInspectPlayerId = activeIds[0] ?? 'P1';
+    }
+    this.emitStateChange();
+  }
+
+  public getFfaPlayerCount(): 2 | 3 | 4 {
+    const activeCount = PLAYER_IDS.filter(
+      (pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false
+    ).length;
+    return Math.min(4, Math.max(2, activeCount)) as 2 | 3 | 4;
+  }
+
+  public setPlayerControlType(playerId: PlayerId, controlType: ControlType): void {
+    const slot = this.lobbyConfig.players[playerId];
+    if (!slot) return;
+    slot.isSlotActive = true;
+    slot.controlType = controlType;
+    const charDef = getCharacterDef(slot.characterId);
+    if (controlType === 'AI_BOT') {
+      slot.name = `Bot ${charDef.name}`;
+    } else if (controlType === 'HUMAN') {
+      slot.name = `Player ${playerId.slice(1)}`;
+    }
+    this.syncFfaPlayerCountFromActiveSlots();
+    this.emitStateChange();
+  }
+
+  public setPlayerName(playerId: PlayerId, name: string): void {
+    const slot = this.lobbyConfig.players[playerId];
+    if (!slot) return;
+    slot.name = name.trim() || `Player ${playerId.slice(1)}`;
+    this.emitStateChange();
+  }
+
+  public setLoadoutInspectPlayer(playerId: PlayerId): void {
+    this.lobbyConfig.loadoutInspectPlayerId = playerId;
+    this.emitStateChange();
+  }
+
+  public setPlayerCharacter(playerId: PlayerId, characterId: string): void {
+    const slot = this.lobbyConfig.players[playerId];
+    if (!slot) return;
+    const charDef = getCharacterDef(characterId);
+    slot.characterId = charDef.id;
+    slot.treasureIds = sanitizePlayerTreasures(charDef.id, slot.treasureIds);
+    if (slot.controlType === 'AI_BOT' && slot.name.startsWith('Bot ')) {
+      slot.name = `Bot ${charDef.name}`;
+    }
+    this.emitStateChange();
+  }
+
+  public setPlayerTreasureSlot(
+    playerId: PlayerId,
+    slotIndex: 0 | 1 | 2,
+    treasureId: string
+  ): { ok: boolean; reason?: string } {
+    const slot = this.lobbyConfig.players[playerId];
+    if (!slot) return { ok: false, reason: 'Invalid player' };
+
+    if (!isTreasureValidForCharacter(slot.characterId, treasureId)) {
+      return {
+        ok: false,
+        reason: 'ห้ามใส่สมบัติที่มีสกิลหลัก (Main Skill) ซ้ำกับสกิลหลักของตัวละคร!',
+      };
+    }
+
+    const next = [...slot.treasureIds] as [string, string, string];
+    const existingIdx = next.indexOf(treasureId);
+    if (existingIdx !== -1 && existingIdx !== slotIndex) {
+      // Swap slots if the treasure is already equipped in another slot
+      const prev = next[slotIndex];
+      next[slotIndex] = treasureId;
+      next[existingIdx] = prev;
+    } else {
+      next[slotIndex] = treasureId;
+    }
+
+    slot.treasureIds = sanitizePlayerTreasures(slot.characterId, next);
+    this.emitStateChange();
+    return { ok: true };
+  }
+
+  public randomizePlayerLoadout(playerId: PlayerId): void {
+    const slot = this.lobbyConfig.players[playerId];
+    if (!slot) return;
+
+    const randomChar =
+      CHARACTER_ROSTER[Math.floor(Math.random() * CHARACTER_ROSTER.length)];
+    slot.characterId = randomChar.id;
+    slot.treasureIds = generateSynergisticLoadout(randomChar.id);
+
+    if (slot.controlType === 'AI_BOT') {
+      slot.name = `Bot ${randomChar.name}`;
+    }
+
+    this.emitStateChange();
+  }
+
+  public kickPlayerSlot(playerId: PlayerId): void {
+    const slot = this.lobbyConfig.players[playerId];
+    if (!slot) return;
+
+    // Never replace with a bot automatically — mark the slot as empty so the user can play 2P/3P
+    // or click "+ Add AI" / "+ Human" whenever they want.
+    slot.isSlotActive = false;
+    this.syncFfaPlayerCountFromActiveSlots();
+
+    const activeIds = PLAYER_IDS.filter(
+      (pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false
+    );
+    if (!activeIds.includes(this.lobbyConfig.loadoutInspectPlayerId)) {
+      this.lobbyConfig.loadoutInspectPlayerId = activeIds[0] ?? 'P1';
+    }
+
+    this.emitStateChange();
+  }
+
+  // --------------------------------------------------------------------------
+  // MATCH INITIALIZATION
+  // --------------------------------------------------------------------------
+
+  public startNewMatch(): MatchState {
+    const mode = this.lobbyConfig.gameMode;
+    // Ensure at least 2 players are active when starting a match
+    const currentlyActive = PLAYER_IDS.filter(
+      (pid) => this.lobbyConfig.players[pid]?.isSlotActive !== false
+    );
+    if (currentlyActive.length < 2) {
+      for (const pid of PLAYER_IDS) {
+        if (this.lobbyConfig.players[pid].isSlotActive === false) {
+          this.lobbyConfig.players[pid].isSlotActive = true;
+          break;
+        }
+      }
+      this.syncFfaPlayerCountFromActiveSlots();
+    }
+
+    const players: Record<PlayerId, PlayerState> = {} as Record<PlayerId, PlayerState>;
+
+    for (let idx = 0; idx < PLAYER_IDS.length; idx++) {
+      const pid = PLAYER_IDS[idx];
+      const slot = this.lobbyConfig.players[pid];
+      const isSlotActive = slot.isSlotActive !== false;
+      const cleanTreasures = sanitizePlayerTreasures(slot.characterId, slot.treasureIds);
+      const teamId: TeamId =
+        mode === 'TEAM_2V2' ? (pid === 'P1' || pid === 'P3' ? 'ALPHA' : 'BRAVO') : null;
+
+      players[pid] = {
+        id: pid,
+        name: slot.name,
+        colorHex: slot.colorHex,
+        teamId,
+        controlType: slot.controlType,
+        characterId: slot.characterId,
+        treasureIds: cleanTreasures,
+        marble: isSlotActive
+          ? (MATCH_CONFIG.startingMarbleByPlayer[pid] ?? MATCH_CONFIG.startingMarble)
+          : 0,
+        loanUsed: false,
+        isBankrupt: !isSlotActive,
+        isSlotActive,
+        tileIndex: isSlotActive ? 0 : -1,
+        lapCount: 0,
+        islandTurnsLeft: 0,
+        isWaitingTravel: false,
+        consecutiveDoubles: 0,
+        oddEvenCharges: MATCH_CONFIG.oddEvenChargesPerMatch,
+        selectedOddEven: 'NONE',
+        skillUsesRemaining: createInitialSkillUsesMap(slot.characterId, cleanTreasures),
+        hasAngelCard: isSlotActive,
+        hasDiscountCoupon: false,
+      };
+    }
+
+    const tiles: BoardTileState[] = WORLD_MAP_TILES.map((def) => ({
+      index: def.index,
+      ownerId: null,
+      buildingLevel: BuildingLevel.NONE,
+      isFestival: false,
+      olympicMultiplier: 1,
+      stepMultiplier: 1,
+    }));
+
+    // Pick 3 random CITY tiles for x2 Festival Cities at match start
+    const cityIndices = WORLD_MAP_TILES.filter((t) => t.type === 'CITY').map((t) => t.index);
+    const shuffled = [...cityIndices].sort(() => Math.random() - 0.5);
+    const festivalPicked = shuffled.slice(0, MATCH_CONFIG.festivalCityCount);
+    for (const idx of festivalPicked) {
+      tiles[idx].isFestival = true;
+    }
+
+    const festivalNames = festivalPicked.map((i) => WORLD_MAP_TILES[i].nameTh).join(', ');
+
+    const firstActiveIdx = Math.max(
+      0,
+      PLAYER_IDS.findIndex((pid) => players[pid].isSlotActive !== false)
+    );
+
+    this.matchState = {
+      gameMode: mode,
+      turnNumber: 1,
+      maxTurns: MATCH_CONFIG.maxTurns,
+      activePlayerIndex: firstActiveIdx,
+      activePlayerId: PLAYER_IDS[firstActiveIdx],
+      phase: 'IDLE_ROLL',
+      players,
+      tiles,
+      blackHole: null,
+      olympicTileIndex: null,
+      olympicHostCount: 0,
+      gaugeValue: 7.0,
+      gaugeDirection: 1,
+      lastDiceRoll: null,
+      pendingMovePath: [],
+      pendingSteppedCount: 0,
+      activePrompt: null,
+      boardPickReason: null,
+      boardPickValidTiles: [],
+      pendingBlackHoleLandmarkIndex: null,
+      pendingLineTeleportLandmarkIndex: null,
+      pendingOlympicIsFree: false,
+      disruptMode: 'FORCE_SELL',
+      pendingDebt: null,
+      pendingDebtQueue: [],
+      extraRollGranted: false,
+      freeWorldTravelMap: { P1: false, P2: false, P3: false, P4: false },
+      monopolyAlerts: [],
+      actionLogs: [],
+      victoryResult: null,
+    };
+
+    this.screenState = 'IN_GAME';
+    this.appendLog(
+      'P1',
+      `🎉 เริ่มการแข่งขัน! เมืองเทศกาล x2ประจำแมตช์: ${festivalNames}`,
+      'SYSTEM'
+    );
+    this.emitStateChange();
+    return this.matchState;
+  }
+
+  public returnToLobby(): void {
+    this.matchState = null;
+    this.screenState = 'LOBBY';
+    this.emitStateChange();
+  }
+
+  // --------------------------------------------------------------------------
+  // ALLIANCE, OWNERSHIP & TOLL / COST CALCULATIONS
+  // --------------------------------------------------------------------------
+
+  public arePlayersAllied(p1: PlayerId | null, p2: PlayerId | null): boolean {
+    if (!p1 || !p2) return false;
+    if (p1 === p2) return true;
+    if (!this.matchState || this.matchState.gameMode !== 'TEAM_2V2') return false;
+    const t1 = this.matchState.players[p1]?.teamId;
+    const t2 = this.matchState.players[p2]?.teamId;
+    return Boolean(t1 && t1 === t2);
+  }
+
+  public isColorGroupMonopoly(group: number | null, ownerId: PlayerId | null): boolean {
+    if (!this.matchState || group === null || !ownerId) return false;
+    const groupTiles = COLOR_GROUP_TILES[group];
+    if (!groupTiles) return false;
+    return groupTiles.every((idx) =>
+      this.arePlayersAllied(ownerId, this.matchState!.tiles[idx].ownerId)
+    );
+  }
+
+  public countOwnedTourismIslands(ownerId: PlayerId | null): number {
+    if (!this.matchState || !ownerId) return 0;
+    return TOURISM_TILE_INDICES.filter((idx) =>
+      this.arePlayersAllied(ownerId, this.matchState!.tiles[idx].ownerId)
+    ).length;
+  }
+
+  public getOwnedTourismIslandIndices(ownerId: PlayerId | null): number[] {
+    if (!this.matchState || !ownerId) return [];
+    return TOURISM_TILE_INDICES.filter((idx) =>
+      this.arePlayersAllied(ownerId, this.matchState!.tiles[idx].ownerId)
+    );
+  }
+
+  public getTourismCounts(ownerId: PlayerId | null): { blueCount: number; redCount: number; totalCount: number } {
+    const owned = this.getOwnedTourismIslandIndices(ownerId);
+    const blueCount = owned.filter((idx) => BLUE_TOURISM_INDICES.includes(idx)).length;
+    const redCount = owned.filter((idx) => RED_TOURISM_INDICES.includes(idx)).length;
+    return { blueCount, redCount, totalCount: owned.length };
+  }
+
+  public calculateTilePropertyValue(tileIndex: number): number {
+    if (!this.matchState) return 0;
+    const tile = this.matchState.tiles[tileIndex];
+    const def = WORLD_MAP_TILES[tileIndex];
+    if (!tile || !def || !tile.ownerId || tile.buildingLevel === BuildingLevel.NONE) return 0;
+    if (def.type === 'TOURISM') {
+      return def.baseCost;
+    }
+    const mult = MATCH_CONFIG.buildingCostMultipliers[tile.buildingLevel] ?? 1;
+    return Math.round(def.baseCost * mult);
+  }
+
+  public calculateTileSellRefund(tileIndex: number): number {
+    return Math.round(this.calculateTilePropertyValue(tileIndex) * MATCH_CONFIG.citySellRefundRate);
+  }
+
+  public calculateBuildCost(
+    playerId: PlayerId,
+    tileIndex: number,
+    fromLevel: BuildingLevel,
+    targetLevel: BuildingLevel
+  ): number {
+    if (!this.matchState || targetLevel <= fromLevel) return 0;
+    const player = this.matchState.players[playerId];
+    const def = WORLD_MAP_TILES[tileIndex];
+    if (!player || !def) return 0;
+
+    const stats = computePlayerStats(player.characterId, player.treasureIds);
+    const fromMult = MATCH_CONFIG.buildingCostMultipliers[fromLevel] ?? 0;
+    const toMult = MATCH_CONFIG.buildingCostMultipliers[targetLevel] ?? 1;
+    const rawCost = def.baseCost * Math.max(0, toMult - fromMult);
+    return Math.round(rawCost * (1 - stats.constDiscountPct / 100));
+  }
+
+  public calculateTakeoverCost(buyerId: PlayerId, tileIndex: number): number {
+    if (!this.matchState) return 0;
+    const buyer = this.matchState.players[buyerId];
+    const propVal = this.calculateTilePropertyValue(tileIndex);
+    if (!buyer || propVal <= 0) return 0;
+    const stats = computePlayerStats(buyer.characterId, buyer.treasureIds);
+    const rawTakeover = propVal * MATCH_CONFIG.takeoverCostMultiplier;
+    return Math.round(rawTakeover * (1 - stats.acqDiscountPct / 100));
+  }
+
+  public calculateTollBreakdown(
+    tileIndex: number,
+    visitorId?: PlayerId
+  ): {
+    baseLevelToll: number;
+    festivalMult: number;
+    colorMonoMult: number;
+    olympicMult: number;
+    stepMult: number;
+    lateGameMult: number;
+    rawToll: number;
+    tollDiscountPct: number;
+    netToll: number;
+  } {
+    if (!this.matchState) {
+      return {
+        baseLevelToll: 0,
+        festivalMult: 1,
+        colorMonoMult: 1,
+        olympicMult: 1,
+        stepMult: 1,
+        lateGameMult: 1,
+        rawToll: 0,
+        tollDiscountPct: 0,
+        netToll: 0,
+      };
+    }
+
+    const tile = this.matchState.tiles[tileIndex];
+    const def = WORLD_MAP_TILES[tileIndex];
+    if (!tile || !def || !tile.ownerId || tile.buildingLevel === BuildingLevel.NONE || tile.isBlackout) {
+      return {
+        baseLevelToll: 0,
+        festivalMult: 1,
+        colorMonoMult: 1,
+        olympicMult: 1,
+        stepMult: 1,
+        lateGameMult: 1,
+        rawToll: 0,
+        tollDiscountPct: 0,
+        netToll: 0,
+      };
+    }
+
+    let baseLevelToll = 0;
+    if (def.type === 'TOURISM') {
+      const ownedIndices = this.getOwnedTourismIslandIndices(tile.ownerId);
+      const scale = getTourismMultiplierForTile(tileIndex, ownedIndices);
+      baseLevelToll = def.baseToll * scale;
+    } else {
+      const mult = MATCH_CONFIG.buildingTollMultipliers[tile.buildingLevel] ?? 1;
+      baseLevelToll = def.baseToll * mult;
+    }
+
+    const festivalMult = tile.isFestival ? MATCH_CONFIG.festivalTollMultiplier : 1;
+    const colorMonoMult =
+      def.type === 'CITY' && this.isColorGroupMonopoly(def.group, tile.ownerId)
+        ? MATCH_CONFIG.colorMonopolyTollMultiplier
+        : 1;
+    const olympicMult = Math.max(1, tile.olympicMultiplier);
+    const stepMult = Math.max(1, tile.stepMultiplier);
+    const lateGameMult =
+      this.matchState.turnNumber >= MATCH_CONFIG.lateGameTurnThreshold
+        ? MATCH_CONFIG.lateGameTollMultiplier
+        : 1;
+
+    const rawToll = Math.round(
+      baseLevelToll * festivalMult * colorMonoMult * olympicMult * stepMult * lateGameMult
+    );
+
+    let tollDiscountPct = 0;
+    if (visitorId && !this.arePlayersAllied(visitorId, tile.ownerId)) {
+      const visitor = this.matchState.players[visitorId];
+      if (visitor) {
+        tollDiscountPct = computePlayerStats(
+          visitor.characterId,
+          visitor.treasureIds
+        ).tollDiscountPct;
+      }
+    }
+
+    const netToll = Math.round(rawToll * (1 - tollDiscountPct / 100));
+    return {
+      baseLevelToll,
+      festivalMult,
+      colorMonoMult,
+      olympicMult,
+      stepMult,
+      lateGameMult,
+      rawToll,
+      tollDiscountPct,
+      netToll,
+    };
+  }
+
+  public calculatePlayerTotalAssets(playerId: PlayerId): number {
+    if (!this.matchState) return 0;
+    const player = this.matchState.players[playerId];
+    if (!player || player.isBankrupt) return 0;
+    let propSum = 0;
+    for (const tile of this.matchState.tiles) {
+      if (tile.ownerId === playerId) {
+        propSum += this.calculateTilePropertyValue(tile.index);
+      }
+    }
+    return player.marble + propSum;
+  }
+
+  // --------------------------------------------------------------------------
+  // SKILL TRIGGER RESOLVER
+  // --------------------------------------------------------------------------
+
+  private tryTriggerSkill(player: PlayerState, skillId: SkillId): boolean {
+    if (!this.matchState || player.isBankrupt) return false;
+    const pct = getEffectiveSkillPct(player, skillId);
+    if (pct <= 0) return false;
+
+    const roll = Math.random() * 100;
+    if (roll >= pct) return false;
+
+    const def = getSkillDef(skillId);
+    if (def.maxUsesPerMatch !== null) {
+      const cur = player.skillUsesRemaining[skillId] ?? def.maxUsesPerMatch;
+      player.skillUsesRemaining[skillId] = Math.max(0, cur - 1);
+    }
+
+    const message = `⚡ ${player.name} ใช้สกิล: ${def.name} (${pct}%)!`;
+    this.appendLog(player.id, message, 'SKILL');
+    this.callbacks.onSkillBanner?.({
+      playerId: player.id,
+      playerName: player.name,
+      skillId,
+      skillName: def.name,
+      procPct: pct,
+      message,
+    });
+
+    return true;
+  }
+
+  private appendLog(
+    playerId: PlayerId,
+    message: string,
+    category: ActionLogEntry['category']
+  ): void {
+    if (!this.matchState) return;
+    const entry: ActionLogEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      turnNumber: this.matchState.turnNumber,
+      playerId,
+      message,
+      category,
+      timestamp: Date.now(),
+    };
+    this.matchState.actionLogs.unshift(entry);
+    if (this.matchState.actionLogs.length > 60) {
+      this.matchState.actionLogs.length = 60;
+    }
+    this.callbacks.onActionLog?.(entry);
+  }
+
+  // --------------------------------------------------------------------------
+  // TURN CONTROLS: ODD/EVEN, ISLAND BAIL, GAUGE & DICE ROLL
+  // --------------------------------------------------------------------------
+
+  public toggleOddEvenMode(mode: OddEvenMode): void {
+    if (!this.matchState) return;
+    if (this.matchState.phase !== 'IDLE_ROLL' && this.matchState.phase !== 'GAUGE_CHARGING') return;
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    if (!player) return;
+
+    if (mode !== 'NONE' && player.oddEvenCharges <= 0) {
+      this.callbacks.onToastBanner?.('สิทธิ์ใช้ลูกเต๋า คู่/คี่ (ODD/EVEN) หมดแล้ว!', '#DC2626');
+      return;
+    }
+
+    player.selectedOddEven = player.selectedOddEven === mode ? 'NONE' : mode;
+    this.emitStateChange();
+  }
+
+  public payDesertIslandBail(): boolean {
+    if (!this.matchState || this.matchState.phase !== 'IDLE_ROLL') return false;
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    if (!player || player.islandTurnsLeft <= 0) return false;
+    if (player.marble < MATCH_CONFIG.desertIslandBailCost) {
+      this.callbacks.onToastBanner?.('เงิน Marble ไม่พอจ่ายค่าประกันตัวออกจากเกาะร้าง!', '#DC2626');
+      return false;
+    }
+
+    player.marble -= MATCH_CONFIG.desertIslandBailCost;
+    player.islandTurnsLeft = 0;
+    this.appendLog(
+      player.id,
+      `💸 ${player.name} จ่ายค่าประกันตัว ${formatMarbleCompact(MATCH_CONFIG.desertIslandBailCost)} ออกจากเกาะร้าง!`,
+      'MOVE'
+    );
+    this.callbacks.onFloatingText?.({
+      tileIndex: player.tileIndex,
+      text: `-${formatMarbleCompact(MATCH_CONFIG.desertIslandBailCost)} ประกันตัว`,
+      colorHex: '#DC2626',
+    });
+    this.emitStateChange();
+    return true;
+  }
+
+  public startGaugeCharge(): void {
+    if (!this.matchState || this.matchState.phase !== 'IDLE_ROLL') return;
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    if (!player) return;
+
+    // If waiting at Sky Terminal (Tile 24), open World Travel destination picker instead of rolling
+    if (player.isWaitingTravel) {
+      this.openWorldTravelPicker(player);
+      return;
+    }
+
+    this.matchState.phase = 'GAUGE_CHARGING';
+    this.matchState.gaugeValue = 2.0;
+    this.matchState.gaugeDirection = 1;
+    this.emitStateChange();
+  }
+
+  public updateGauge(dtSeconds: number): number {
+    if (!this.matchState || this.matchState.phase !== 'GAUGE_CHARGING') {
+      return this.matchState?.gaugeValue ?? 7.0;
+    }
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    const stats = computePlayerStats(player.characterId, player.treasureIds);
+    const speed = stats.gaugeSpeed; // 9.5 * (1 - 0.018 * dcLevel)
+
+    let next = this.matchState.gaugeValue + this.matchState.gaugeDirection * speed * dtSeconds;
+    if (next >= 12.0) {
+      next = 12.0 - (next - 12.0);
+      this.matchState.gaugeDirection = -1;
+    } else if (next <= 2.0) {
+      next = 2.0 + (2.0 - next);
+      this.matchState.gaugeDirection = 1;
+    }
+    this.matchState.gaugeValue = Math.max(2.0, Math.min(12.0, next));
+    return this.matchState.gaugeValue;
+  }
+
+  public releaseGaugeRoll(overrideGaugeValue?: number): DiceRollResult | null {
+    if (!this.matchState) return null;
+    if (this.matchState.phase !== 'GAUGE_CHARGING' && this.matchState.phase !== 'IDLE_ROLL') {
+      return null;
+    }
+
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    if (player.isWaitingTravel) {
+      this.openWorldTravelPicker(player);
+      return null;
+    }
+
+    if (typeof overrideGaugeValue === 'number' && !Number.isNaN(overrideGaugeValue)) {
+      this.matchState.gaugeValue = Math.max(2.0, Math.min(12.0, overrideGaugeValue));
+    }
+
+    const rollResult = this.resolveTwoStageDiceRoll(player, this.matchState.gaugeValue);
+    this.matchState.lastDiceRoll = rollResult;
+    this.matchState.phase = 'DICE_ANIMATING';
+    this.matchState.extraRollGranted = false;
+
+    const dblTag = rollResult.isDouble ? ' (DOUBLE!)' : '';
+    const dcTag = rollResult.dcTriggered ? ' 🎯[คุมเต๋าแม่นยำ!]' : '';
+    this.appendLog(
+      player.id,
+      `🎲 ${player.name} ทอยได้ ${rollResult.die1} + ${rollResult.die2} = ${rollResult.sum}${dblTag}${dcTag}`,
+      'DICE'
+    );
+
+    if (rollResult.dcTriggered) {
+      this.callbacks.onToastBanner?.(
+        `🎯 ${player.name} คุมเต๋าทำงาน! ออก ${rollResult.sum} เป๊ะ (${rollResult.dcProcPct}%)`,
+        player.colorHex
+      );
+    }
+
+    this.emitStateChange();
+    return rollResult;
+  }
+
+  private resolveTwoStageDiceRoll(player: PlayerState, rawGauge: number): DiceRollRe
