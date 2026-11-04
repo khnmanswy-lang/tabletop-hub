@@ -1,0 +1,692 @@
+sult {
+    const g = Math.max(2.0, Math.min(12.0, rawGauge));
+    const targetSum = Math.round(g);
+    const stats = computePlayerStats(player.characterId, player.treasureIds);
+    const oddEvenUsed = player.selectedOddEven;
+
+    // Consume ODD/EVEN charge if active
+    if (oddEvenUsed !== 'NONE' && player.oddEvenCharges > 0) {
+      player.oddEvenCharges -= 1;
+    }
+    player.selectedOddEven = 'NONE';
+
+    const targetCompatible =
+      oddEvenUsed === 'NONE' ||
+      (oddEvenUsed === 'EVEN' && targetSum % 2 === 0) ||
+      (oddEvenUsed === 'ODD' && targetSum % 2 !== 0);
+
+    // Stage 1: Determine Sum (2..12)
+    const dcTriggered = targetCompatible && Math.random() * 100 < stats.dcProcPct;
+    let sum = targetSum;
+
+    if (!dcTriggered) {
+      const table =
+        oddEvenUsed === 'EVEN'
+          ? DICE_TABLE_EVEN
+          : oddEvenUsed === 'ODD'
+          ? DICE_TABLE_ODD
+          : DICE_TABLE_NONE;
+
+      const low = Math.max(2, Math.min(12, Math.floor(g)));
+      const high = Math.max(2, Math.min(12, Math.ceil(g)));
+      const t = g - low;
+
+      const rowLow = table[low];
+      const rowHigh = table[high];
+      const weights: number[] = [];
+      let totalWeight = 0;
+
+      for (let i = 0; i < 11; i++) {
+        const w = (1 - t) * rowLow[i] + t * rowHigh[i];
+        weights.push(w);
+        totalWeight += w;
+      }
+
+      let pick = Math.random() * totalWeight;
+      sum = 7;
+      for (let i = 0; i < 11; i++) {
+        pick -= weights[i];
+        if (pick <= 0) {
+          sum = i + 2;
+          break;
+        }
+      }
+    }
+
+    // Stage 2: Universal Double Check + Hook 1 (S10_DOUBLE_BOOST)
+    const doubleBoostPct = getEffectiveSkillPct(player, 'S10_DOUBLE_BOOST');
+    let isDouble = false;
+    let die1 = 1;
+    let die2 = 1;
+
+    if (sum === 2) {
+      isDouble = true;
+      die1 = 1;
+      die2 = 1;
+    } else if (sum === 12) {
+      isDouble = true;
+      die1 = 6;
+      die2 = 6;
+    } else if (sum % 2 !== 0) {
+      isDouble = false;
+      const pairs = NON_DOUBLE_DIE_PAIRS[sum];
+      const chosen = pairs[Math.floor(Math.random() * pairs.length)];
+      die1 = chosen[0];
+      die2 = chosen[1];
+    } else {
+      // Even sum in {4, 6, 8, 10}
+      const baseDoublePct = UNIVERSAL_DOUBLE_PROB_PCT[sum - 2] ?? 0;
+      const effectiveDoublePct = Math.min(95, baseDoublePct + doubleBoostPct);
+      isDouble = Math.random() * 100 < effectiveDoublePct;
+      if (isDouble) {
+        die1 = sum / 2;
+        die2 = sum / 2;
+      } else {
+        const pairs = NON_DOUBLE_DIE_PAIRS[sum];
+        const chosen = pairs[Math.floor(Math.random() * pairs.length)];
+        die1 = chosen[0];
+        die2 = chosen[1];
+      }
+    }
+
+    return {
+      playerId: player.id,
+      gaugeValue: g,
+      targetSum,
+      die1,
+      die2,
+      sum,
+      isDouble,
+      dcTriggered,
+      dcProcPct: stats.dcProcPct,
+      oddEvenUsed,
+      doubleBoostPct,
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // POST-DICE ANIMATION -> MOVEMENT & STEP HOOKS
+  // --------------------------------------------------------------------------
+
+  public completeDiceAnimation(): void {
+    if (!this.matchState || this.matchState.phase !== 'DICE_ANIMATING') return;
+    const roll = this.matchState.lastDiceRoll;
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    if (!roll || !player) return;
+
+    // Case 1: Player is currently trapped on Desert Island (islandTurnsLeft > 0)
+    if (player.islandTurnsLeft > 0) {
+      if (roll.isDouble) {
+        player.islandTurnsLeft = 0;
+        player.consecutiveDoubles = 0;
+        this.appendLog(
+          player.id,
+          `🔓 ${player.name} ทอยออกเบิ้ล (${roll.die1}+${roll.die2}) หนีออกจากเกาะร้างสำเร็จ!`,
+          'MOVE'
+        );
+        this.callbacks.onToastBanner?.(
+          `🔓 ${player.name} ทอยเบิ้ลหนีออกจากเกาะร้างสำเร็จ!`,
+          '#16A34A'
+        );
+        // Move forward by roll.sum without granting extra double turn
+        this.startForwardMovement(player, roll.sum, false);
+        return;
+      } else {
+        player.islandTurnsLeft = Math.max(0, player.islandTurnsLeft - 1);
+        this.appendLog(
+          player.id,
+          `🏝️ ${player.name} ทอยไม่เบิ้ล ติดเกาะร้างต่อ (เหลือ ${player.islandTurnsLeft} เทิร์น)`,
+          'MOVE'
+        );
+        this.callbacks.onToastBanner?.(
+          `🏝️ ทอยไม่เบิ้ล! ${player.name} ติดเกาะร้าง (เหลือ ${player.islandTurnsLeft} เทิร์น)`,
+          '#D97706'
+        );
+        this.finishTurnOrExtraRoll();
+        return;
+      }
+    }
+
+    // Case 2: Normal Roll — Check Consecutive Doubles & Hook 2 (S04_TRIPLE_DBL_FLY)
+    if (roll.isDouble) {
+      player.consecutiveDoubles += 1;
+      if (player.consecutiveDoubles >= MATCH_CONFIG.maxConsecutiveDoublesBeforeIsland) {
+        // Hook 2: ON_THIRD_CONSECUTIVE_DOUBLE -> S04_TRIPLE_DBL_FLY
+        if (this.tryTriggerSkill(player, 'S04_TRIPLE_DBL_FLY')) {
+          player.consecutiveDoubles = 0;
+          this.matchState.extraRollGranted = false;
+          this.warpPlayerToSkyTerminal(player, true);
+          this.finishTurnOrExtraRoll();
+          return;
+        }
+
+        // Otherwise sent to Desert Island (Tile 8)
+        this.appendLog(
+          player.id,
+          `🚨 ${player.name} ทอยเบิ้ล 3 ครั้งติด! ถูกส่งไปเกาะร้างทันที!`,
+          'MOVE'
+        );
+        this.callbacks.onToastBanner?.(
+          `🚨 ทอยเบิ้ล 3 ครั้งติด! ${player.name} ถูกส่งเข้าเกาะร้าง!`,
+          '#DC2626'
+        );
+        this.sendPlayerToDesertIsland(player);
+        return;
+      }
+      this.matchState.extraRollGranted = true;
+    } else {
+      player.consecutiveDoubles = 0;
+      this.matchState.extraRollGranted = false;
+    }
+
+    this.startForwardMovement(player, roll.sum, roll.isDouble);
+  }
+
+  private startForwardMovement(player: PlayerState, steps: number, _isDouble: boolean): void {
+    if (!this.matchState) return;
+    const path: number[] = [];
+    let cur = player.tileIndex;
+    for (let s = 1; s <= steps; s++) {
+      cur = (cur + 1) % MATCH_CONFIG.boardSize;
+      path.push(cur);
+    }
+
+    this.matchState.pendingMovePath = path;
+    this.matchState.pendingSteppedCount = 0;
+    this.matchState.phase = 'PIECE_MOVING';
+    this.emitStateChange();
+  }
+
+  /**
+   * Called on each hop step (either by IsoBoard3DRenderer's onStepCallback or automatically
+   * inside completePieceMovement if any steps remain).
+   * Handles:
+   * - Passing/Landing on START (Tile 0) -> +1 Lap & Salary
+   * - S01_PERFUME_STEAL -> Steals 7% cash from any enemy on that step's tile!
+   */
+  public advancePieceStep(stepTileIndex?: number): void {
+    if (!this.matchState || this.matchState.phase !== 'PIECE_MOVING') return;
+    const path = this.matchState.pendingMovePath;
+    if (this.matchState.pendingSteppedCount >= path.length) return;
+
+    const expectedIdx = path[this.matchState.pendingSteppedCount];
+    const tileIdx = typeof stepTileIndex === 'number' ? stepTileIndex : expectedIdx;
+
+    const mover = this.matchState.players[this.matchState.activePlayerId];
+    if (!mover) return;
+
+    this.matchState.pendingSteppedCount += 1;
+    mover.tileIndex = tileIdx;
+
+    // 1. Check START (Tile 0) Salary & Lap Increment
+    if (tileIdx === 0) {
+      this.awardStartSalary(mover);
+    }
+
+    // 2. Check Perfume Steal (M06_SUPER_PERFUME 7% + S01_PERFUME_STEAL 3% - Stackable!)
+    const enemiesOnTile = PLAYER_IDS.map((pid) => this.matchState!.players[pid]).filter(
+      (other) =>
+        !other.isBankrupt &&
+        other.id !== mover.id &&
+        !this.arePlayersAllied(mover.id, other.id) &&
+        other.tileIndex === tileIdx &&
+        other.marble > 0
+    );
+
+    if (enemiesOnTile.length > 0) {
+      let combinedRate = 0;
+      const triggeredNames: string[] = [];
+      if (this.tryTriggerSkill(mover, 'M06_SUPER_PERFUME')) {
+        const charDef = getCharacterDef(mover.characterId);
+        const charHasSuperPerfume = charDef.mainSkill.skillId === 'M06_SUPER_PERFUME';
+        const treasureHasSuperPerfume = mover.treasureIds.some((tid) => {
+          const tr = getTreasureDef(tid);
+          return tr.mainSkill.skillId === 'M06_SUPER_PERFUME';
+        });
+
+        let superRate = 0;
+        let rateLabel = '';
+        if (charHasSuperPerfume && treasureHasSuperPerfume) {
+          // If stacked: add cash steal percentage (12% + 7% = 19%), trigger proc chance stays identical
+          superRate = MATCH_CONFIG.perfumeCharStealRate + MATCH_CONFIG.perfumeTreasureStealRate;
+          rateLabel = `น้ำหอมมหาเสน่ห์ (ซ้อนทับ ${Math.round(superRate * 100)}%)`;
+        } else if (charHasSuperPerfume) {
+          superRate = MATCH_CONFIG.perfumeCharStealRate; // 12%
+          rateLabel = `น้ำหอมมหาเสน่ห์ (${Math.round(superRate * 100)}%)`;
+        } else {
+          superRate = MATCH_CONFIG.perfumeTreasureStealRate; // 7%
+          rateLabel = `น้ำหอมมหาเสน่ห์ (${Math.round(superRate * 100)}%)`;
+        }
+
+        combinedRate += superRate;
+        triggeredNames.push(rateLabel);
+      }
+      if (this.tryTriggerSkill(mover, 'S01_PERFUME_STEAL')) {
+        combinedRate += MATCH_CONFIG.perfumeSubStealRate; // 3%
+        triggeredNames.push('น้ำหอมหลากสี (3%)');
+      }
+
+      if (combinedRate > 0) {
+        const ratePct = Math.round(combinedRate * 100);
+        let totalStolen = 0;
+        for (const enemy of enemiesOnTile) {
+          const stolen = Math.round(enemy.marble * combinedRate);
+          if (stolen > 0) {
+            enemy.marble -= stolen;
+            mover.marble += stolen;
+            totalStolen += stolen;
+            this.callbacks.onPerfumeSteal?.({
+              stealerId: mover.id,
+              victimId: enemy.id,
+              amount: stolen,
+              tileIndex: tileIdx,
+              ratePct,
+            });
+          }
+        }
+        if (totalStolen > 0) {
+          const label = triggeredNames.join(' + ');
+          this.appendLog(
+            mover.id,
+            `🌸 ${mover.name} ใช้${label} ดูดเงินสด ${formatMarbleCompact(totalStolen)} (${ratePct}%) จากศัตรู!`,
+            'SKILL'
+          );
+          this.callbacks.onFloatingText?.({
+            tileIndex: tileIdx,
+            text: `+${formatMarbleCompact(totalStolen)} น้ำหอม ${ratePct}%!`,
+            colorHex: '#EC4899',
+          });
+        }
+      }
+    }
+
+    this.emitStateChange();
+  }
+
+  public completePieceMovement(): void {
+    if (!this.matchState || this.matchState.phase !== 'PIECE_MOVING') return;
+
+    // Process any steps that haven't been stepped yet
+    while (this.matchState.pendingSteppedCount < this.matchState.pendingMovePath.length) {
+      this.advancePieceStep();
+    }
+
+    const mover = this.matchState.players[this.matchState.activePlayerId];
+    this.matchState.pendingMovePath = [];
+    this.matchState.pendingSteppedCount = 0;
+    this.matchState.phase = 'TILE_RESOLUTION';
+
+    this.resolveLandedTile(mover, mover.tileIndex, false);
+  }
+
+  private awardStartSalary(player: PlayerState): void {
+    if (!this.matchState) return;
+    player.lapCount += 1;
+    const stats = computePlayerStats(player.characterId, player.treasureIds);
+    const salary = Math.round(MATCH_CONFIG.salaryAmount * (1 + stats.salBonusPct / 100));
+    player.marble += salary;
+
+    this.appendLog(
+      player.id,
+      `💰 ${player.name} ผ่านจุด START (รอบที่ ${player.lapCount + 1}) รับเงินเดือน +${formatMarbleCompact(salary)}!`,
+      'MOVE'
+    );
+    this.callbacks.onFloatingText?.({
+      tileIndex: 0,
+      text: `+${formatMarbleCompact(salary)} SALARY!`,
+      colorHex: '#16A34A',
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // TILE RESOLUTION & ALL 12 LIFECYCLE HOOKS
+  // --------------------------------------------------------------------------
+
+  private resolveLandedTile(
+    mover: PlayerState,
+    tileIndex: number,
+    isFromBlackHoleOrGuidebook: boolean
+  ): void {
+    if (!this.matchState || mover.isBankrupt) return;
+    mover.tileIndex = tileIndex;
+
+    // 1. Check Black Hole Warp first (if player landed on blackTileIndex during normal movement)
+    if (
+      !isFromBlackHoleOrGuidebook &&
+      this.matchState.blackHole &&
+      // Hits EVERYONE incl. the owner (by design: owner can use it as a shortcut back to their Landmark)
+      this.matchState.blackHole.blackTileIndex === tileIndex
+    ) {
+      const bh = this.matchState.blackHole;
+      const whiteIdx = bh.whiteTileIndex;
+      const lmName = WORLD_MAP_TILES[whiteIdx].nameTh;
+      this.matchState.blackHole = null; // Single Black Hole disappears after sucking 1 player in
+
+      this.appendLog(
+        mover.id,
+        `🌀 ${mover.name} ถูกดูดเข้าหลุมดำ! วาร์ปไปที่แลนด์มาร์ก ${lmName}!`,
+        'SKILL'
+      );
+      this.callbacks.onToastBanner?.(
+        `🌀 ${mover.name} ถูกดูดเข้าหลุมดำ! วาร์ปไปที่ ${lmName}!`,
+        '#7C3AED'
+      );
+      mover.tileIndex = whiteIdx;
+      this.resolveLandedTile(mover, whiteIdx, true);
+      return;
+    }
+
+    // 2. Hook 4: ON_LAND_WITH_PLAYERS (Standing enemies check S02_SHERIFF_TAX & M07_WRONG_GUIDEBOOK)
+    if (!isFromBlackHoleOrGuidebook) {
+      const standingEnemies = PLAYER_IDS.map((pid) => this.matchState!.players[pid]).filter(
+        (other) =>
+          !other.isBankrupt &&
+          other.id !== mover.id &&
+          !this.arePlayersAllied(mover.id, other.id) &&
+          other.tileIndex === tileIndex
+      );
+
+      for (const defender of standingEnemies) {
+        // Defender checks S02_SHERIFF_TAX (steals 20% of mover's cash)
+        if (mover.marble > 0 && this.tryTriggerSkill(defender, 'S02_SHERIFF_TAX')) {
+          const tax = Math.round(mover.marble * MATCH_CONFIG.sheriffTaxRate);
+          if (tax > 0) {
+            mover.marble -= tax;
+            defender.marble += tax;
+            this.appendLog(
+              defender.id,
+              `🤠 ${defender.name} ใช้ตรานายอำเภอ เก็บภาษี ${formatMarbleCompact(tax)} (20%) จาก ${mover.name}!`,
+              'SKILL'
+            );
+            this.callbacks.onFloatingText?.({
+              tileIndex,
+              text: `-${formatMarbleCompact(tax)} ตรานายอำเภอ 20%!`,
+              colorHex: '#D97706',
+            });
+          }
+        }
+
+        // Defender checks M07_WRONG_GUIDEBOOK (send mover to defender's highest-toll Landmark)
+        const defenderLandmarks = this.matchState.tiles.filter(
+          (t) =>
+            this.arePlayersAllied(defender.id, t.ownerId) &&
+            t.buildingLevel === BuildingLevel.LANDMARK
+        );
+        if (defenderLandmarks.length > 0 && this.tryTriggerSkill(defender, 'M07_WRONG_GUIDEBOOK')) {
+          let bestLm = defenderLandmarks[0];
+          let bestToll = -1;
+          for (const lm of defenderLandmarks) {
+            const toll = this.calculateTollBreakdown(lm.index, mover.id).netToll;
+            if (toll > bestToll) {
+              bestToll = toll;
+              bestLm = lm;
+            }
+          }
+          const lmDef = WORLD_MAP_TILES[bestLm.index];
+          this.appendLog(
+            defender.id,
+            `📕 ${defender.name} ใช้ไกด์บุ๊กผิดพลาด! ส่ง ${mover.name} ไปยังแลนด์มาร์ก ${lmDef.nameTh}!`,
+            'SKILL'
+          );
+          mover.tileIndex = bestLm.index;
+          this.resolveLandedTile(mover, bestLm.index, true);
+          return;
+        }
+      }
+    }
+
+    const tile = this.matchState.tiles[tileIndex];
+    const def = WORLD_MAP_TILES[tileIndex];
+
+    switch (def.type) {
+      case 'START': {
+        // Landing directly on START allows upgrading any 1 owned/teammate city by +1 level
+        this.openStartUpgradePicker(mover);
+        return;
+      }
+
+      case 'DESERT_ISLAND': {
+        this.sendPlayerToDesertIsland(mover);
+        return;
+      }
+
+      case 'OLYMPIC': {
+        this.openOlympicCityPicker(mover, false);
+        return;
+      }
+
+      case 'WORLD_TRAVEL': {
+        this.enterSkyTerminalTile(mover, false);
+        this.finishTileResolution();
+        return;
+      }
+
+      case 'BONUS_GAME': {
+        this.startBonusCoinGame(mover);
+        return;
+      }
+
+      case 'CHANCE': {
+        this.resolveChanceTile(mover);
+        return;
+      }
+
+      case 'TAX_AUDIT': {
+        this.resolveTaxAuditTile(mover);
+        return;
+      }
+
+      case 'CITY':
+      case 'TOURISM': {
+        this.resolvePropertyTile(mover, tile, def);
+        return;
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // PROPERTY TILE RESOLUTION (UNOWNED, OWN/ALLY, OR ENEMY)
+  // --------------------------------------------------------------------------
+
+  private resolvePropertyTile(
+    mover: PlayerState,
+    tile: BoardTileState,
+    def: WorldTileDef
+  ): void {
+    if (!this.matchState) return;
+
+    // 1. Unowned City or Tourism Island
+    if (tile.ownerId === null) {
+      this.openBuyOrUpgradePrompt(mover, tile.index, false);
+      return;
+    }
+
+    // 2. Owned by Self or Teammate (2v2)
+    if (this.arePlayersAllied(mover.id, tile.ownerId)) {
+      if (tile.isBlackout) {
+        tile.isBlackout = false;
+        this.appendLog(mover.id, `💡 ${mover.name} กู้คืนระบบไฟที่ ${def.nameTh} สำเร็จ!`, 'MOVE');
+      }
+      if (def.type === 'TOURISM') {
+        this.appendLog(mover.id, `🏝️ ${mover.name} แวะพักผ่อนที่ ${def.nameTh} ของทีมตัวเอง`, 'MOVE');
+        this.finishTileResolution();
+        return;
+      }
+
+      if (tile.buildingLevel === BuildingLevel.LANDMARK) {
+        // Hook 9: ON_VISIT_OWN_LANDMARK
+        this.triggerOwnLandmarkHooks(mover, tile.index, false);
+        return;
+      }
+
+      // Can upgrade own/teammate city (HOTEL unlocks LANDMARK!)
+      this.openBuyOrUpgradePrompt(mover, tile.index, false);
+      return;
+    }
+
+    // 3. Owned by Enemy -> Pay Toll + Optional Takeover
+    const owner = this.matchState.players[tile.ownerId];
+    if (!owner || owner.isBankrupt) {
+      this.openBuyOrUpgradePrompt(mover, tile.index, false);
+      return;
+    }
+
+    // Check Power Outage (Blackout) on enemy city!
+    if (tile.isBlackout) {
+      tile.isBlackout = false;
+      this.appendLog(
+        mover.id,
+        `🔌 ${def.nameTh} ไฟดับอยู่! ${mover.name} ไม่ต้องเสียค่าผ่านทาง (และไฟกลับมาติดแล้ว)!`,
+        'TOLL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: tile.index,
+        text: `🔌 ไฟดับ! ฟรี 0 M`,
+        colorHex: '#38BDF8',
+      });
+      this.proceedAfterEnemyTollPaid(mover, tile, def, 0, '🔌 เมืองไฟดับ (ยกเว้นค่าผ่านทาง 100%)');
+      return;
+    }
+
+    const breakdown = this.calculateTollBreakdown(tile.index, mover.id);
+    let payableToll = breakdown.netToll;
+
+    // Hook 5: ON_BEFORE_PAY_TOLL -> S07_BLACK_CARD (100% Toll Exemption Once)
+    if (payableToll > 0 && this.tryTriggerSkill(mover, 'S07_BLACK_CARD')) {
+      payableToll = 0;
+      this.appendLog(
+        mover.id,
+        `💳 ${mover.name} ใช้บัตรเครดิตดำ! ยกเว้นค่าผ่านทางที่ ${def.nameTh} 100%!`,
+        'SKILL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: tile.index,
+        text: `FREE! บัตรดำ 100%`,
+        colorHex: '#E5A93B',
+      });
+      this.proceedAfterEnemyTollPaid(mover, tile, def, 0, '💳 สกิลบัตรเครดิตดำ [S07] (ยกเว้นค่าผ่านทาง 100%)');
+      return;
+    }
+
+    // Check Held Angel Shield Card -> Ask player whether to use it now or save it for later!
+    if (payableToll > 0 && mover.hasAngelCard) {
+      const discountedTollAmount = mover.hasDiscountCoupon
+        ? Math.round(payableToll * 0.5)
+        : payableToll;
+      this.matchState.activePrompt = {
+        type: 'ANGEL_CARD_PROMPT',
+        playerId: mover.id,
+        tileIndex: tile.index,
+        creditorId: owner.id,
+        tollAmount: payableToll,
+        hasDiscountCoupon: Boolean(mover.hasDiscountCoupon),
+        discountedTollAmount,
+        reason: 'TOLL',
+      };
+      this.emitStateChange();
+      return;
+    }
+
+    this.executeEnemyTollPayment(mover, tile, def, payableToll);
+  }
+
+  private executeEnemyTollPayment(
+    mover: PlayerState,
+    tile: BoardTileState,
+    def: WorldTileDef,
+    rawPayableToll: number
+  ): void {
+    if (!this.matchState || mover.isBankrupt || !tile.ownerId) return;
+    const owner = this.matchState.players[tile.ownerId];
+    if (!owner || owner.isBankrupt) {
+      this.openBuyOrUpgradePrompt(mover, tile.index, false);
+      return;
+    }
+
+    let payableToll = rawPayableToll;
+
+    // Check Held Discount Coupon Card (-50% Toll from Chance Card)
+    if (payableToll > 0 && mover.hasDiscountCoupon) {
+      mover.hasDiscountCoupon = false;
+      payableToll = Math.round(payableToll * 0.5);
+      this.appendLog(
+        mover.id,
+        `🎟️ ${mover.name} ใช้คูปองลดค่าผ่านทาง 50% ที่ ${def.nameTh} (เหลือ ${formatMarbleCompact(payableToll)})!`,
+        'TOLL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: tile.index,
+        text: `🎟️ ลด 50%!`,
+        colorHex: '#38BDF8',
+      });
+    }
+
+    const allowTakeover =
+      def.type === 'CITY' &&
+      tile.buildingLevel >= BuildingLevel.LAND &&
+      tile.buildingLevel <= BuildingLevel.HOTEL;
+
+    if (mover.marble >= payableToll) {
+      mover.marble -= payableToll;
+      owner.marble += payableToll;
+      this.appendLog(
+        mover.id,
+        `💸 ${mover.name} จ่ายค่าผ่านทาง ${formatMarbleCompact(payableToll)} ให้ ${owner.name} ที่ ${def.nameTh}`,
+        'TOLL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: tile.index,
+        text: `-${formatMarbleCompact(payableToll)}`,
+        colorHex: '#DC2626',
+      });
+      this.callbacks.onTollPaid?.({
+        payerId: mover.id,
+        receiverId: owner.id,
+        amount: payableToll,
+        tileIndex: tile.index,
+      });
+      this.proceedAfterEnemyTollPaid(mover, tile, def, payableToll);
+    } else {
+      // Enter DEBT_RESOLUTION
+      this.enqueueOrStartDebt({
+        debtorId: mover.id,
+        creditorId: owner.id,
+        amountOwed: payableToll,
+        sourceTileIndex: tile.index,
+        allowPostPayTakeover: allowTakeover,
+        isFromSkillPull: false,
+      });
+    }
+  }
+
+  public resolveAngelCardPrompt(useAngelCard: boolean): boolean {
+    if (!this.matchState || this.matchState.activePrompt?.type !== 'ANGEL_CARD_PROMPT') {
+      return false;
+    }
+
+    const prompt = this.matchState.activePrompt;
+    const player = this.matchState.players[prompt.playerId];
+    const tile = this.matchState.tiles[prompt.tileIndex];
+    const def = WORLD_MAP_TILES[prompt.tileIndex];
+    this.matchState.activePrompt = null;
+
+    if (useAngelCard && player.hasAngelCard) {
+      player.hasAngelCard = false;
+      this.callbacks.onAngelCardUsed?.({
+        playerId: player.id,
+        tileIndex: prompt.tileIndex,
+        targetName: def.nameTh,
+        reason: 'TOLL',
+      });
+      this.appendLog(
+        player.id,
+        `👼 ${player.name} ใช้การ์ดนางฟ้า! ยกเว้น${prompt.reason === 'TAX' ? 'ภาษีสรรพากร' : `ค่าผ่านทางที่ ${def.nameTh}`} 100%!`,
+        'TOLL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: prompt.tileIndex,
+        text: `👼 นางฟ้า! ฟรี 100%`,
+        colorHex: '#FDE047',
+      });
+
+      if (prompt.reason ===
