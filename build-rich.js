@@ -6,6 +6,22 @@ const richDir = path.join(__dirname, 'games', 'lets-get-rich');
 const distAssets = path.join(richDir, 'dist', 'assets');
 fs.mkdirSync(distAssets, { recursive: true });
 
+// 0a. Reassemble gameEngine.ts if split into chunks
+const engineDir = path.join(richDir, 'src', 'engine');
+if (fs.existsSync(path.join(engineDir, 'gameEngine.p1'))) {
+  const parts = [1, 2, 3, 4, 5, 6].map(i => path.join(engineDir, `gameEngine.p${i}`));
+  const combined = parts.map(p => fs.readFileSync(p, 'utf8')).join('');
+  fs.writeFileSync(path.join(engineDir, 'gameEngine.ts'), combined, 'utf8');
+}
+
+// 0b. Reassemble uiManager.ts if split into chunks
+const uiDir = path.join(richDir, 'src', 'ui');
+if (fs.existsSync(path.join(uiDir, 'uiManager.p1'))) {
+  const parts = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => path.join(uiDir, `uiManager.p${i}`));
+  const combined = parts.map(p => fs.readFileSync(p, 'utf8')).join('');
+  fs.writeFileSync(path.join(uiDir, 'uiManager.ts'), combined, 'utf8');
+}
+
 // 1. Bundle server-side authoritative engine
 esbuild.buildSync({
   entryPoints: [path.join(richDir, 'src', 'engine', 'gameEngine.ts')],
