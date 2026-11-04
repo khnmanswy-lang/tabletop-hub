@@ -244,7 +244,8 @@ LoanAmount)}!`,
         wrappedRound = true;
       }
       const candidateId = PLAYER_IDS[nextIdx];
-      if (!this.matchState.players[candidateId].isBankrupt) {
+      const candidate = this.matchState.players[candidateId];
+      if (candidate.isSlotActive !== false && !candidate.isBankrupt) {
         break;
       }
     }
@@ -294,7 +295,7 @@ LoanAmount)}!`,
     const checkedRepresentatives =
       this.matchState.gameMode === 'TEAM_2V2'
         ? (['P1', 'P2'] as PlayerId[])
-        : PLAYER_IDS.filter((pid) => !this.matchState!.players[pid].isBankrupt);
+        : PLAYER_IDS.filter((pid) => this.matchState!.players[pid].isSlotActive !== false && !this.matchState!.players[pid].isBankrupt);
 
     for (const repId of checkedRepresentatives) {
       const rep = this.matchState.players[repId];
@@ -414,7 +415,7 @@ LoanAmount)}!`,
     const checkTargets =
       mode === 'TEAM_2V2'
         ? (['P1', 'P2'] as PlayerId[])
-        : PLAYER_IDS.filter((pid) => !this.matchState!.players[pid].isBankrupt);
+        : PLAYER_IDS.filter((pid) => this.matchState!.players[pid].isSlotActive !== false && !this.matchState!.players[pid].isBankrupt);
 
     for (const repId of checkTargets) {
       const rep = this.matchState.players[repId];
