@@ -1,1362 +1,412 @@
-        border: 3px solid #1E1612;
-        border-radius: 14px;
-        padding: 10px 14px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        box-shadow: inset 0 2px 0 rgba(255,255,255,0.7), 0 3px 0 #D9C398, 0 5px 0 #1E1612;
-      ">
-        <div style="
-          width: 56px;
-          height: 56px;
-          border-radius: 14px;
-          background: linear-gradient(135deg, #FEF9C3 0%, #FDE047 100%);
-          border: 2.5px solid #1E1612;
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: inset 0 2px 0 rgba(255,255,255,0.9), 0 2px 0 #1E1612;
-          flex-shrink: 0;
-          overflow: hidden;
-        ">
-          <span style="
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            background: #FFD43B;
-            color: #1E1612;
-            font-size: 10.5px;
-            font-weight: 900;
-            padding: 0px 6px;
-            border-radius: 999px;
-            border: 1.5px solid #1E1612;
-            box-shadow: 0 1px 0 #1E1612;
-            line-height: 15px;
-            z-index: 2;
-          ">S+</span>
-          ${iconHtml}
+P4 on Right (NO fake Gold/Diamond/Clover) -->
+      <div style="display:flex; justify-content:space-between; align-items:center; height:44px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="red-btn" id="loadoutBtnBackLobby" style="padding:5px 12px; font-size:13px;">⬅ LOBBY</button>
+          <button class="royal-panel" id="loadoutBtnHome" style="padding:5px 11px; font-size:13px; cursor:pointer;">🏠 MENU</button>
+          <span style="font-size:18px; font-weight:900; letter-spacing:0.5px; text-shadow:0 2px 4px #000; margin-left:4px;">
+            CHARACTER & TREASURE LOADOUT
+          </span>
         </div>
-        <div style="flex:1; font-size:13.5px; font-weight:800; color:#141413; line-height:1.45;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-            <div style="display:flex; align-items:center;">
-              ${getCategoryBadge(textDesc)}
-              ${title ? `<span style="color:#854D0E; font-size:13.5px; font-weight:900;">${title}</span>` : ''}
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span style="font-size:12px; font-weight:900; color:#fde047; margin-right:4px;">เลือกผู้เล่น:</span>
+          ${playerSwitcherHtml}
+        </div>
+      </div>
+
+      <!-- 3-Column Body -->
+      <div style="display:grid; grid-template-columns: 28% 37% 33%; gap:12px; height:calc(100% - 52px);">
+        <!-- Left Column: Pedestal + 3 Treasure Slots -->
+        <div style="display:flex; flex-direction:column; gap:8px; height:100%;">
+          <div class="royal-panel" style="flex:1.25; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding-bottom:12px;">
+            <div class="royal-header" style="width:100%;">
+              <span>${targetPlayer.name} (${targetPlayer.id})</span>
+              <span style="color:#fde047;">RANK ${curChar.rank}</span>
             </div>
-            <span style="background:#1E1612; color:#FFD43B; font-weight:900; font-size:12px; padding:3px 10px; border-radius:999px; border:1.5px solid #CA8A04; font-variant-numeric:tabular-nums; flex-shrink:0;">
-              โอกาส ${procPct}%
-            </span>
+            <!-- S+ Character Card on Glowing Pedestal -->
+            <div style="width:162px; background:linear-gradient(180deg, ${curChar.accentColor} 0%, #1e1b4b 100%); border:3px solid #fde047; border-radius:14px; padding:10px; text-align:center; box-shadow:0 0 24px ${curChar.accentColor}99; position:relative;">
+              <span style="position:absolute; top:-8px; left:-8px; background:#0f172a; border:2px solid #fde047; border-radius:8px; padding:1px 6px; font-size:15px; font-weight:900; color:#fde047;">${curChar.rank}</span>
+              <div style="font-size:52px; line-height:1.1;">${curChar.avatarEmoji}</div>
+              <div style="font-size:16px; font-weight:900; color:#fef08a; margin-top:4px;">${curChar.name}</div>
+              <div style="font-size:11px; color:#e2e8f0; font-weight:700;">${curChar.title}</div>
+            </div>
+            <!-- Glowing Pedestal Base -->
+            <div style="width:190px; height:22px; border-radius:50%; background:radial-gradient(circle, #38bdf8 0%, #4f46e5 70%, transparent 100%); border:2px solid #a5f3fc; box-shadow:0 0 16px #38bdf8;"></div>
           </div>
-          <div style="color:#141413;">${textDesc}</div>
-          ${subSkillHtml || ''}
+
+          <div class="royal-panel" style="flex:0.85; display:flex; flex-direction:column;">
+            <div class="royal-header">
+              <span>TREASURE (ห้ามซ้ำ Main ตลค)</span>
+              <span style="color:#fde047;">3 ชิ้น</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:8px; flex:1; align-items:stretch;">
+              ${equippedSlotsHtml}
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Column: 5 Segmented Stat Bars + Active Skill Box -->
+        <div class="royal-panel" style="display:flex; flex-direction:column; overflow:hidden;">
+          <div class="royal-header">
+            <span>CHARACTER STATS & SKILLS</span>
+            <span style="color:#fde047;">+0 .. +5</span>
+          </div>
+          <div style="padding:10px 14px; display:flex; flex-direction:column; gap:8px; flex:1; justify-content:space-between; overflow-y:auto;" class="lgr-scroll">
+            <div style="display:flex; flex-direction:column; gap:7px;">
+              ${statBarsHtml}
+            </div>
+
+            <!-- SKILL Box -->
+            <div style="background:#112240; border:2px solid #3b82f6; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:5px;">
+              <div style="text-align:center; font-size:11px; font-weight:900; color:#93c5fd; border-bottom:1px solid #1e3a8a; padding-bottom:3px;">
+                SKILL ประจำตัวละคร & เรทรวมสุทธิ ((÷3)×1.6 | Sub บวกทับตรงๆ)
+              </div>
+              <div style="background:#1e1b4b; border:1px solid #a855f7; border-radius:6px; padding:4px 8px; font-size:11px;">
+                <strong style="color:#fde047;">Main (${charMainDef.code}):</strong> ${charMainDef.name} (${curChar.mainSkill.procPct}%) — <span style="color:#cbd5e1;">${charMainDef.effectDesc}</span>
+              </div>
+              <div style="background:#0f172a; border:1px solid #3b82f6; border-radius:6px; padding:4px 8px; font-size:11px;">
+                <strong style="color:#7dd3fc;">Char Sub 1 (${charSub1Def.code}):</strong> ${charSub1Def.name} (${curChar.subSkills[0].procPct}%)
+              </div>
+              <div style="background:#0f172a; border:1px solid #3b82f6; border-radius:6px; padding:4px 8px; font-size:11px;">
+                <strong style="color:#7dd3fc;">Char Sub 2 (${charSub2Def.code}):</strong> ${charSub2Def.name} (${curChar.subSkills[1].procPct}%)
+              </div>
+              <div style="font-size:11px; font-weight:900; color:#fde047; margin-top:2px;">
+                ⚡ Active Stacked Sub Skills (ตัวละคร + สมบัติ 3 ชิ้น):
+              </div>
+              <div style="display:flex; flex-direction:column; gap:3px;">
+                ${stackedSubsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: INVENTORY (Characters / Treasures Tabs + Grid + Confirm Button) -->
+        <div class="royal-panel" style="display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;">
+          <div class="royal-header">
+            <span>INVENTORY (${targetPlayer.id})</span>
+            <span style="color:#93c5fd;">เลือกจัดเซ็ต</span>
+          </div>
+          <div style="padding:8px 10px; display:flex; flex-direction:column; gap:8px; flex:1; overflow:hidden;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+              <button class="${this.loadoutInvTab === 'CHAR' ? 'gold-btn' : 'tab-pill'}" id="invTabChar" style="padding:6px; font-size:12px;">
+                CHARACTERS (8)
+              </button>
+              <button class="${this.loadoutInvTab === 'TR' ? 'gold-btn' : 'tab-pill'}" id="invTabTr" style="padding:6px; font-size:12px;">
+                TREASURES (10)
+              </button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; overflow-y:auto; flex:1; padding-right:3px; align-content:start;" class="lgr-scroll">
+              ${inventoryGridHtml}
+            </div>
+          </div>
+          <div style="padding:8px 12px;">
+            <button class="gold-btn" id="btnConfirmLoadout" style="width:100%; padding:9px; font-size:14px;">
+              ✔ CONFIRM LOADOUT (ไปหน้า LOBBY)
+            </button>
+          </div>
         </div>
       </div>
     `;
 
-    const skillRows: string[] = [];
+    // Wire events
+    container
+      .querySelector('#loadoutBtnBackLobby')
+      ?.addEventListener('click', () => this.showScreen('LOBBY'));
+    container
+      .querySelector('#loadoutBtnHome')
+      ?.addEventListener('click', () => this.showScreen('MAIN_MENU'));
+    container
+      .querySelector('#btnConfirmLoadout')
+      ?.addEventListener('click', () => this.showScreen('LOBBY'));
 
-    // 1. Character Innate Main Skill
-    skillRows.push(
-      renderGoldenSkillCard(
-        getMascotSvg(p.characterId, 46),
-        charDef.mainSkill.procPct,
-        charMainDef.effectDesc,
-        `สกิลติดตัว: ${charDef.name}`
-      )
-    );
-
-    // 2. Character Sub Skills (ความสามารถพิเศษ S+)
-    for (const sub of charDef.subSkills) {
-      const sDef = getSkillDef(sub.skillId);
-      skillRows.push(
-        renderGoldenSkillCard(
-          getMascotSvg(p.characterId, 46),
-          sub.procPct,
-          sDef.effectDesc,
-          `ความสามารถพิเศษ: ${sDef.name}`
-        )
-      );
-    }
-
-    // 3. Equipped Treasures (Main + Sub)
-    p.treasureIds.forEach((tid, idx) => {
-      const tr = getTreasureDef(tid);
-      const mDef = getSkillDef(tr.mainSkill.skillId);
-      const sDef = getSkillDef(tr.subSkill.skillId);
-      const subHtml = tr.subSkill
-        ? `<div style="font-size:12.5px; color:#141413; font-weight:800; margin-top:4px; background:#F3E5C8; border-radius:8px; padding:4px 10px; border:2px solid #1E1612;">(สกิลรอง: โอกาส ${tr.subSkill.procPct}% ${sDef.effectDesc})</div>`
-        : '';
-      skillRows.push(
-        renderGoldenSkillCard(
-          `<span style="font-size:28px;">${tr.iconEmoji}</span>`,
-          tr.mainSkill.procPct,
-          mDef.effectDesc,
-          `จี้เครื่องราง #${idx + 1}: ${tr.name}`,
-          subHtml
-        )
-      );
-    });
-
-    modal.innerHTML = `
-      <div style="
-        width: 840px;
-        max-width: 95vw;
-        background: #FFF9EB;
-        border: 4px solid #1E1612;
-        border-radius: 18px;
-        padding: 4px;
-        box-shadow: 0 10px 0 #1E1612;
-        display: flex;
-        flex-direction: column;
-      ">
-        <!-- Header with Player Tabs & Close -->
-        <div style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 16px;
-          background: linear-gradient(180deg, #FFD43B 0%, #F59F00 100%);
-          border-radius: 14px 14px 0 0;
-          border-bottom: 3px solid #1E1612;
-        ">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="cartoon-title" style="font-size: 16px; color: #FFF;">
-              👑 ความสามารถตัวละคร & จี้เครื่องราง (${p.name})
-            </span>
-            <div style="display: flex; gap: 4px; margin-left: 10px;">
-              ${switcherHtml}
-            </div>
-          </div>
-          <button id="btnCloseInspector" style="
-            background: linear-gradient(180deg, #FF5A5F 0%, #DC2626 100%);
-            color: #FFF;
-            border: 2.5px solid #1E1612;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            font-size: 15px;
-            font-weight: 900;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 3px 0 #7F1D1D;
-          ">✕</button>
-        </div>
-
-        <!-- Authentic Golden Card Rows (No summary section) -->
-        <div style="
-          background: #FDF9EA;
-          border-radius: 0 0 14px 14px;
-          padding: 14px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          max-height: 72vh;
-          overflow-y: auto;
-        " class="lgr-scroll">
-          ${skillRows.join('')}
-        </div>
-      </div>
-    `;
-
-    modal.classList.add('open');
-
-    modal
-      .querySelector('#btnCloseInspector')
-      ?.addEventListener('click', () => modal.classList.remove('open'));
-
-    modal.querySelectorAll('.inspector-p-tab').forEach((btn) => {
+    container.querySelectorAll('.loadout-p-switch').forEach((btn) => {
       btn.addEventListener('click', () => {
         const pid = (btn as HTMLElement).dataset.pid as PlayerId;
-        this.openPlayerInspector(pid);
+        if (pid) {
+          this.selectedLoadoutPlayerId = pid;
+          this.renderLoadoutScreen();
+        }
+      });
+    });
+
+    container.querySelector('#invTabChar')?.addEventListener('click', () => {
+      this.loadoutInvTab = 'CHAR';
+      this.renderLoadoutScreen();
+    });
+    container.querySelector('#invTabTr')?.addEventListener('click', () => {
+      this.loadoutInvTab = 'TR';
+      this.renderLoadoutScreen();
+    });
+
+    container.querySelectorAll('.inv-char-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const charId = (card as HTMLElement).dataset.charId;
+        if (!charId) return;
+        const newChar = getCharacterDef(charId);
+        // Auto-remove any treasure that conflicts with new character's Main skill
+        const filtered = targetPlayer.treasureIds.filter(
+          (tid) =>
+            !isMainSkillConflict(getTreasureDef(tid).mainSkill.skillId, newChar.mainSkill.skillId)
+        );
+        for (const tr of TREASURE_POOL) {
+          if (
+            filtered.length < 3 &&
+            !isMainSkillConflict(tr.mainSkill.skillId, newChar.mainSkill.skillId) &&
+            !filtered.includes(tr.id)
+          ) {
+            filtered.push(tr.id);
+          }
+        }
+        const nextTr = [filtered[0], filtered[1], filtered[2]] as [
+          string,
+          string,
+          string,
+        ];
+        targetPlayer.characterId = newChar.id;
+        targetPlayer.treasureIds = nextTr;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          newChar.id,
+          nextTr
+        );
+        this.renderLoadoutScreen();
+      });
+    });
+
+    container.querySelectorAll('.inv-tr-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const trId = (card as HTMLElement).dataset.trId;
+        if (!trId) return;
+        const trDef = getTreasureDef(trId);
+        if (isMainSkillConflict(trDef.mainSkill.skillId, curChar.mainSkill.skillId)) {
+          return; // Blocked: conflicts with Character Main
+        }
+        const list = [...targetPlayer.treasureIds];
+        if (list.includes(trId)) {
+          return; // Already equipped
+        }
+        list.shift();
+        list.push(trId);
+        const nextTr = [list[0], list[1], list[2]] as [string, string, string];
+        targetPlayer.treasureIds = nextTr;
+        this.callbacks.onUpdatePlayerLoadout?.(
+          targetPlayer.id,
+          targetPlayer.characterId,
+          nextTr
+        );
+        this.renderLoadoutScreen();
       });
     });
   }
 
   // ==========================================================================
-  // SCREEN 6 & GAMEPLAY MODALS (City Build, Takeover, Coin Flip, Debt, Victory)
   // ==========================================================================
-  private renderActiveGameplayModals(): void {
-    const modal = this.stageEl.querySelector(
-      '#modal_GAMEPLAY_ACTION'
+  // SCREEN 3: UNIFIED LOBBY (Topbar + 4x Player Banners + 1/3 Pick / 2/3 Inspect)
+  // ==========================================================================
+  private renderLobbyScreen(): void {
+    const container = this.stageEl.querySelector(
+      '#screen_LOBBY'
     ) as HTMLElement;
-    if (!modal) return;
+    if (!container) return;
 
-    // Never show in-game action / victory modals outside IN_GAME screen
-    if (this.state.screen !== 'IN_GAME') {
-      modal.classList.remove('open');
-      return;
-    }
-
-    if (this.state.victoryResult) {
-      this.renderVictoryModal(modal, this.state.victoryResult);
-      modal.classList.add('open');
-      return;
-    }
-
-    if (this.state.pendingDebt) {
-      if (this.canControlSlotLocally(this.state.pendingDebt.debtorId)) {
-        this.renderDebtResolutionModal(modal, this.state.pendingDebt);
-        modal.classList.add('open');
-        return;
-      }
-    }
-
-    if (this.state.pendingCityModal) {
-      if (this.canControlSlotLocally(this.state.pendingCityModal.playerId)) {
-        this.renderCityPurchaseModal(modal, this.state.pendingCityModal);
-        modal.classList.add('open');
-        return;
-      }
-    } else {
-      this.lastCityModalKey = null;
-    }
-
-    if (this.state.pendingTakeoverModal) {
-      if (this.canControlSlotLocally(this.state.pendingTakeoverModal.buyerId)) {
-        this.renderTakeoverModal(modal, this.state.pendingTakeoverModal);
-        modal.classList.add('open');
-        return;
-      }
-    }
-
-    if (this.state.pendingBonusGame) {
-      const activeP = this.getActivePlayer();
-      if (activeP && this.canControlSlotLocally(activeP.id)) {
-        this.renderBonusCoinFlipModal(modal, this.state.pendingBonusGame);
-        modal.classList.add('open');
-        return;
-      }
-    }
-
-    if (this.state.pendingFortuneCard) {
-      this.renderFortuneCardModal(modal, this.state.pendingFortuneCard);
-      modal.classList.add('open');
-      return;
-    }
-
-    modal.classList.remove('open');
-  }
-
-  /**
-   * SCREEN 6: CITY PURCHASE & CONSTRUCTION MODAL (Matches Reference Image 6)
-   */
-  private renderCityPurchaseModal(
-    modal: HTMLElement,
-    payload: CityModalPayload
-  ): void {
-    const tileDef: WorldTileDef = WORLD_MAP_TILES[payload.tileIndex];
-    const player = this.state.players.find((p) => p.id === payload.playerId);
-    const modalKey = `${payload.playerId}_${payload.tileIndex}_${payload.currentLevel}`;
-
-    const isOptLocked = (o: any) => Boolean(o.locked || o.isLockedByLap1);
-    const getOptLabel = (o: any) => o.label || o.labelTh || o.labelEn || `Tier ${o.level}`;
-    const getOptSubLabel = (o: any) => o.subLabel || o.labelEn || o.labelTh || '';
-    const getOptToll = (o: any) => {
-      if (typeof o.resultingToll === 'number' && !isNaN(o.resultingToll)) return o.resultingToll;
-      const mult = (MATCH_CONFIG.buildingTollMultipliers as any)[o.level] ?? 1;
-      return tileDef ? Math.round(tileDef.baseToll * mult) : 0;
+    const isTeamMode = this.state.mode === 'TEAM_2V2';
+    const ffaCount = this.state.ffaPlayerCount ?? 4;
+    const isPlayerSlotActive = (p: PlayerState | undefined, idx: number): boolean => {
+      if (!p) return false;
+      if (typeof p.isSlotActive === 'boolean') return p.isSlotActive;
+      return isTeamMode || idx < ffaCount;
     };
+    const activeSlotCount = this.state.players.filter((p, idx) => isPlayerSlotActive(p, idx)).length;
 
-    const unlockedOptions = payload.options.filter((o) => !isOptLocked(o));
-    const affordableOptions = payload.options.filter(
-      (o) => !isOptLocked(o) && (player ? player.marble >= o.cost : true)
+    // Ensure selected player is an active slot
+    if (
+      !this.state.players.some(
+        (p, idx) => p.id === this.selectedLoadoutPlayerId && isPlayerSlotActive(p, idx)
+      )
+    ) {
+      const firstActive = this.state.players.find((p, idx) => isPlayerSlotActive(p, idx));
+      this.selectedLoadoutPlayerId = firstActive?.id ?? 'P1';
+    }
+    const targetPlayer =
+      this.state.players.find((p) => p.id === this.selectedLoadoutPlayerId) ??
+      this.state.players[0];
+
+    const curChar: CharacterDef = getCharacterDef(targetPlayer.characterId);
+    const curTrIds = [...targetPlayer.treasureIds] as [string, string, string];
+    const charMainDef = getSkillDef(curChar.mainSkill.skillId);
+    const combinedSkills = computeCombinedPlayerSkills(
+      curChar.id,
+      curTrIds,
+      targetPlayer.skillUsesRemaining
     );
 
-    // "default to build most possible"
-    if (this.lastCityModalKey !== modalKey) {
-      this.lastCityModalKey = modalKey;
-      if (affordableOptions.length > 0) {
-        // Automatically pre-select highest affordable unlocked level
-        this.selectedBuildLevel =
-          affordableOptions[affordableOptions.length - 1].level;
-      } else if (unlockedOptions.length > 0) {
-        this.selectedBuildLevel =
-          payload.defaultSelectedLevel && !isOptLocked(payload.options.find(o => o.level === payload.defaultSelectedLevel))
-            ? payload.defaultSelectedLevel
-            : unlockedOptions[unlockedOptions.length - 1].level;
-      } else {
-        this.selectedBuildLevel = payload.options[0]?.level ?? BuildingLevel.LAND;
-      }
-    } else {
-      // If modal was already opened and user selected a level, verify it's not locked
-      if (
-        !unlockedOptions.some((o) => o.level === this.selectedBuildLevel) &&
-        unlockedOptions.length > 0
-      ) {
-        this.selectedBuildLevel =
-          affordableOptions.length > 0
-            ? affordableOptions[affordableOptions.length - 1].level
-            : unlockedOptions[unlockedOptions.length - 1].level;
-      }
-    }
+    // 1. Topbar Mode Buttons & Controls
+    const startBalLabel = formatMarbleCompact(
+      MATCH_CONFIG.startingMarbleByPlayer[targetPlayer.id] ?? MATCH_CONFIG.startingMarble
+    );
 
-    const selectedOpt =
-      payload.options.find((o) => o.level === this.selectedBuildLevel) ??
-      payload.options[0];
-    const canAfford = player ? player.marble >= selectedOpt.cost : true;
-    const isSelectedLocked = isOptLocked(selectedOpt);
+    // 2. Player Banners (4x Horizontal Row - Chunky Toy License Cards)
+    const playerBannerGradients: Record<PlayerId, string> = {
+      P1: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
+      P2: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+      P3: 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
+      P4: 'linear-gradient(135deg, #F59E0B 0%, #B45309 100%)',
+    };
 
-    const cardsHtml = payload.options
-      .map((opt: any) => {
-        const locked = isOptLocked(opt);
-        const isSelected = !locked && opt.level === this.selectedBuildLevel;
-        const isLandmark = opt.level === BuildingLevel.LANDMARK;
-        const isRecommended = affordableOptions.length > 0 && opt.level === affordableOptions[affordableOptions.length - 1].level;
-        const label = getOptLabel(opt);
-        const subLabel = getOptSubLabel(opt);
+    const playerBannersHtml = PLAYER_IDS.map((pid, idx) => {
+      const p = this.state.players[idx];
+      const isActiveSlot = isPlayerSlotActive(p, idx);
+      const isSelected = pid === this.selectedLoadoutPlayerId;
+
+      if (!isActiveSlot || !p) {
         return `
-          <div class="build-tier-card ${locked ? 'locked' : ''} ${
-            isSelected ? 'selected' : ''
-          } ${isLandmark ? 'landmark-tier' : ''}" data-level="${opt.level}">
-            ${
-              isRecommended && !locked
-                ? `<span style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:#FFD43B; color:#1E1612; font-weight:900; font-size:10px; padding:1px 8px; border-radius:999px; border:1.5px solid #1E1612; box-shadow:0 2px 0 #1E1612; z-index:3;">👑 แนะนำ!</span>`
-                : ''
-            }
-            ${
-              isSelected
-                ? `<span style="position:absolute; top:6px; right:8px; font-weight:900; color:#15803d; font-size:18px;">✔</span>`
-                : ''
-            }
-            <strong style="font-size:15px; font-family:var(--font-display); font-weight:800; color:#1E1612;">${label}</strong>
-            <div style="height:76px; display:flex; align-items:center; justify-content:center; margin:4px 0;">
-              ${locked ? '<div style="font-size:42px;">🔒</div>' : getBuildingSvg(opt.level, 72)}
-            </div>
-            <div style="font-size:11.5px; font-weight:800; color:${
-              locked ? '#DC2626' : isLandmark ? '#B45309' : '#475569'
-            };">
-              ${locked ? (payload.lapCount === 0 ? '🔒 ปลดล็อกรอบ 2 (Lap 2)' : (opt.lockReason ?? 'ยังสร้างไม่ได้')) : subLabel}
-            </div>
-            <div style="background:#1E1612; color:${
-              locked ? '#94A3B8' : '#FFD43B'
-            }; width:100%; padding:5px; border-radius:999px; font-weight:900; font-size:12.5px; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:4px; font-variant-numeric:tabular-nums;">
-              ${getMarbleGemSvg(13)} ${formatMarbleCompact(opt.cost)}
-            </div>
-          </div>
-        `;
-      })
-      .join('');
-
-    modal.innerHTML = `
-      <div class="royal-panel" style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:16px 22px; position:relative;">
-        <!-- Top Ribbon Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="background:#FFF9EB; border:2.5px solid #1E1612; border-radius:999px; padding:4px 14px; font-size:12px; font-weight:900; color:#1E1612; box-shadow:0 2px 0 #1E1612;">
-            🏃 รอบการเดิน: Lap ${payload.lapCount + 1} ${
-              payload.lapCount === 0
-                ? '(รอบแรกสร้างสูงสุด 2 หลัง)'
-                : '(ปลดล็อกโรงแรม & แลนด์มาร์ก!)'
-            }
-          </div>
-          <div style="background:linear-gradient(180deg, ${tileDef.colorHex} 0%, #1E1612 100%); border:3px solid #FFD43B; border-radius:12px; padding:6px 28px; font-size:17px; font-weight:900; color:#FFF; box-shadow:0 4px 0 #1E1612;">
-            🏙️ ${tileDef.name.toUpperCase()} — ${tileDef.nameTh} ${
-              tileDef.group ? `(Group ${tileDef.group})` : '(Tourism)'
-            }
-          </div>
-          <button class="red-btn" id="btnCityModalClose" style="border-radius:50%; width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px;">✕</button>
-        </div>
-
-        <!-- Building Cards Grid -->
-        <div class="city-cards-grid" style="display:grid; grid-template-columns:repeat(${Math.min(
-          4,
-          payload.options.length
-        )}, 1fr); gap:14px; margin:auto 0; height:62%;">
-          ${cardsHtml}
-        </div>
-
-        <!-- Discount & Resulting Toll Bar -->
-        <div style="background:#FFF9EB; border:2.5px solid #1E1612; border-radius:12px; padding:8px 16px; text-align:center; font-size:13px; font-weight:900; color:#1E1612; box-shadow:0 2px 0 #1E1612;">
-          ส่วนลดก่อสร้าง (-${payload.constDiscountPct}%) |
-          ค่าก่อสร้าง: <span style="color:#B45309; font-variant-numeric:tabular-nums;">${formatMarbleFull(selectedOpt.cost)}</span> |
-          ค่าผ่านทางเริ่มต้น: <span style="color:#15803D; font-variant-numeric:tabular-nums;">${formatMarbleFull(getOptToll(selectedOpt))}</span>
-        </div>
-
-        <!-- Bottom Action Buttons: Wide Build button (1.6x) vs Compact Pass button -->
-        <div style="display:flex; justify-content:center; align-items:center; gap:20px;">
-          <button class="red-btn" id="btnPassBuild" style="width:140px; padding:10px; font-size:14px; font-weight:900;">
-            ข้าม (PASS)
-          </button>
-          <button class="green-btn" id="btnConfirmBuild" ${
-            !canAfford || isSelectedLocked ? 'disabled' : ''
-          } style="width:320px; padding:11px; font-size:16px; font-weight:900;">
-            ${
-              isSelectedLocked
-                ? `รอบ 1 ยังสร้างไม่ได้ (Locked)`
-                : canAfford
-                ? `🔨 สร้างเมือง (BUILD: ${formatMarbleFull(selectedOpt.cost)})`
-                : `เงินสดไม่พอ (${formatMarbleCompact(selectedOpt.cost)})`
-            }
-          </button>
-        </div>
-      </div>
-    `;
-
-    modal.querySelectorAll('.build-tier-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        if (card.classList.contains('locked')) return;
-        const lv = Number(
-          (card as HTMLElement).dataset.level
-        ) as BuildingLevel;
-        this.selectedBuildLevel = lv;
-        this.renderCityPurchaseModal(modal, payload);
-      });
-    });
-
-    modal
-      .querySelector('#btnPassBuild')
-      ?.addEventListener('click', () => {
-        this.lastCityModalKey = null;
-        this.callbacks.onPassCityBuild?.();
-      });
-    modal
-      .querySelector('#btnCityModalClose')
-      ?.addEventListener('click', () => {
-        this.lastCityModalKey = null;
-        this.callbacks.onPassCityBuild?.();
-      });
-    modal
-      .querySelector('#btnConfirmBuild')
-      ?.addEventListener('click', () => {
-        const lv = this.selectedBuildLevel;
-        const opt = payload.options.find(o => o.level === lv);
-        if (opt && isOptLocked(opt)) return;
-
-        if (lv === BuildingLevel.LANDMARK) {
-          soundManager.playLandmarkFanfare();
-        } else {
-          soundManager.playClick();
-        }
-        this.lastCityModalKey = null;
-        this.callbacks.onConfirmCityBuild?.(lv);
-      });
-  }
-
-  /**
-   * HOSTILE TAKEOVER MODAL (ซื้อต่อเมืองศัตรู 2.0x ลบส่วนลด Acq Discount)
-   */
-  private renderTakeoverModal(
-    modal: HTMLElement,
-    payload: TakeoverModalPayload
-  ): void {
-    const tileDef = WORLD_MAP_TILES[payload.tileIndex];
-    const buyer = this.state.players.find((p) => p.id === payload.buyerId);
-    const owner = this.state.players.find((p) => p.id === payload.ownerId);
-    const buyerCash = buyer?.marble ?? 0;
-    const canAffordTakeover = buyerCash >= payload.netTakeoverCost;
-    const totalWithLandmark = payload.netTakeoverCost + payload.landmarkUpgradeCost;
-    const canAffordBoth = buyer && payload.canUpgradeToLandmarkAfter
-      ? buyerCash >= totalWithLandmark
-      : false;
-
-    const tierLabels: Record<number, string> = {
-      [BuildingLevel.NONE]: 'ที่ดินเปล่า',
-      [BuildingLevel.VILLA]: '🏡 วิลล่า',
-      [BuildingLevel.BUILDING]: '🏢 ตึก',
-      [BuildingLevel.HOTEL]: '🏨 โรงแรม',
-      [BuildingLevel.LANDMARK]: '🏰 แลนด์มาร์ก',
-    };
-    const tierBadge = tierLabels[payload.buildingLevel] ?? 'สิ่งก่อสร้าง';
-
-    modal.innerHTML = `
-      <div class="royal-panel" style="width:840px; padding:24px 30px; display:flex; flex-direction:column; gap:16px; text-align:center;">
-        <!-- Golden Arcade Title Banner -->
-        <div style="background:linear-gradient(180deg, #FFD43B 0%, #F59F00 100%); border:4px solid #1E1612; border-radius:18px; padding:12px 22px; box-shadow:inset 0 3px 0 rgba(255,255,255,0.7), 0 5px 0 #B45309, 0 8px 0 #1E1612; display:flex; align-items:center; justify-content:center; gap:12px;">
-          <span style="font-size:26px;">🤝</span>
-          <span style="font-family:var(--font-display); font-size:24px; font-weight:900; color:#FFFFFF; -webkit-text-stroke:2px #1E1612; text-shadow:0 3px 0 #1E1612; letter-spacing:0.04em;">
-            HOSTILE TAKEOVER
-          </span>
-          <span style="font-family:var(--font-body); font-size:16px; font-weight:900; color:#1E1612; background:#FFF9EB; padding:3px 14px; border-radius:999px; border:2.5px solid #1E1612; box-shadow:0 2px 0 #1E1612;">
-            ซื้อต่อโฉนดเมืองศัตรู!
-          </span>
-        </div>
-
-        <!-- Deed Card Container -->
-        <div style="background:#FFFFFF; border:3.5px solid #1E1612; border-radius:16px; padding:18px 22px; box-shadow:0 4px 0 #1E1612; text-align:left; display:flex; flex-direction:column; gap:14px;">
-          <!-- City Header & Owner -->
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2.5px dashed #CBD5E1; padding-bottom:12px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="background:${tileDef.colorHex}; color:#FFF; padding:4px 14px; border-radius:999px; border:2.5px solid #1E1612; font-size:15px; font-weight:900; box-shadow:0 2px 0 #1E1612;">
-                ${tileDef.name.toUpperCase()}
-              </span>
-              <span style="font-size:22px; font-weight:900; color:#141413;">${tileDef.nameTh}</span>
-              <span style="font-size:13px; font-weight:800; background:#F1F5F9; color:#475569; padding:3px 10px; border-radius:8px; border:1.5px solid #CBD5E1;">
-                ${tierBadge}
-              </span>
-            </div>
-            <div style="font-size:15px; font-weight:900; color:#141413; display:flex; align-items:center; gap:6px;">
-              <span>เจ้าของเดิม:</span>
-              <span style="background:#FEE2E2; color:#991B1B; padding:4px 14px; border-radius:999px; border:2px solid #1E1612; display:flex; align-items:center; gap:4px;">
-                <span>${owner ? getCharacterDef(owner.characterId).avatarEmoji : '👤'}</span>
-                <span>${owner?.name ?? payload.ownerId}</span>
-              </span>
-            </div>
-          </div>
-
-          <!-- 2-Column Property Transfer Receipt -->
-          <div style="display:grid; grid-template-columns: 1.05fr 0.95fr; gap:18px; background:#F8FAFC; padding:16px 20px; border-radius:14px; border:2.5px solid #1E1612;">
-            <div style="display:flex; flex-direction:column; gap:10px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:800; color:#334155;">
-                <span>🏷️ ราคาประเมินซื้อต่อ (2.0x):</span>
-                <span style="font-family:var(--font-num); font-size:16px; font-weight:900; color:#1E293B;">${formatMarbleFull(payload.rawTakeoverCost)}</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:900; color:#16A34A;">
-                <span>📉 ส่วนลดซื้อต่อ (Acq DC):</span>
-                <span style="font-family:var(--font-num); font-size:16px;">-${payload.acqDiscountPct}%</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:17px; font-weight:900; color:#B45309; background:#FEF3C7; border:2px solid #F59E0B; border-radius:10px; padding:8px 12px; margin-top:2px;">
-                <span>💰 ยอดชำระสุทธิ:</span>
-                <span style="font-family:var(--font-num); font-size:22px; color:#92400E; font-weight:900;">${formatMarbleFull(payload.netTakeoverCost)}</span>
-              </div>
-            </div>
-
-            <div style="display:flex; flex-direction:column; justify-content:center; gap:10px; border-left:2.5px dashed #CBD5E1; padding-left:18px;">
-              <div style="font-size:14px; font-weight:800; color:#475569;">
-                📈 ค่าผ่านทางใหม่หลังยึดครอง:
-              </div>
-              <div style="background:#DCFCE7; border:2px solid #22C55E; border-radius:10px; padding:6px 14px; font-size:23px; font-weight:900; color:#15803D; font-family:var(--font-num); display:flex; align-items:center; gap:8px;">
-                ${getMarbleGemSvg(22)} <span>${formatMarbleFull(payload.resultingToll)}</span>
-              </div>
-              <div style="background:#FEF2F2; border:1.5px solid #FCA5A5; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:800; color:#991B1B; line-height:1.4;">
-                🛡️ สกิล <strong>[S08] โล่ป้องกัน</strong> ของศัตรูอาจทำงานเพื่อสกัดกั้นการซื้อต่อ
-              </div>
-            </div>
-          </div>
-
-          <!-- Player Wallet Affordability Status Bar -->
-          <div style="background:${canAffordTakeover ? '#F0FDF4' : '#FEF2F2'}; border:2.5px solid #1E1612; border-radius:12px; padding:10px 18px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; color:#141413;">
-              <span>💵 เงินในกระเป๋าของคุณ:</span>
-              <strong style="font-family:var(--font-num); font-size:17px; color:${canAffordTakeover ? '#15803D' : '#DC2626'};">
-                ${formatMarbleFull(buyerCash)}
-              </strong>
-            </div>
-            <div style="font-size:14px; font-weight:900; color:${canAffordTakeover ? '#15803D' : '#DC2626'}; background:${canAffordTakeover ? '#DCFCE7' : '#FEE2E2'}; padding:3px 12px; border-radius:999px; border:1.5px solid ${canAffordTakeover ? '#22C55E' : '#EF4444'};">
-              ${canAffordTakeover ? '✅ เงินเพียงพอสำหรับการซื้อต่อ' : `❌ เงินไม่พอ (ขาดอีก ${formatMarbleFull(payload.netTakeoverCost - buyerCash)})`}
-            </div>
-          </div>
-        </div>
-
-        <!-- Action CTA Buttons -->
-        <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
-          <button class="red-btn" id="btnSkipTakeover" style="padding:12px 28px; font-size:16px; font-weight:900;">
-            ข้าม (ไม่ซื้อต่อ)
-          </button>
-          <button class="green-btn" id="btnDoTakeover" ${!canAffordTakeover ? 'disabled' : ''} style="padding:12px 30px; font-size:17px; font-weight:900;">
-            🤝 ซื้อต่อ (${formatMarbleFull(payload.netTakeoverCost)}) ${!canAffordTakeover ? '— เงินไม่พอ' : ''}
-          </button>
-          ${
-            payload.canUpgradeToLandmarkAfter
-              ? `<button class="gold-btn" id="btnTakeoverAndLandmark" ${!canAffordBoth ? 'disabled' : ''} style="padding:12px 30px; font-size:17px; font-weight:900;">
-                  🏰 ซื้อต่อ + สร้างแลนด์มาร์ก (${formatMarbleFull(totalWithLandmark)}) ${!canAffordBoth ? '— เงินไม่พอ' : ''}
-                </button>`
-              : ''
-          }
-        </div>
-      </div>
-    `;
-
-    modal
-      .querySelector('#btnSkipTakeover')
-      ?.addEventListener('click', () => {
-        soundManager.playClick();
-        this.callbacks.onPassTakeover?.();
-      });
-    modal
-      .querySelector('#btnDoTakeover')
-      ?.addEventListener('click', () => {
-        soundManager.playClick();
-        this.callbacks.onConfirmTakeover?.(false);
-      });
-    modal
-      .querySelector('#btnTakeoverAndLandmark')
-      ?.addEventListener('click', () => {
-        soundManager.playLandmarkFanfare();
-        this.callbacks.onConfirmTakeover?.(true);
-      });
-  }
-
-  /**
-   * COIN FLIP BONUS MINIGAME MODAL (Tile 2 — Supports S09 Coin Master)
-   */
-  private renderBonusCoinFlipModal(
-    modal: HTMLElement,
-    bonus: PendingBonusGameState
-  ): void {
-    const rewards = MATCH_CONFIG.bonusGameRewards;
-    const nextReward = rewards[bonus.round] ?? rewards[3];
-
-    modal.innerHTML = `
-      <div class="royal-panel" style="width:780px; padding:24px 30px; display:flex; flex-direction:column; gap:18px; text-align:center;">
-        <div>
-          <span class="cartoon-title" style="font-size:24px; color:#FFD43B;">
-            COIN FLIP BONUS MINIGAME (เกมทายหัว/ก้อย 3 ด่าน)
-          </span>
-        </div>
-
-        <div style="display:flex; justify-content:center; align-items:center; gap:12px;">
-          ${[1, 2, 3]
-            .map(
-              (r) => `
-              <div style="flex:1; background:${
-                bonus.round === r ? 'linear-gradient(180deg,#FFFBEB 0%,#FEF08A 100%)' : '#FFF9EB'
-              }; border:3px solid #1E1612; border-radius:14px; padding:12px; box-shadow:${
-                bonus.round === r ? '0 4px 0 #B45309, 0 6px 0 #1E1612' : '0 3px 0 #1E1612'
-              }; position:relative;">
-                ${bonus.round === r ? '<span style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:#EF4444; color:#FFF; font-weight:900; font-size:10px; padding:2px 10px; border-radius:999px; border:2px solid #1E1612; box-shadow:0 2px 0 #1E1612;">ACTIVE</span>' : ''}
-                <div style="font-size:12px; color:#1E1612; font-weight:900;">ROUND ${r}</div>
-                <div style="font-size:17px; font-weight:900; color:#141413; display:flex; align-items:center; justify-content:center; gap:4px; margin-top:3px;">
-                  ${getMarbleGemSvg(16)} <span style="font-family:var(--font-num);">${formatMarbleCompact(rewards[r])}</span>
-                </div>
-              </div>
-              ${r < 3 ? '<div style="font-size:22px; font-weight:900; color:#1E1612;">➔</div>' : ''}
-            `
-            )
-            .join('')}
-        </div>
-
-        ${
-          bonus.autoWonRound1 || bonus.hasCoinMasterRetry
-            ? `<div style="background:#DCFCE7; border:2.5px solid #15803D; border-radius:12px; padding:8px 14px; font-size:13px; font-weight:900; color:#166534;">
-                ⚡ สกิล [S09] เซียนมินิเกม (Coin Master): ${
-                  bonus.hasCoinMasterRetry
-                    ? 'มีสิทธิ์ทายผิดแก้ตัวฟรี 1 ครั้ง!'
-                    : 'ชนะด่านแรกอัตโนมัติ!'
-                }
-              </div>`
-            : ''
-        }
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
-          <div style="background:#DCFCE7; border:2.5px solid #1E1612; border-radius:12px; padding:10px 16px; font-size:14px; font-weight:900; color:#166534; box-shadow:0 3px 0 #1E1612;">
-            เงินสะสมปัจจุบัน:
-            <strong style="font-size:20px; font-family:var(--font-num); color:#15803D; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px;">
-              ${getMarbleGemSvg(18)} ${formatMarbleFull(bonus.currentReward)}
-            </strong>
-          </div>
-          <div style="background:#FEF9C3; border:2.5px solid #1E1612; border-radius:12px; padding:10px 16px; font-size:14px; font-weight:900; color:#854D0E; box-shadow:0 3px 0 #1E1612;">
-            ทายถูกด่านนี้รับเพิ่ม:
-            <strong style="font-size:20px; font-family:var(--font-num); color:#B45309; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px;">
-              ${getMarbleGemSvg(18)} ${formatMarbleFull(nextReward)}
-            </strong>
-          </div>
-        </div>
-
-        <!-- Animated Coin Flip Stage with 3D Vector SVG Coin -->
-        <div id="bonusCoinStage" style="height:104px; display:flex; align-items:center; justify-content:center; perspective:800px;">
-          <div id="bonusCoinIcon" style="display:inline-flex; align-items:center; justify-content:center; transition:transform 0.2s ease;">
-            ${getCoinSvg(100, false)}
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:center; gap:18px;">
-          <button class="gold-btn" id="btnCoinHeads" style="padding:12px 28px; font-size:16px; font-weight:900;">
-            👑 ทายหัว (HEADS)
-          </button>
-          <button class="blue-btn" id="btnCoinTails" style="padding:12px 28px; font-size:16px; font-weight:900;">
-            🦅 ทายก้อย (TAILS)
-          </button>
-          <button class="green-btn" id="btnCoinStop" style="padding:12px 24px; font-size:15px; font-weight:900;">
-            💰 หยุดรับเงิน (${formatMarbleCompact(bonus.currentReward)})
-          </button>
-        </div>
-      </div>
-    `;
-
-    const triggerFlip = (guess: 'HEADS' | 'TAILS') => {
-      const coinEl = modal.querySelector('#bonusCoinIcon') as HTMLElement | null;
-      const headsBtn = modal.querySelector('#btnCoinHeads') as HTMLButtonElement | null;
-      const tailsBtn = modal.querySelector('#btnCoinTails') as HTMLButtonElement | null;
-      const stopBtn = modal.querySelector('#btnCoinStop') as HTMLButtonElement | null;
-
-      if (headsBtn) headsBtn.disabled = true;
-      if (tailsBtn) tailsBtn.disabled = true;
-      if (stopBtn) stopBtn.disabled = true;
-
-      if (coinEl) {
-        coinEl.style.animation = 'coinFlipAnim 0.75s cubic-bezier(0.2, 0.8, 0.3, 1)';
-        soundManager.playRollGaugeTick(0.85);
-      }
-
-      setTimeout(() => {
-        if (coinEl) {
-          coinEl.innerHTML = getCoinSvg(100, guess === 'TAILS');
-          coinEl.style.animation = '';
-        }
-        this.callbacks.onBonusCoinGuess?.(guess);
-      }, 720);
-    };
-
-    modal
-      .querySelector('#btnCoinHeads')
-      ?.addEventListener('click', () => triggerFlip('HEADS'));
-    modal
-      .querySelector('#btnCoinTails')
-      ?.addEventListener('click', () => triggerFlip('TAILS'));
-    modal
-      .querySelector('#btnCoinStop')
-      ?.addEventListener('click', () =>
-        this.callbacks.onBonusStopAndCollect?.()
-      );
-  }
-
-  /**
-   * Animated 3D Fortune Card Modal (LINE Let's Get Rich Peak Era CHANCE Tile)
-   */
-  private renderFortuneCardModal(
-    modal: HTMLElement,
-    payload: FortuneCardModalPayload
-  ): void {
-    const player = this.state.players.find((p) => p.id === payload.playerId);
-    const pName = player?.name ?? payload.playerId;
-    const isHuman = !this.youPlayerId || payload.playerId === this.youPlayerId;
-
-    modal.innerHTML = `
-      <div class="fortune-card-stage">
-        <div class="fortune-card-flipper" id="fortuneCardFlipper">
-          <!-- Back of Card (Shown briefly before 3D flipping) -->
-          <div class="fortune-card-face fortune-card-back">
-            <div class="fc-back-inner">
-              <div class="fc-back-star">🌟</div>
-              <div class="fc-back-title">CHANCE</div>
-              <div class="fc-back-sub">การ์ดดวงชะตา</div>
-            </div>
-          </div>
-
-          <!-- Front of Card (Revealed after 3D flip) -->
-          <div class="fortune-card-face fortune-card-front">
-            <div class="fc-front-header">
-              <span class="fc-badge">CHANCE CARD</span>
-              <span style="font-size:12px; font-weight:800; color:#92400e;">${pName}</span>
-            </div>
-
-            <div class="fc-avatar-big">${payload.titleTh.split(' ')[0] ?? '🃏'}</div>
-
-            <div>
-              <div class="fc-title-th">${payload.titleTh}</div>
-              <div class="fc-title-en">${payload.titleEn}</div>
-            </div>
-
-            <div class="fc-desc-box">${payload.descTh}</div>
-
-            ${
-              payload.rewardAmount > 0
-                ? `<div class="fc-reward-pill">+${formatMarbleCompact(payload.rewardAmount)} MARBLE</div>`
-                : ''
-            }
-
-            <div style="width:100%; margin-top:8px;">
-              <button class="gold-btn fortune-confirm-btn" id="btnConfirmFortuneCard" style="width:100%; padding:10px 16px; font-size:14px; font-weight:900;">
-                ${isHuman ? '✨ ตกลง (รับผลการ์ด)' : `⏳ ${pName} กำลังดำเนินการ...`}
+          <div class="lobby-banner-empty" style="background:#FFF9EB; border:3px dashed #A89078; border-radius:14px; padding:6px 10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; height:88px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.06);">
+            <div style="font-size:12px; font-weight:900; color:#786C5E;">ที่นั่ง ${pid} ว่าง (EMPTY SLOT)</div>
+            <div style="display:flex; gap:6px; width:100%;">
+              <button class="gold-btn btn-lobby-add-ai" data-idx="${idx}" style="flex:1; padding:5px 6px; font-size:11px; font-weight:900; border-radius:8px; cursor:pointer;">
+                🤖 + เพิ่ม AI Bot
+              </button>
+              <button class="tab-pill btn-lobby-add-human" data-idx="${idx}" style="flex:1; padding:5px 4px; font-size:11px; font-weight:900; border-radius:8px; cursor:pointer;">
+                👤 + ผู้เล่น
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    `;
+        `;
+      }
 
-    // Trigger 3D flip shortly after modal renders
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const flipper = modal.querySelector('#fortuneCardFlipper');
-        if (flipper) {
-          flipper.classList.add('flipped');
-          soundManager.playLandmarkFanfare();
-        }
-      }, 140);
-    });
+      const pChar = getCharacterDef(p.characterId);
+      const teamBadge = isTeamMode
+        ? p.teamId === 'ALPHA' ? 'TEAM A' : 'TEAM B'
+        : `SOLO ${p.id}`;
 
-    const confirmBtn = modal.querySelector('#btnConfirmFortuneCard') as HTMLButtonElement | null;
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
-        soundManager.playClick();
-        this.callbacks.onConfirmFortuneCard?.();
-      });
-    }
-  }
+      const isYou = this.youPlayerId ? p.id === this.youPlayerId : false;
+      const isHuman = p.controlType === 'HUMAN';
+      const isRemoteConnected = isHuman && p.connected && !isYou;
 
-  /**
-   * Displays the glorious animated Angel Shield banner across the screen when an Angel Card is used.
-   */
-  public showAngelShieldActivationBanner(targetName: string, reason: string): void {
-    let overlay = this.stageEl.querySelector('#angelShieldBannerOverlay') as HTMLElement | null;
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'angelShieldBannerOverlay';
-      overlay.className = 'angel-shield-overlay';
-      this.stageEl.appendChild(overlay);
-    }
-
-    const reasonText =
-      reason === 'TOLL'
-        ? `ยกเว้นค่าผ่านทางที่ ${targetName} 100%!`
-        : reason === 'BLACKOUT'
-        ? `ป้องกันไฟดับที่ ${targetName} สำเร็จ!`
-        : `ป้องกันการแย่ง/สลับเมืองที่ ${targetName} สำเร็จ!`;
-
-    overlay.innerHTML = `
-      <div class="angel-shield-box">
-        <div class="angel-ico">👼</div>
-        <div class="angel-heading">การ์ดนางฟ้าทำงาน!</div>
-        <div class="angel-detail">${reasonText}</div>
-      </div>
-    `;
-
-    overlay.classList.add('show');
-    soundManager.playLandmarkFanfare();
-
-    setTimeout(() => {
-      overlay?.classList.remove('show');
-    }, 1800);
-  }
-
-  /**
-   * BOARD TARGET PICKER DRAWER (For M02 Black Hole, Tile 16 Olympic, Tile 24 World Travel, Tile 0 START Upgrade, M10 Disrupt)
-   */
-  private renderBoardPickerDrawer(): void {
-    const drawer = this.stageEl.querySelector(
-      '#boardTargetPickerDrawer'
-    ) as HTMLElement | null;
-    if (!drawer) return;
-
-    const pick = this.state.pendingBoardPick;
-    if (!pick) {
-      drawer.classList.remove('open');
-      return;
-    }
-
-    drawer.classList.add('open');
-    const titles: Record<BoardPickReason, string> = {
-      BLACK_HOLE_PLACE:
-        '🌀 เลือกช่องวางหลุมดำ (Black Hole) — ศัตรูที่เหยียบจะถูกดูดมายังแลนด์มาร์กของคุณทันที!',
-      OLYMPIC_SELECT:
-        '🏅 โอลิมปิก (Olympic Expo) — เลือกเมืองของคุณเพื่อเพิ่มตัวคูณค่าผ่านทาง (สูงสุด x5)',
-      WORLD_TRAVEL_DEST:
-        '✈️ สนามบินรอบโลก (Sky Terminal) — เลือกช่องปลายทางที่คุณต้องการบินไปลงทันที',
-      START_UPGRADE_CITY:
-        '🏁 จุดเริ่มต้น START — เลือกเมืองของคุณเพื่อสร้างตึกเพิ่ม 1 ขั้นทันที',
-      DISRUPT_SELL_OR_SWAP:
-        '🔮 การ์ดดวง/ลูกแก้วป่วนเมือง — เลือกเมืองศัตรูเพื่อบังคับขายคืนธนาคาร หรือสลับเมืองกับเรา',
-      BLACKOUT_SELECT:
-        '🔌 การ์ดไฟดับ (Power Outage) — เลือกเมืองหรือแลนด์มาร์กศัตรูเพื่อตัดไฟให้ค่าผ่านทางเหลือ 0 M!',
-      LINE_TELEPORT_DEST:
-        '🔮 วาร์ปแถวแลนด์มาร์ก (M10) — เลือกช่องใดก็ได้ในแถวเดียวกัน (ไม่รวมช่องมุม) เพื่อวาร์ปไปทันที!',
-    };
-
-    const chipsHtml = pick.validTileIndices
-      .map((tIdx) => {
-        const tDef = WORLD_MAP_TILES[tIdx];
-        return `
-          <button class="tab-pill board-pick-chip" data-tidx="${tIdx}" style="padding:4px 10px; font-size:11px; border-color:${tDef.colorHex};">
-            #${tIdx} ${tDef.nameTh} (${tDef.name})
+      let controlBadgeHtml = '';
+      if (isRemoteConnected) {
+        controlBadgeHtml = `<span style="font-size:9.5px; font-weight:900; padding:2px 7px; border-radius:999px; background:#F0FDF4; color:#15803D; border:2px solid #1E1612;">👤 Online</span>`;
+      } else {
+        controlBadgeHtml = `
+          <button class="btn-lobby-toggle-control" data-pid="${p.id}" title="คลิกสลับ: Human (Pass 'n Play) / AI Bot" style="background:${isHuman ? 'linear-gradient(180deg,#22C55E 0%,#16A34A 100%)' : 'linear-gradient(180deg,#38BDF8 0%,#0284C7 100%)'}; border:2px solid #1E1612; color:#fff; border-radius:999px; padding:2px 8px; font-size:9.5px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 0 #1E1612;">
+            ${isHuman ? '🟢 Pass \'n Play' : '🤖 AI Bot'}
           </button>
         `;
-      })
-      .join('');
-
-    drawer.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-size:13px; font-weight:900; color:#fde047;">${titles[pick.reason]}</span>
-        ${
-          pick.reason === 'DISRUPT_SELL_OR_SWAP'
-            ? `<div style="display:flex; gap:6px;">
-                <button class="tab-pill ${
-                  this.boardPickDisruptMode === 'SELL' ? 'active' : ''
-                }" id="btnDisruptModeSell" style="padding:3px 10px; font-size:11px;">💥 บังคับขาย</button>
-                <button class="tab-pill ${
-                  this.boardPickDisruptMode === 'SWAP' ? 'active' : ''
-                }" id="btnDisruptModeSwap" style="padding:3px 10px; font-size:11px;">🔄 สลับเมือง</button>
-              </div>`
-            : `<span style="font-size:11px; color:#93c5fd;">คลิกที่ช่องบนกระดาน 3D หรือกดปุ่มด้านล่าง</span>`
-        }
-      </div>
-      <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;" class="lgr-scroll">
-        ${chipsHtml}
-      </div>
-    `;
-
-    drawer
-      .querySelector('#btnDisruptModeSell')
-      ?.addEventListener('click', () => {
-        this.boardPickDisruptMode = 'SELL';
-        this.renderBoardPickerDrawer();
-      });
-    drawer
-      .querySelector('#btnDisruptModeSwap')
-      ?.addEventListener('click', () => {
-        this.boardPickDisruptMode = 'SWAP';
-        this.renderBoardPickerDrawer();
-      });
-
-    drawer.querySelectorAll('.board-pick-chip').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const tidx = Number((btn as HTMLElement).dataset.tidx);
-        this.callbacks.onBoardTilePicked?.(tidx, this.boardPickDisruptMode);
-      });
-    });
-  }
-
-  /**
-   * DEBT / BANK LOAN (+1M) / SELL CITY (50%) RESOLUTION MODAL
-   */
-  private renderDebtResolutionModal(
-    modal: HTMLElement,
-    debt: PendingDebtState
-  ): void {
-    const debtor = this.state.players.find((p) => p.id === debt.debtorId);
-    if (!debtor) return;
-
-    const ownedTiles = this.state.tiles.filter(
-      (t) => t.ownerId === debtor.id
-    );
-    let selectedRefundSum = 0;
-    for (const tIdx of this.selectedDebtSellTiles) {
-      const bState = this.state.tiles[tIdx];
-      if (bState && bState.ownerId === debtor.id) {
-        selectedRefundSum += this.computeTileSellRefund(bState);
       }
-    }
 
-    const projectedCash = debtor.marble + selectedRefundSum;
-    const shortfall = Math.max(0, debt.amountOwed - projectedCash);
-    const canPayNow = projectedCash >= debt.amountOwed;
+      const youBadgeHtml = isYou
+        ? `<span style="background:#FFD43B; color:#1E1612; font-weight:900; font-size:9px; padding:1px 7px; border-radius:999px; border:2px solid #1E1612; transform:rotate(-3deg); display:inline-block; box-shadow:0 2px 0 #1E1612;">YOU ★</span>`
+        : '';
 
-    const propertiesHtml =
-      ownedTiles.length === 0
-        ? `<div style="color:#94a3b8; font-size:12px; padding:12px;">ไม่มีเมืองในครอบครองให้ขายทอดตลาด</div>`
-        : ownedTiles
-            .map((t) => {
-              const def = WORLD_MAP_TILES[t.index];
-              const refund = this.computeTileSellRefund(t);
-              const checked = this.selectedDebtSellTiles.has(t.index);
-              return `
-                <div class="debt-sell-row" data-tidx="${t.index}" style="background:${
-                  checked ? '#1e3a8a' : '#0f172a'
-                }; border:1.5px solid ${
-                  checked ? '#fde047' : '#334155'
-                }; border-radius:8px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-size:12px;">
-                  <span>${checked ? '☑️' : '⬜'} <strong>${def.nameTh} (${def.name})</strong> — Lv.${t.buildingLevel}</span>
-                  <strong style="color:#4ade80;">+🪙 ${formatMarbleFull(refund)} (50%)</strong>
-                </div>
-              `;
-            })
-            .join('');
+      const kickBtnHtml = !isYou
+        ? `<button class="btn-lobby-kick" data-pid="${p.id}" title="Kick Player / Clear Slot" style="background:linear-gradient(180deg,#FF5A5F 0%,#DC2626 100%); border:2px solid #1E1612; color:#fff; border-radius:999px; padding:1px 7px; font-size:9px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:2px; box-shadow:0 2px 0 #7F1D1D;">✕ Kick</button>`
+        : '';
 
-    modal.innerHTML = `
-      <div class="royal-panel" style="width:760px; border:3px solid #ef4444; padding:18px 24px; display:flex; flex-direction:column; gap:12px;">
-        <div style="font-size:19px; font-weight:900; color:#fca5a5; text-align:center;">
-          🚨 เงินสดไม่พอจ่ายค่าผ่านทาง! (DEBT & BANK LOAN RESOLUTION)
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; text-align:center; background:#0f172a; padding:10px; border-radius:10px;">
-          <div>
-            <div style="font-size:11px; color:#94a3b8;">ยอดหนี้ที่ต้องชำระ</div>
-            <div style="font-size:16px; font-weight:900; color:#f87171;">${formatMarbleFull(debt.amountOwed)}</div>
-          </div>
-          <div>
-            <div style="font-size:11px; color:#94a3b8;">เงินสด + เมืองที่เลือกขาย</div>
-            <div style="font-size:16px; font-weight:900; color:#fde047;">${formatMarbleFull(projectedCash)}</div>
-          </div>
-          <div>
-            <div style="font-size:11px; color:#94a3b8;">ยอดขาดอีก</div>
-            <div style="font-size:16px; font-weight:900; color:${shortfall === 0 ? '#4ade80' : '#fca5a5'};">${formatMarbleFull(shortfall)}</div>
-          </div>
-        </div>
-
-        <div style="max-height:190px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;" class="lgr-scroll">
-          ${propertiesHtml}
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-          <button class="gold-btn" id="btnTakeBankLoan" ${
-            debtor.loanUsed ? 'disabled' : ''
-          } style="padding:9px 18px; font-size:13px;">
-            🏦 ${
-              debtor.loanUsed
-                ? 'ใช้สิทธิ์กู้ 1M ไปแล้ว'
-                : 'กู้ธนาคาร +1,000,000 M (1 ครั้ง/เกม)'
-            }
-          </button>
-
-          <div style="display:flex; gap:10px;">
-            ${
-              this.selectedDebtSellTiles.size > 0
-                ? `<button class="blue-btn" id="btnSellSelectedCities" style="padding:9px 16px; font-size:13px;">
-                    💰 ยืนยันขายเมืองที่เลือก (+${formatMarbleCompact(selectedRefundSum)})
-                  </button>`
-                : ''
-            }
-            ${
-              canPayNow
-                ? `<button class="green-btn" id="btnPayDebtNow" style="padding:9px 22px; font-size:14px;">
-                    ✅ ชำระหนี้ (${formatMarbleCompact(debt.amountOwed)})
-                  </button>`
-                : `<button class="red-btn" id="btnDeclareBankruptcy" style="padding:9px 18px; font-size:13px;">
-                    🏳️ ยอมล้มละลาย (Bankrupt)
-                  </button>`
-            }
-          </div>
-        </div>
-      </div>
-    `;
-
-    modal.querySelectorAll('.debt-sell-row').forEach((row) => {
-      row.addEventListener('click', () => {
-        const tidx = Number((row as HTMLElement).dataset.tidx);
-        if (this.selectedDebtSellTiles.has(tidx)) {
-          this.selectedDebtSellTiles.delete(tidx);
-        } else {
-          this.selectedDebtSellTiles.add(tidx);
-        }
-        this.renderDebtResolutionModal(modal, debt);
-      });
-    });
-
-    modal
-      .querySelector('#btnTakeBankLoan')
-      ?.addEventListener('click', () => this.callbacks.onTakeBankLoan?.());
-
-    modal
-      .querySelector('#btnSellSelectedCities')
-      ?.addEventListener('click', () => {
-        const list = Array.from(this.selectedDebtSellTiles);
-        this.selectedDebtSellTiles.clear();
-        this.callbacks.onSellCitiesForDebt?.(list);
-      });
-
-    modal
-      .querySelector('#btnPayDebtNow')
-      ?.addEventListener('click', () => {
-        if (this.selectedDebtSellTiles.size > 0) {
-          const list = Array.from(this.selectedDebtSellTiles);
-          this.selectedDebtSellTiles.clear();
-          this.callbacks.onSellCitiesForDebt?.(list);
-        }
-        this.callbacks.onPayResolvedDebt?.();
-      });
-
-    modal
-      .querySelector('#btnDeclareBankruptcy')
-      ?.addEventListener('click', () => {
-        soundManager.playBankruptGong();
-        this.callbacks.onDeclareBankruptcy?.();
-      });
-  }
-
-  /**
-   * GAME RULES & ODDS REFERENCE MODAL ((÷3)×1.6 Rates + Two-Stage Gauge Dice Table)
-   */
-  public openRulesModal(): void {
-    const modal = this.stageEl.querySelector(
-      '#modal_RULES_ODDS'
-    ) as HTMLElement;
-    if (!modal) return;
-
-    let bodyHtml = '';
-    if (this.rulesTab === 'SKILLS') {
-      bodyHtml = `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; overflow-y:auto; max-height:500px; padding-right:6px;" class="lgr-scroll">
-          ${SKILL_CATALOG.map(
-            (s) => `
-            <div style="background:#FFF9EB; border:2.5px solid #1E1612; border-radius:12px; padding:10px 14px; box-shadow:0 3px 0 #1E1612;">
-              <div style="display:flex; justify-content:space-between; align-items:center; font-weight:900;">
-                <span style="color:#141413; font-size:13.5px;">[${s.code}] ${s.name} (${s.nameEn})</span>
-                <span style="background:${s.slotCategory === 'MAIN' ? '#FF5A5F' : '#38BDF8'}; color:#FFF; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; font-size:10.5px; font-weight:900; font-variant-numeric:tabular-nums;">ตลค ${s.charPct}% | สมบัติ ${s.treasurePct}%</span>
-              </div>
-              <div style="color:#141413; margin-top:4px; font-size:12.5px; font-weight:700; line-height:1.35;">${s.effectDesc}</div>
+      return `
+        <div class="lobby-player-banner" data-pid="${p.id}" style="background:${playerBannerGradients[p.id]}; border:3px solid #1E1612; outline:${isSelected ? '4px solid #FFD43B' : 'none'}; box-shadow:${isSelected ? '0 6px 0 #1E1612, inset 0 2px 0 rgba(255,255,255,0.4)' : '0 4px 0 #1E1612, inset 0 2px 0 rgba(255,255,255,0.3)'}; border-radius:14px; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; height:88px; position:relative; cursor:pointer; transition:transform 0.15s ease;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="background:#FFF9EB; border:2px solid #1E1612; border-radius:999px; padding:1px 7px; font-size:9.5px; font-weight:900; color:#1E1612; box-shadow:0 1.5px 0 #1E1612;">
+              ${teamBadge}
+            </span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              ${youBadgeHtml}
+              ${controlBadgeHtml}
+              <button class="btn-lobby-randomize" data-pid="${p.id}" title="สุ่มจัดเซ็ตคอมโบ (Synergistic Meta Build)" style="background:linear-gradient(180deg,#A855F7 0%,#7E22CE 100%); border:2px solid #1E1612; color:#fff; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; gap:2px; box-shadow:0 2px 0 #581C87;">🎲 Build</button>
+              ${kickBtnHtml}
             </div>
-          `
-          ).join('')}
-        </div>
-      `;
-    } else if (this.rulesTab === 'CHANCE') {
-      bodyHtml = `
-        <div style="font-size:13px; color:#141413; font-weight:800; margin-bottom:10px; background:#F3E5C8; padding:10px 14px; border-radius:10px; border:2px solid #1E1612;">
-          🃏 <strong>ระบบช่องการ์ดดวง (Chance Tile 4, 13, 20, 28):</strong> ผู้เล่นทุกคนพก <strong style="color:#B45309;">👼 การ์ดนางฟ้า x1</strong> เข้ามาตั้งแต่เริ่มเกม! เมื่อตกช่องการ์ดดวง ขั้นที่ 1 เช็กสกิลหลัก <strong style="color:#B45309;">[M10] บังคับขาย/แลกเมือง (ตลค 27% / สมบัติ 16%)</strong> ก่อน หากไม่ติดจะสุ่มการ์ดดวง 9 ใบตามน้ำหนักเรทจริงด้านล่าง (รวม 100% — ดวงซวยรวม 20%):
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; overflow-y:auto; max-height:450px; padding-right:6px;" class="lgr-scroll">
-          ${FORTUNE_CARD_DECK.map((c) => {
-            const badgeCol =
-              c.category === 'BUFF'
-                ? '#10B981'
-                : c.category === 'DISRUPT'
-                  ? '#8B5CF6'
-                  : '#EF4444';
-            return `
-              <div style="background:#FFF9EB; border:2.5px solid #1E1612; border-radius:12px; padding:10px 14px; box-shadow:0 3px 0 #1E1612;">
-                <div style="display:flex; justify-content:space-between; align-items:center; font-weight:900;">
-                  <span style="color:#141413; font-size:13.5px;">${c.emoji} ${c.titleTh}</span>
-                  <span style="background:${badgeCol}; color:#FFF; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; font-size:10.5px; font-weight:900; font-variant-numeric:tabular-nums;">เรทออก ${c.weightPct}%</span>
-                </div>
-                <div style="color:#141413; margin-top:4px; font-size:12.5px; font-weight:700; line-height:1.35;">${c.descTh}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    } else if (this.rulesTab === 'DICE') {
-      const targets = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-      bodyHtml = `
-        <div style="font-size:13px; color:#141413; font-weight:800; margin-bottom:10px; background:#F3E5C8; padding:10px 14px; border-radius:10px; border:2px solid #1E1612;">
-          🎯 <strong>Two-Stage Continuous Gauge Dice:</strong> ค่า DC (+0..+5 = 10%..20%) มีโอกาสล็อกแต้มตรงช่องเป้าหมายทันที หากไม่ติดจะสุ่มตามตารางด้านล่าง (ส่วนโอกาสออกเบิ้ลของแต้มคู่ 4=35%, 6=20%, 8=20%, 10=35%, 2&12=100% + โบนัส S10):
-        </div>
-        <div style="overflow-y:auto; max-height:450px;" class="lgr-scroll">
-          <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center; background:#FFF9EB; border:2.5px solid #1E1612; border-radius:10px; overflow:hidden;">
-            <thead>
-              <tr style="background:#FFD43B; color:#1E1612;">
-                <th style="padding:7px; border:1.5px solid #1E1612; font-weight:900;">เข็มชี้ (Target)</th>
-                ${targets.map((n) => `<th style="padding:7px; border:1.5px solid #1E1612; font-weight:900;">ออก ${n}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${targets
-                .map(
-                  (t) => `
-                <tr>
-                  <td style="padding:6px; border:1.5px solid #1E1612; font-weight:900; background:#F3E5C8; color:#1E1612;">เป้า ${t}</td>
-                  ${DICE_TABLE_NONE[t]
-                    .map(
-                      (pct, idx) =>
-                        `<td style="padding:6px; border:1.5px solid #1E1612; font-weight:800; color:${
-                          idx + 2 === t ? '#15803D; font-weight:900; background:#DCFCE7;' : '#141413;'
-                        }">${pct}%</td>`
-                    )
-                    .join('')}
-                </tr>
-              `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    } else {
-      bodyHtml = `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; font-size:13px;">
-          <div style="background:#FFF9EB; border:3px solid #1E1612; border-radius:14px; padding:16px; box-shadow:0 3px 0 #1E1612;">
-            <div style="font-size:15px; font-weight:900; color:#141413; margin-bottom:8px;">🏆 เงื่อนไขชนะพิเศษ (Special Monopolies)</div>
-            <ul style="margin:0; padding-left:20px; line-height:1.75; color:#141413; font-weight:700;">
-              <li><strong>Triple Monopoly (x2):</strong> ครอบครองเมืองครบทั้งสีจำนวน 3 สีขึ้นไป ชนะทันที!</li>
-              <li><strong>Line Monopoly (x3):</strong> ครอบครองทุกช่องที่ซื้อได้ในแถบกระดานด้านใดด้านหนึ่งครบทั้งแถบ ชนะทันที!</li>
-              <li><strong>Tourism Monopoly (x5):</strong> ครอบครองเกาะท่องเที่ยวครบทั้ง 5 เกาะ (สีฟ้า 3 เกาะ: พีพี, เชจู, โบราโบรา [ตัวคูณ x1, x2, x4] และสีแดง 2 เกาะ: ฮาวาย, กาลาปากอส [ตัวคูณ x1, x3]) ชนะทันที!</li>
-              <li><strong>โหมด 2v2 Shared Monopoly:</strong> นับโฉนดของเพื่อนร่วมทีมรวมกันได้ และเดินตกเมืองเพื่อนไม่ต้องเสียค่าผ่านทาง!</li>
-            </ul>
           </div>
-          <div style="background:#FFF9EB; border:3px solid #1E1612; border-radius:14px; padding:16px; box-shadow:0 3px 0 #1E1612;">
-            <div style="font-size:15px; font-weight:900; color:#141413; margin-bottom:8px;">⚡ กติกาเศรษฐกิจ & 5 เทิร์นสุดท้าย</div>
-            <ul style="margin:0; padding-left:20px; line-height:1.75; color:#141413; font-weight:700;">
-              <li><strong>Lap 1 Building Lock:</strong> รอบแรก (Lap 1) สร้างได้สูงสุดแค่ 2 หลัง (Building) ต้องผ่านจุด START ขึ้น Lap 2 จึงปลดล็อกโรงแรม (Hotel)</li>
-              <li><strong>Festival x2 Cities:</strong> สุ่มเมืองคูณสอง 3 แห่งตั้งแต่เริ่มเกม</li>
-              <li><strong>Last 5 Turns (เทิร์น 16..20):</strong> ค่าผ่านทางทุกเมืองทั่วกระดานเพิ่มขึ้น x1.5 เท่า!</li>
-              <li><strong>ครบ 20 เทิร์น:</strong> ตัดสินผู้ชนะจากสินทรัพย์รวม (เงินสด + มูลค่าเมืองทั้งหมด)</li>
-            </ul>
-          </div>
-        </div>
-      `;
-    }
 
-    modal.innerHTML = `
-      <div class="royal-panel" style="width:960px; max-width:96vw; height:88%; display:flex; flex-direction:column; padding:18px 24px; gap:14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; align-items:center; gap:8px;">
-            <span class="cartoon-title" style="font-size:19px; color:#FFD43B;">📊 GAME RULES & ODDS</span>
-            <button class="tab-pill ${this.rulesTab === 'SKILLS' ? 'active' : ''}" id="tabRulesSkills" style="font-weight:900; font-size:12px; padding:5px 12px;">20 สกิลฮิต ((÷3)×1.6)</button>
-            <button class="tab-pill ${this.rulesTab === 'CHANCE' ? 'active' : ''}" id="tabRulesChance" style="font-weight:900; font-size:12px; padding:5px 12px;">🃏 การ์ดดวง (9 ใบ + นางฟ้า)</button>
-            <button class="tab-pill ${this.rulesTab === 'DICE' ? 'active' : ''}" id="tabRulesDice" style="font-weight:900; font-size:12px; padding:5px 12px;">ตารางเกจลูกเต๋า 2..12</button>
-            <button class="tab-pill ${this.rulesTab === 'MONOPOLY' ? 'active' : ''}" id="tabRulesMono" style="font-weight:900; font-size:12px; padding:5px 12px;">กติกาชนะ Monopoly & 2v2</button>
-          </div>
-          <button class="red-btn" id="btnCloseRulesModal" style="border-radius:50%; width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900;">✕</button>
-        </div>
-        <div style="flex:1; overflow:hidden;">
-          ${bodyHtml}
-        </div>
-      </div>
-    `;
-
-    modal.classList.add('open');
-
-    modal
-      .querySelector('#btnCloseRulesModal')
-      ?.addEventListener('click', () => modal.classList.remove('open'));
-    modal.querySelector('#tabRulesSkills')?.addEventListener('click', () => {
-      this.rulesTab = 'SKILLS';
-      this.openRulesModal();
-    });
-    modal.querySelector('#tabRulesChance')?.addEventListener('click', () => {
-      this.rulesTab = 'CHANCE';
-      this.openRulesModal();
-    });
-    modal.querySelector('#tabRulesDice')?.addEventListener('click', () => {
-      this.rulesTab = 'DICE';
-      this.openRulesModal();
-    });
-    modal.querySelector('#tabRulesMono')?.addEventListener('click', () => {
-      this.rulesTab = 'MONOPOLY';
-      this.openRulesModal();
-    });
-  }
-
-  /**
-   * VICTORY SUMMARY MODAL
-   */
-  private renderVictoryModal(
-    modal: HTMLElement,
-    victory: VictoryResult
-  ): void {
-    try {
-      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
-    } catch {
-      // Ignore if canvas-confetti fails in headless env
-    }
-
-    const sortedPlayers = [...this.state.players]
-      .filter((p) => p.isSlotActive !== false)
-      .sort(
-        (a, b) =>
-          this.computePlayerTotalAssets(b) - this.computePlayerTotalAssets(a)
-      );
-
-    const rowsHtml = sortedPlayers
-      .map((p, i) => {
-        const charDef = getCharacterDef(p.characterId);
-        const isWin = victory.winnerPlayerIds.includes(p.id);
-        const total = this.computePlayerTotalAssets(p);
-        return `
-          <div style="background:${
-            isWin ? 'linear-gradient(90deg,#1e3a8a,#1d4ed8)' : '#0f172a'
-          }; border:2px solid ${
-            isWin ? '#fde047' : '#334155'
-          }; border-radius:10px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:20px; font-weight:900; color:#fde047;">#${i + 1}</span>
-              <span style="font-size:28px;">${charDef.avatarEmoji}</span>
-              <div>
-                <div style="font-size:15px; font-weight:900;">
-                  ${p.name} (${charDef.name}) ${isWin ? '👑 WINNER!' : ''}
-                </div>
-                <div style="font-size:11px; color:#93c5fd;">
-                  เงินสด: ${formatMarbleFull(p.marble)}
-                </div>
+            <div style="width:38px; height:38px; border-radius:10px; background:#FFF9EB; border:2px solid #1E1612; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 0 #1E1612; overflow:hidden;">
+              ${getMascotSvg(p.characterId, 36)}
+            </div>
+            <div style="overflow:hidden;">
+              <div style="font-size:12px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1.5px 0 #1E1612;">
+                ${p.name}
+              </div>
+              <div style="font-size:10px; font-weight:900; color:#FEF08A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 0 rgba(0,0,0,0.5);">
+                ${pChar.name} <span style="color:#FFF; font-size:9px;">(${pChar.rank})</span>
               </div>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:11px; color:#cbd5e1;">Total Assets</div>
-              <div style="font-size:16px; font-weight:900; color:#4ade80;">${formatMarbleFull(total)}</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:9px; font-weight:900; color:#FFF;">
+            <span>${p.treasureIds.map(tid => getTreasureDef(tid).iconEmoji).join(' ')} <span style="background:rgba(0,0,0,0.25); border-radius:4px; padding:0 3px; font-size:8px; margin-left:2px;">[${CHARACTER_SYNERGIES[p.characterId]?.archetypeTh || ''}]</span></span>
+            ${isSelected ? `<span style="background:#FFD43B; color:#1E1612; border:1.5px solid #1E1612; border-radius:999px; padding:0 6px; font-size:8.5px; font-weight:900; transform:rotate(-2deg); display:inline-block;">★ EDITING</span>` : `<span style="opacity:0.85; font-size:8.5px;">Click to Edit</span>`}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 3. Left Panel (1/3 Width): Pick Char + Pick Treasure
+    const charPickerCardsHtml = CHARACTER_ROSTER.map((c) => {
+      const isSelected = c.id === targetPlayer.characterId;
+      return `
+        <div class="lobby-char-btn" data-char-id="${c.id}" style="background:${isSelected ? 'linear-gradient(180deg,#FFFBEB 0%,#FEF08A 100%)' : '#FFF9EB'}; border:2.5px solid #1E1612; border-radius:10px; padding:4px; text-align:center; cursor:pointer; box-shadow:${isSelected ? 'inset 0 2px 0 rgba(255,255,255,0.8), 0 3px 0 #B45309, 0 5px 0 #1E1612' : '0 3px 0 #1E1612'}; position:relative; transition:transform 0.1s ease;">
+          ${isSelected ? `<span style="position:absolute; top:2px; right:3px; font-size:9px; color:#15803D; font-weight:900; background:#DCFCE7; border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; border:1px solid #15803D;">✔</span>` : ''}
+          <div style="display:flex; justify-content:center; align-items:center; height:32px;">${getMascotSvg(c.id, 32)}</div>
+          <div style="font-size:10px; font-weight:900; color:#1E1612; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">${c.name}</div>
+          <div style="font-size:8px; font-weight:900; color:#B45309;">${c.rank} • ${c.mainSkill.procPct}%</div>
+        </div>
+      `;
+    }).join('');
+
+    // Equipped 3 Treasure Slots
+    const equippedTrSlotsHtml = curTrIds.map((tid, slotIdx) => {
+      const tr = getTreasureDef(tid);
+      const isSlotActive = slotIdx === this.selectedTreasureSlotIndex;
+      const isConflict = isMainSkillConflict(tr.mainSkill.skillId, curChar.mainSkill.skillId);
+      return `
+        <div class="lobby-tr-slot-btn" data-slot-idx="${slotIdx}" style="background:${isSlotActive ? '#FEF9C3' : '#FFF9EB'}; border:2.5px solid ${isConflict ? '#DC2626' : '#1E1612'}; border-radius:10px; padding:4px 6px; display:flex; align-items:center; gap:6px; cursor:pointer; box-shadow:${isSlotActive ? '0 3px 0 #CA8A04, 0 5px 0 #1E1612' : '0 3px 0 #1E1612'};">
+          <span style="font-size:20px;">${tr.iconEmoji}</span>
+          <div style="overflow:hidden; flex:1;">
+            <div style="font-size:9px; font-weight:900; color:${isConflict ? '#DC2626' : '#1E1612'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              Slot ${slotIdx + 1}: ${tr.name}
+            </div>
+            <div style="font-size:8px; color:${isConflict ? '#B91C1C' : '#64748B'}; font-weight:800;">
+              ${isConflict ? '⛔ ซ้ำ Main' : `Main ${tr.mainSkill.procPct}%`}
             </div>
           </div>
-        `;
-      })
-      .join('');
+          ${isSlotActive ? `<span style="font-size:9px; color:#B45309; font-weight:900;">▼</span>` : ''}
+        </div>
+      `;
+    }).join('');
 
-    modal.innerHTML = `
-      <div class="royal-panel" style="width:780px; border:3.5px solid #fde047; padding:22px 28px; display:flex; flex-direction:column; gap:14px;">
-        <div style="text-align:center;">
-          <div style="font-size:13px; font-weight:900; color:#93c5fd;">MATCH COMPLETED</div>
-          <div style="font-size:28px; font-weight:900; color:#fde047;">
-            🏆 ${victory.winTypeLabel} (x${victory.multiplier} REWARD!)
+    // 10 Treasure Pool
+    const treasurePoolCardsHtml = TREASURE_POOL.map((t) => {
+      const isEquippedInActiveSlot = curTrIds[this.selectedTreasureSlotIndex] === t.id;
+      const isEquippedAnywhere = curTrIds.includes(t.id);
+      const isConflict = isMainSkillConflict(t.mainSkill.skillId, curChar.mainSkill.skillId);
+      return `
+        <div class="lobby-tr-pool-btn" data-tr-id="${t.id}" title="${t.name} (${t.nameEn})" style="background:${isEquippedInActiveSlot ? '#FEF9C3' : '#FFF9EB'}; border:2px solid ${isConflict ? '#DC2626' : '#1E1612'}; border-radius:8px; padding:3px; text-align:center; cursor:${isConflict ? 'not-allowed' : 'pointer'}; opacity:${isConflict ? 0.45 : 1}; position:relative; box-shadow:0 2px 0 #1E1612;">
+          ${isEquippedAnywhere ? `<span style="position:absolute; top:1px; right:2px; font-size:8px; color:#15803D; font-weight:900; background:#DCFCE7; border-radius:50%; width:12px; height:12px; display:flex; align-items:center; justify-content:center; border:1px solid #15803D;">✔</span>` : ''}
+          <div style="font-size:20px; line-height:1;">${t.iconEmoji}</div>
+          <div style="font-size:9px; font-weight:900; color:#1E1612; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.name}</div>
+          <div style="font-size:7.5px; color:${isConflict ? '#B91C1C' : '#64748B'}; font-weight:800;">
+            ${isConflict ? 'ซ้ำ Main' : `${t.mainSkill.procPct}%`}
           </div>
         </div>
+      `;
+    }).join('');
 
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          ${rowsHtml}
-        </div>
+    // 4. Right Panel (2/3 Width): See Abilities + See Sum Stat and Skills
+    const statsList = [
+      { label: `🎲 Dice Control`, pct: `${STAT_SCALING_TABLE.dcProcPct[curChar.stats.dc]}%`, lv: curChar.stats.dc, color: '#38bdf8' },
+      { label: `🛠️ Construction DC`, pct: `-${STAT_SCALING_TABLE.constDiscountPct[curChar.stats.constDc]}%`, lv: curChar.stats.constDc, color: '#fb923c' },
+      { label: `🤝 Acquisition DC`, pct: `-${STAT_SCALING_TABLE.acqDiscountPct[curChar.stats.acqDc]}%`, lv: curChar.stats.acqDc, color: '#facc15' },
+      { label: `🛡️ Toll Discount`, pct: `-${STAT_SCALING_TABLE.tollDiscountPct[curChar.stats.tollDc]}%`, lv: curChar.stats.tollDc, color: '#f59e0b' },
+      { label: `🍀 Salary / Luck`, pct: `+${STAT_SCALING_TABLE.salLuckBonusPct[curChar.stats.salLuck]}%`, lv: curChar.stats.salLuck, color: '#4ade80' },
+    ];
 
-        <div style="display:flex; justify-content:center; gap:18px; margin-top:6px;">
-          <button class="gold-btn" id="btnVictoryRematch" style="padding:10px 28px; font-size:15px;">
-            🔄 PLAY AGAIN (REMATCH)
-          </button>
-          <button class="blue-btn" id="btnVictoryLobby" style="padding:10px 24px; font-size:14px;">
-            👥 RETURN TO LOBBY
-          </button>
-        </div>
-      </div>
-    `;
-
-    modal
-      .querySelector('#btnVictoryRematch')
-      ?.addEventListener('click', () => {
-        modal.classList.remove('open');
-        this.callbacks.onRematch?.();
-      });
-
-    modal
-      .querySelector('#btnVictoryLobby')
-      ?.addEventListener('click', () => {
-        modal.classList.remove('open');
-        this.state.victoryResult = null;
-        if (this.callbacks.onReturnToLobby) {
-          this.callbacks.onReturnToLobby();
-        } else {
-          this.showScreen('LOBBY');
-        }
-      });
-  }
-
-  private computeTileSellRefund(tileState: BoardTileState): number {
-    const def = WORLD_MAP_TILES[tileState.index];
-    const mult =
-      MATCH_CONFIG.buildingCostMultipliers[tileState.buildingLevel] ?? 1;
-    return Math.round(def.baseCost * mult * MATCH_CONFIG.citySellRefundRate);
-  }
-
-  private computePlayerTotalAssets(player: PlayerState): number {
-    if (player.isBankrupt) return 0;
-    let propVal = 0;
-    for (const t of this.state.tiles) {
-      if (t.ownerId === player.id) {
-        const def = WORLD_MAP_TILES[t.index];
-        const mult =
-          MATCH_CONFIG.buildingCostMultipliers[t.buildingLevel] ?? 1;
-        propVal += Math.round(def.baseCost * mult);
+    const statBarsHtml = statsList.map((s) => {
+      let segs = '';
+      for (let i = 1; i <= 5; i++) {
+        segs += `<div style="flex:1; height:12px; border-radius:999px; background:${i <= s.lv ? s.color : '#F3E5C8'}; border:2px solid #1E1612; box-shadow:${i <= s.lv ? 'inset 0 2px 0 rgba(255,255,255,0.7), 0 2px 0 #1E1612' : 'none'};"></div>`;
       }
-    }
-    return player.marble + propVal;
-  }
-
-  private computeMonopolyProgress(player: PlayerState): {
-    completedColorGroups: number;
-    bestLineCount: number;
-    tourismOwned: number;
-  } {
-    const isOwnedBySide = (ownerId: PlayerId | null): boolean => {
-      if (!ownerId) return false;
-      if (ownerId === player.id) return true;
-      if (this.state.mode === 'TEAM_2V2' && player.teamId) {
-        const other = this.state.players.find((p) => p.id === ownerId);
-        return other?.teamId === player.teamId;
-      }
-      return false;
-    };
-
-    let completedColorGroups = 0;
-    for (let g = 1; g <= 7; g++) {
-      const groupTiles = WORLD_MAP_TILES.filter((t) => t.group === g);
-      if (
-        groupTiles.length > 0 &&
-        groupTiles.every((t) => isOwnedBySide(this.state.tiles[t.index]?.ownerId))
-      ) {
-        completedColorGroups++;
-      }
-    }
-
-    let bestLineCount = 0;
-    for (let line = 0; line < 4; line++) {
-      const buyableOnLine = WORLD_MAP_TILES.filter(
-        (t) => t.line === line && (t.type === 'CITY' || t.type === 'TOURISM')
-      );
-      const ownedCount = buyableOnLine.filter((t) =>
-        isOwnedBySide(this.state.tiles[t.index]?.ownerId)
-      ).length;
-      if (ownedCount > bestLineCount) bestLineCount = ownedCount;
-    }
-
-    const tourismOwned = WORLD_MAP_TILES.filter(
-      (t) =>
-        t.type === 'TOURISM' &&
-        isOwnedBySide(this.state.tiles[t.index]?.ownerId)
-    ).length;
-
-    return { completedColorGroups, bestLineCount, tourismOwned };
-  }
-}
+      return `
+        <div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:900; color:#141413; margin-bottom:2px;">
+            <span>${s.label} (${s.pct})</span>
+            <span style="color:#B45309; font-weight:900;">+${s.lv}/5</span>
+          </div>
+          <div style="display:flex; gap:3px;">${segs}</div>
+ 
