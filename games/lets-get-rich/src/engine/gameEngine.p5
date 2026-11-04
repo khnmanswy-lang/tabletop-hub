@@ -1,0 +1,686 @@
+tate.boardPickReason = 'BLACK_HOLE_PLACE';
+    this.matchState.boardPickValidTiles = validTiles;
+    this.matchState.pendingBlackHoleLandmarkIndex = landmarkTileIndex;
+    this.appendLog(
+      player.id,
+      `🌀 เลือกช่องบนกระดานเพื่อวางหลุมดำเชื่อมมายัง ${WORLD_MAP_TILES[landmarkTileIndex].nameTh}`,
+      'SKILL'
+    );
+    this.emitStateChange();
+  }
+
+  private openLineTeleportPicker(player: PlayerState, landmarkTileIndex: number): void {
+    if (!this.matchState) return;
+    const rowLine = WORLD_MAP_TILES[landmarkTileIndex].line;
+    // Non-corner tiles in the same row (indices % 8 !== 0) excluding the Landmark tile itself
+    const validTiles = WORLD_MAP_TILES.filter(
+      (t) => t.line === rowLine && t.index % 8 !== 0 && t.index !== landmarkTileIndex
+    ).map((t) => t.index);
+
+    if (validTiles.length === 0) {
+      this.finishTileResolution();
+      return;
+    }
+
+    this.matchState.phase = 'BOARD_TARGET_PICK';
+    this.matchState.boardPickReason = 'LINE_TELEPORT_DEST';
+    this.matchState.boardPickValidTiles = validTiles;
+    this.appendLog(
+      player.id,
+      `🔮 วาร์ปแถวแลนด์มาร์กทำงาน! เลือกช่องในแถวเดียวกัน (ไม่รวมช่องมุม) เพื่อวาร์ปไปทันที!`,
+      'SKILL'
+    );
+    this.emitStateChange();
+  }
+
+  // --------------------------------------------------------------------------
+  // HOOK 11: BONUS COIN FLIP MINIGAME (TILE 2) + S09_COIN_MASTER
+  // --------------------------------------------------------------------------
+
+  private startBonusCoinGame(player: PlayerState): void {
+    if (!this.matchState) return;
+    // Hook 11: ON_BONUS_GAME_START -> S09_COIN_MASTER
+    const coinMasterProc = this.tryTriggerSkill(player, 'S09_COIN_MASTER');
+
+    const bonusState: PendingBonusGameState = coinMasterProc
+      ? {
+          playerId: player.id,
+          round: 2,
+          currentReward: MATCH_CONFIG.bonusGameRewards[1], // 200,000 M guaranteed Round 1 win!
+          hasCoinMasterRetry: true,
+          autoWonRound1: true,
+        }
+      : {
+          playerId: player.id,
+          round: 1,
+          currentReward: MATCH_CONFIG.bonusGameRewards[0], // 100,000 M base pot
+          hasCoinMasterRetry: false,
+          autoWonRound1: false,
+        };
+
+    this.matchState.activePrompt = {
+      type: 'BONUS_COIN_GAME',
+      bonusState,
+    };
+    this.emitStateChange();
+  }
+
+  public flipBonusCoin(_choice: 'HEADS' | 'TAILS'): {
+    wonRound: boolean;
+    usedRetry: boolean;
+    finished: boolean;
+    reward: number;
+  } {
+    if (!this.matchState || this.matchState.activePrompt?.type !== 'BONUS_COIN_GAME') {
+      return { wonRound: false, usedRetry: false, finished: true, reward: 0 };
+    }
+
+    const bs = this.matchState.activePrompt.bonusState;
+    const player = this.matchState.players[bs.playerId];
+    const isWin = Math.random() < 0.5;
+
+    if (isWin) {
+      const nextReward = MATCH_CONFIG.bonusGameRewards[bs.round] ?? 800_000;
+      bs.currentReward = nextReward;
+
+      if (bs.round >= 3) {
+        player.marble += nextReward;
+        this.appendLog(
+          player.id,
+          `🪙 ${player.name} ชนะโยนเหรียญครบ 3 ตาติด! รับแจ็กพอต +${formatMarbleCompact(nextReward)}!`,
+          'MOVE'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex: 2,
+          text: `+${formatMarbleCompact(nextReward)} JACKPOT!`,
+          colorHex: '#E5A93B',
+        });
+        this.matchState.activePrompt = null;
+        this.finishTileResolution();
+        return { wonRound: true, usedRetry: false, finished: true, reward: nextReward };
+      }
+
+      bs.round = (bs.round + 1) as 1 | 2 | 3;
+      this.emitStateChange();
+      return { wonRound: true, usedRetry: false, finished: false, reward: nextReward };
+    }
+
+    // Guessed wrong: check S09_COIN_MASTER free retry!
+    if (bs.hasCoinMasterRetry) {
+      bs.hasCoinMasterRetry = false;
+      this.appendLog(
+        player.id,
+        `⚡ เซียนมินิเกมทำงาน! ${player.name} ทายผิดแต่ได้สิทธิ์แก้ตัวฟรีอีก 1 ครั้ง!`,
+        'SKILL'
+      );
+      this.callbacks.onToastBanner?.(
+        `⚡ เซียนมินิเกม! ได้สิทธิ์โยนเหรียญแก้ตัวฟรี!`,
+        '#9333EA'
+      );
+      this.emitStateChange();
+      return { wonRound: false, usedRetry: true, finished: false, reward: bs.currentReward };
+    }
+
+    // Lose bonus game pot
+    this.appendLog(player.id, `🪙 ${player.name} ทายเหรียญพลาด อดรับเงินรางวัลโบนัส`, 'MOVE');
+    this.matchState.activePrompt = null;
+    this.finishTileResolution();
+    return { wonRound: false, usedRetry: false, finished: true, reward: 0 };
+  }
+
+  public takeBonusReward(): void {
+    if (!this.matchState || this.matchState.activePrompt?.type !== 'BONUS_COIN_GAME') return;
+    const bs = this.matchState.activePrompt.bonusState;
+    const player = this.matchState.players[bs.playerId];
+    if (player && bs.currentReward > 0) {
+      player.marble += bs.currentReward;
+      this.appendLog(
+        player.id,
+        `🪙 ${player.name} หยุดรับเงินรางวัลโยนเหรียญ +${formatMarbleCompact(bs.currentReward)}!`,
+        'MOVE'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: 2,
+        text: `+${formatMarbleCompact(bs.currentReward)}`,
+        colorHex: '#16A34A',
+      });
+    }
+    this.matchState.activePrompt = null;
+    this.finishTileResolution();
+  }
+
+  // --------------------------------------------------------------------------
+  // HOOK 10: CHANCE / FORTUNE CARD TILE + M10_DISRUPT_CITY
+  // --------------------------------------------------------------------------
+
+  public setDisruptMode(mode: DisruptActionMode): void {
+    if (!this.matchState) return;
+    this.matchState.disruptMode = mode;
+    this.emitStateChange();
+  }
+
+  private resolveChanceTile(player: PlayerState): void {
+    if (!this.matchState) return;
+
+    // Weighted 9-Card Classic Fortune Deck (100% Total Weight — No Gold Bonus)
+    let totalWeight = 0;
+    for (const c of FORTUNE_CARD_DECK) {
+      totalWeight += c.weightPct;
+    }
+    let roll = Math.random() * totalWeight;
+    let pickedDef = FORTUNE_CARD_DECK[0];
+    for (const c of FORTUNE_CARD_DECK) {
+      if (roll < c.weightPct) {
+        pickedDef = c;
+        break;
+      }
+      roll -= c.weightPct;
+    }
+
+    let rewardAmount = 0;
+    const descTh = pickedDef.descTh;
+    if (pickedDef.cardId === 'HOST_OLYMPIC_FREE' || pickedDef.cardId === 'FORCED_SALE_OR_SWAP') {
+      rewardAmount = 150_000;
+    } else if (pickedDef.cardId === 'POWER_OUTAGE' || pickedDef.cardId === 'CHARITY_TAX') {
+      rewardAmount = 120_000;
+    }
+
+    this.matchState.activePrompt = {
+      type: 'FORTUNE_CARD_MODAL',
+      playerId: player.id,
+      cardId: pickedDef.cardId,
+      titleTh: `${pickedDef.emoji} ${pickedDef.titleTh}`,
+      titleEn: pickedDef.titleEn,
+      descTh,
+      rewardAmount,
+    };
+    this.emitStateChange();
+  }
+
+  public confirmFortuneCard(): void {
+    if (!this.matchState || this.matchState.activePrompt?.type !== 'FORTUNE_CARD_MODAL') return;
+    const prompt = this.matchState.activePrompt;
+    const player = this.matchState.players[prompt.playerId];
+    this.matchState.activePrompt = null;
+
+    if (!player) {
+      this.finishTileResolution();
+      return;
+    }
+
+    switch (prompt.cardId) {
+      case 'ANGEL_SHIELD': {
+        player.hasAngelCard = true;
+        this.appendLog(
+          player.id,
+          `👼 ${player.name} ได้รับ "การ์ดนางฟ้า" (ป้องกันค่าผ่านทาง 100% หรือป้องกันการป่วนเมือง)!`,
+          'MOVE'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex: player.tileIndex,
+          text: `👼 ได้การ์ดนางฟ้า!`,
+          colorHex: '#FDE047',
+        });
+        this.finishTileResolution();
+        return;
+      }
+
+      case 'DISCOUNT_COUPON': {
+        player.hasDiscountCoupon = true;
+        this.appendLog(
+          player.id,
+          `🎟️ ${player.name} ได้รับ "คูปองลดค่าผ่านทาง 50%" สำหรับเมืองศัตรูครั้งถัดไป!`,
+          'MOVE'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex: player.tileIndex,
+          text: `🎟️ คูปองลด 50%!`,
+          colorHex: '#38BDF8',
+        });
+        this.finishTileResolution();
+        return;
+      }
+
+      case 'FREE_START_PASS': {
+        player.tileIndex = 0;
+        this.awardStartSalary(player);
+        this.openStartUpgradePicker(player);
+        return;
+      }
+
+      case 'HOST_OLYMPIC_FREE': {
+        const hasOwned = this.matchState.tiles.some((t) =>
+          this.arePlayersAllied(player.id, t.ownerId)
+        );
+        if (hasOwned) {
+          this.openOlympicCityPicker(player, true);
+        } else {
+          player.marble += prompt.rewardAmount;
+          this.appendLog(
+            player.id,
+            `🃏 ${player.name} ยังไม่มีเมืองจัดโอลิมปิก รับเงินปลอบใจ +${formatMarbleCompact(prompt.rewardAmount)}!`,
+            'MOVE'
+          );
+          this.finishTileResolution();
+        }
+        return;
+      }
+
+      case 'WORLD_TRAVEL_INVITE': {
+        this.warpPlayerToSkyTerminal(player, true);
+        this.finishTileResolution();
+        return;
+      }
+
+      case 'POWER_OUTAGE': {
+        const enemyTiles = this.matchState.tiles
+          .filter((t) => t.ownerId !== null && !this.arePlayersAllied(player.id, t.ownerId) && !t.isBlackout)
+          .map((t) => t.index);
+        if (enemyTiles.length > 0) {
+          this.matchState.phase = 'BOARD_TARGET_PICK';
+          this.matchState.boardPickReason = 'BLACKOUT_SELECT';
+          this.matchState.boardPickValidTiles = enemyTiles;
+          this.emitStateChange();
+        } else {
+          player.marble += prompt.rewardAmount;
+          this.appendLog(
+            player.id,
+            `🔌 ยังไม่มีเมืองศัตรูให้ตัดไฟ ${player.name} รับโบนัส +${formatMarbleCompact(prompt.rewardAmount)} แทน!`,
+            'MOVE'
+          );
+          this.finishTileResolution();
+        }
+        return;
+      }
+
+      case 'FORCED_SALE_OR_SWAP': {
+        const enemyNonLandmarks = this.matchState.tiles
+          .filter((t) => {
+            const def = WORLD_MAP_TILES[t.index];
+            return (
+              def.type === 'CITY' &&
+              t.ownerId !== null &&
+              !this.arePlayersAllied(player.id, t.ownerId) &&
+              t.buildingLevel >= BuildingLevel.LAND &&
+              t.buildingLevel < BuildingLevel.LANDMARK
+            );
+          })
+          .map((t) => t.index);
+
+        if (enemyNonLandmarks.length > 0) {
+          this.matchState.phase = 'BOARD_TARGET_PICK';
+          this.matchState.boardPickReason = 'DISRUPT_SELL_OR_SWAP';
+          this.matchState.boardPickValidTiles = enemyNonLandmarks;
+          this.emitStateChange();
+        } else {
+          player.marble += prompt.rewardAmount;
+          this.appendLog(
+            player.id,
+            `🔮 ยังไม่มีเมืองศัตรูที่บังคับขายได้ ${player.name} รับโบนัส +${formatMarbleCompact(prompt.rewardAmount)} แทน!`,
+            'MOVE'
+          );
+          this.finishTileResolution();
+        }
+        return;
+      }
+
+      case 'CHARITY_TAX': {
+        const paid = Math.min(player.marble, prompt.rewardAmount);
+        player.marble -= paid;
+        this.appendLog(
+          player.id,
+          `💸 ${player.name} เปิดได้การ์ดบริจาคการกุศล จ่ายเงิน -${formatMarbleCompact(paid)}!`,
+          'TOLL'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex: player.tileIndex,
+          text: `-${formatMarbleCompact(paid)} บริจาค`,
+          colorHex: '#DC2626',
+        });
+        this.finishTileResolution();
+        return;
+      }
+
+      case 'ISLAND_EXILE': {
+        this.appendLog(
+          player.id,
+          `🌪️ ${player.name} เปิดเจอพายุพัดหลงติดเกาะร้างทันที!`,
+          'MOVE'
+        );
+        this.sendPlayerToDesertIsland(player);
+        return;
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // TAX AUDIT TILE (TILE 30: 10% OF TOTAL ASSETS)
+  // --------------------------------------------------------------------------
+
+  private resolveTaxAuditTile(player: PlayerState): void {
+    if (!this.matchState) return;
+    const totalAssets = this.calculatePlayerTotalAssets(player.id);
+    const taxAmount = Math.max(50_000, Math.round(totalAssets * MATCH_CONFIG.taxAuditRate));
+
+    if (taxAmount > 0 && player.hasAngelCard) {
+      this.matchState.activePrompt = {
+        type: 'ANGEL_CARD_PROMPT',
+        playerId: player.id,
+        tileIndex: player.tileIndex,
+        creditorId: 'BANK',
+        tollAmount: taxAmount,
+        hasDiscountCoupon: false,
+        discountedTollAmount: taxAmount,
+        reason: 'TAX',
+      };
+      this.emitStateChange();
+      return;
+    }
+
+    this.executeTaxAuditPayment(player, taxAmount);
+  }
+
+  private executeTaxAuditPayment(player: PlayerState, taxAmount: number): void {
+    if (!this.matchState) return;
+    if (player.marble >= taxAmount) {
+      player.marble -= taxAmount;
+      this.appendLog(
+        player.id,
+        `🏛️ ${player.name} จ่ายภาษีสรรพากร 10% (-${formatMarbleCompact(taxAmount)})`,
+        'TOLL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: player.tileIndex,
+        text: `-${formatMarbleCompact(taxAmount)} TAX`,
+        colorHex: '#DC2626',
+      });
+      this.callbacks.onTaxPaid?.({
+        payerId: player.id,
+        amount: taxAmount,
+        tileIndex: player.tileIndex,
+      });
+      this.finishTileResolution();
+    } else {
+      this.enqueueOrStartDebt({
+        debtorId: player.id,
+        creditorId: 'BANK',
+        amountOwed: taxAmount,
+        sourceTileIndex: 30,
+        allowPostPayTakeover: false,
+        isFromSkillPull: false,
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // BOARD TARGET PICKER RESOLUTION
+  // --------------------------------------------------------------------------
+
+  public selectBoardTargetTile(tileIndex: number): boolean {
+    if (!this.matchState || this.matchState.phase !== 'BOARD_TARGET_PICK') return false;
+    if (!this.matchState.boardPickValidTiles.includes(tileIndex)) return false;
+
+    const reason = this.matchState.boardPickReason;
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    const tile = this.matchState.tiles[tileIndex];
+    const def = WORLD_MAP_TILES[tileIndex];
+
+    this.matchState.boardPickReason = null;
+    this.matchState.boardPickValidTiles = [];
+    this.matchState.phase = 'TILE_RESOLUTION';
+
+    switch (reason) {
+      case 'BLACK_HOLE_PLACE': {
+        const whiteIdx = this.matchState.pendingBlackHoleLandmarkIndex ?? player.tileIndex;
+        this.matchState.pendingBlackHoleLandmarkIndex = null;
+        this.matchState.blackHole = {
+          blackTileIndex: tileIndex,
+          whiteTileIndex: whiteIdx,
+          ownerId: player.id,
+        };
+        this.appendLog(
+          player.id,
+          `🌀 ${player.name} วางหลุมดำที่ ${def.nameTh} เชื่อมมายัง ${WORLD_MAP_TILES[whiteIdx].nameTh}!`,
+          'SKILL'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex,
+          text: `🌀 BLACK HOLE!`,
+          colorHex: '#7C3AED',
+        });
+        this.finishTileResolution();
+        return true;
+      }
+
+      case 'OLYMPIC_SELECT': {
+        const isFree = this.matchState.pendingOlympicIsFree;
+        this.matchState.pendingOlympicIsFree = false;
+        this.applyOlympicExpoToTile(tileIndex, player, isFree);
+        this.finishTileResolution();
+        return true;
+      }
+
+      case 'BLACKOUT_SELECT': {
+        const targetOwner = tile.ownerId ? this.matchState.players[tile.ownerId] : null;
+        if (targetOwner && targetOwner.hasAngelCard) {
+          targetOwner.hasAngelCard = false;
+          this.callbacks.onAngelCardUsed?.({
+            playerId: targetOwner.id,
+            tileIndex,
+            targetName: def.nameTh,
+            reason: 'BLACKOUT',
+          });
+          this.appendLog(
+            targetOwner.id,
+            `👼 การ์ดนางฟ้าของ ${targetOwner.name} ทำงาน! ป้องกันการ์ดไฟดับที่ ${def.nameTh} สำเร็จ!`,
+            'SKILL'
+          );
+          this.callbacks.onFloatingText?.({
+            tileIndex,
+            text: `👼 นางฟ้ากันไฟดับ!`,
+            colorHex: '#FDE047',
+          });
+          this.finishTileResolution();
+          return true;
+        }
+
+        tile.isBlackout = true;
+        this.appendLog(
+          player.id,
+          `🔌 ${player.name} ใช้การ์ดไฟดับ ตัดไฟเมือง ${def.nameTh} (ค่าผ่านทางเหลือ 0 M)!`,
+          'SKILL'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex,
+          text: `🔌 ไฟดับ (x0)!`,
+          colorHex: '#38BDF8',
+        });
+        this.finishTileResolution();
+        return true;
+      }
+
+      case 'START_UPGRADE_CITY': {
+        if (tile.buildingLevel < BuildingLevel.LANDMARK) {
+          tile.buildingLevel = (tile.buildingLevel + 1) as BuildingLevel;
+          const isNowLm = tile.buildingLevel === BuildingLevel.LANDMARK;
+          this.appendLog(
+            player.id,
+            `⬆️ ${player.name} ใช้สิทธิ์จุด START อัปเกรด ${def.nameTh} เป็น ${isNowLm ? 'แลนด์มาร์ก!' : `ระดับ ${tile.buildingLevel}`}`,
+            'BUILD'
+          );
+          this.callbacks.onFloatingText?.({
+            tileIndex,
+            text: isNowLm ? `🏛️ LANDMARK!` : `⬆️ UPGRADE!`,
+            colorHex: player.colorHex,
+          });
+          // Landmark skills (M01, M02, M08, M10, S06) ONLY trigger on manual build during normal turn, NEVER from START or skills!
+        }
+        this.finishTileResolution();
+        return true;
+      }
+
+      case 'DISRUPT_SELL_OR_SWAP': {
+        const prevOwner = tile.ownerId ? this.matchState.players[tile.ownerId] : null;
+        if (prevOwner && prevOwner.hasAngelCard) {
+          prevOwner.hasAngelCard = false;
+          this.callbacks.onAngelCardUsed?.({
+            playerId: prevOwner.id,
+            tileIndex,
+            targetName: def.nameTh,
+            reason: 'DISRUPT',
+          });
+          this.appendLog(
+            prevOwner.id,
+            `👼 การ์ดนางฟ้าของ ${prevOwner.name} ทำงาน! ป้องกันการบังคับขาย/สลับเมืองที่ ${def.nameTh} สำเร็จ!`,
+            'SKILL'
+          );
+          this.callbacks.onFloatingText?.({
+            tileIndex,
+            text: `👼 นางฟ้าป้องกันเมือง!`,
+            colorHex: '#FDE047',
+          });
+          this.finishTileResolution();
+          return true;
+        }
+
+        const ownNonLandmarks = this.matchState.tiles.filter(
+          (t) =>
+            WORLD_MAP_TILES[t.index].type === 'CITY' &&
+            t.ownerId === player.id &&
+            t.buildingLevel >= BuildingLevel.LAND &&
+            t.buildingLevel < BuildingLevel.LANDMARK
+        );
+
+        if (this.matchState.disruptMode === 'SWAP' && ownNonLandmarks.length > 0 && prevOwner) {
+          // Swap player's lowest-value non-Landmark city with the target enemy city
+          ownNonLandmarks.sort(
+            (a, b) =>
+              this.calculateTilePropertyValue(a.index) - this.calculateTilePropertyValue(b.index)
+          );
+          const myLowestTile = ownNonLandmarks[0];
+          const myDef = WORLD_MAP_TILES[myLowestTile.index];
+
+          myLowestTile.ownerId = prevOwner.id;
+          tile.ownerId = player.id;
+
+          this.appendLog(
+            player.id,
+            `🔮 ${player.name} ใช้สกิลสลับโฉนด! นำเมือง ${myDef.nameTh} สลับกับ ${def.nameTh} ของ ${prevOwner.name}!`,
+            'SKILL'
+          );
+          this.callbacks.onFloatingText?.({
+            tileIndex,
+            text: `🔮 SWAPPED!`,
+            colorHex: '#9333EA',
+          });
+        } else {
+          // Force-Sell enemy city back to bank
+          const refund = this.calculateTileSellRefund(tileIndex);
+          if (prevOwner) {
+            prevOwner.marble += refund;
+          }
+          tile.ownerId = null;
+          tile.buildingLevel = BuildingLevel.NONE;
+          tile.olympicMultiplier = 1;
+          tile.stepMultiplier = 1;
+
+          this.appendLog(
+            player.id,
+            `🔮 ${player.name} บังคับขายเมือง ${def.nameTh} ของ ${prevOwner?.name ?? 'ศัตรู'} คืนธนาคาร!`,
+            'SKILL'
+          );
+          this.callbacks.onFloatingText?.({
+            tileIndex,
+            text: `🔮 บังคับขาย!`,
+            colorHex: '#9333EA',
+          });
+        }
+
+        if (this.checkAndApplyVictoryConditions()) {
+          this.emitStateChange();
+          return true;
+        }
+        this.finishTileResolution();
+        return true;
+      }
+
+      case 'WORLD_TRAVEL_DEST': {
+        const isFree = this.matchState.freeWorldTravelMap[player.id] ?? false;
+        const fee = isFree ? 0 : MATCH_CONFIG.worldTravelTicketCost;
+        if (fee > 0) {
+          player.marble = Math.max(0, player.marble - fee);
+        }
+        player.isWaitingTravel = false;
+        this.matchState.freeWorldTravelMap[player.id] = false;
+
+        // If flying past START (or to START), check if they wrapped around
+        if (tileIndex === 0 || tileIndex < 24) {
+          this.awardStartSalary(player);
+        }
+
+        this.appendLog(
+          player.id,
+          `✈️ ${player.name} บินลัดฟ้าไปลงที่ ${def.nameTh}!`,
+          'MOVE'
+        );
+
+        // Animate single warp hop to destination
+        this.matchState.pendingMovePath = [tileIndex];
+        this.matchState.pendingSteppedCount = 1; // Already processed START wrap
+        player.tileIndex = tileIndex;
+        this.matchState.phase = 'PIECE_MOVING';
+        this.emitStateChange();
+        return true;
+      }
+
+      case 'LINE_TELEPORT_DEST': {
+        this.appendLog(
+          player.id,
+          `🔮 ${player.name} วาร์ปในแถวเดียวกันไปยัง ${def.nameTh} ทันที!`,
+          'SKILL'
+        );
+        this.callbacks.onFloatingText?.({
+          tileIndex,
+          text: `🔮 ROW WARP!`,
+          colorHex: '#9333EA',
+        });
+
+        // Animate single warp hop to destination in same row
+        this.matchState.pendingMovePath = [tileIndex];
+        this.matchState.pendingSteppedCount = 1;
+        player.tileIndex = tileIndex;
+        this.matchState.phase = 'PIECE_MOVING';
+        this.emitStateChange();
+        return true;
+      }
+    }
+
+    this.finishTileResolution();
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // DEBT, BANK LOAN, CITY SELL-BACK & BANKRUPTCY RESOLUTION
+  // --------------------------------------------------------------------------
+
+  private enqueueOrStartDebt(debt: PendingDebtState): void {
+    if (!this.matchState) return;
+    if (!this.matchState.pendingDebt) {
+      this.matchState.pendingDebt = debt;
+      this.matchState.phase = 'DEBT_RESOLUTION';
+    } else {
+      this.matchState.pendingDebtQueue.push(debt);
+    }
+    this.emitStateChange();
+  }
+
+  public takeBankLoan(): boolean {
+    if (!this.matchState || !this.matchState.pendingDebt) return false;
+    const debtor = this.matchState.players[this.matchState.pendingDebt.debtorId];
+    if (!debtor || debtor.loanUsed) return false;
+
+    debtor.loanUsed = true;
+    debtor.marble += MATCH_CONFIG.bankLoanAmount;
+    this.appendLog(
+      debtor.id,
+      `🏦 ${debtor.name} กู้เงินฉุกเฉินจากธนาคาร +${formatMarbleCompact(MATCH_CONFIG.bank
