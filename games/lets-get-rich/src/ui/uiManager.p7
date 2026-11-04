@@ -1,0 +1,583 @@
+#monopolyDangerBannerSlot');
+    if (alertSlot) {
+      const alerts = this.state.monopolyAlerts ?? [];
+      if (alerts.length > 0) {
+        const topAlert = alerts[0];
+        const owner = this.state.players.find(
+          (p) => p.id === topAlert.ownerPlayerId
+        );
+        const missingTile = WORLD_MAP_TILES[topAlert.missingTileIndex];
+        alertSlot.innerHTML = `
+          <div class="monopoly-danger-banner">
+            <span>🚨 DANGER!</span>
+            <span style="color:#ffffff;">${owner ? owner.name : topAlert.ownerPlayerId}</span>
+            <span>ขาดอีก 1 ช่อง (${
+              missingTile ? missingTile.nameTh : '#' + topAlert.missingTileIndex
+            }) ชนะ</span>
+            <span style="color:#fde047; text-decoration:underline;">${
+              topAlert.labelTh
+            }</span>
+          </div>
+        `;
+      } else {
+        alertSlot.innerHTML = '';
+      }
+    }
+
+    // Toggle Human Bankrupt Fast-Exit Box
+    const humanExitBox = this.stageEl.querySelector(
+      '#humanBankruptExitBox'
+    ) as HTMLElement | null;
+    if (humanExitBox) {
+      const humanPlayer = this.state.players.find(
+        (p) => p.isSlotActive !== false && p.controlType === 'HUMAN'
+      );
+      const isHumanBankrupt = humanPlayer?.isBankrupt ?? false;
+      const isGameOver = !!this.state.victoryResult;
+      humanExitBox.style.display =
+        isHumanBankrupt && !isGameOver ? 'flex' : 'none';
+    }
+
+    this.renderCenterDiceReadout();
+    this.renderBoardPickerDrawer();
+  }
+
+  // ==========================================================================
+  // SCREEN 5: PLAYER INFO & SKILL INSPECTOR MODAL (Reference Image 5)
+  // ==========================================================================
+  public openPlayerInspector(playerId: PlayerId): void {
+    this.inspectedPlayerId = playerId;
+    const modal = this.stageEl.querySelector(
+      '#modal_PLAYER_INSPECTOR'
+    ) as HTMLElement;
+    if (!modal) return;
+
+    const p =
+      this.state.players.find((x) => x.id === this.inspectedPlayerId) ??
+      this.state.players[0];
+    if (!p) return;
+
+    const charDef = getCharacterDef(p.characterId);
+    const charMainDef = getSkillDef(charDef.mainSkill.skillId);
+
+    const switcherHtml = this.state.players
+      .filter((pl) => pl.isSlotActive !== false)
+      .map((pl) => {
+        const c = getCharacterDef(pl.characterId);
+        return `
+          <button class="tab-pill inspector-p-tab ${
+            pl.id === p.id ? 'active' : ''
+          }" data-pid="${pl.id}" style="padding:4px 10px; font-size:11px; font-weight:900;">
+            ${c.name}
+          </button>
+        `;
+      })
+      .join('');
+
+    const getCategoryBadge = (text: string): string => {
+      if (text.includes('หลุมดำ') || text.includes('แม่เหล็ก') || text.includes('บังคับขาย') || text.includes('สลาย')) {
+        return `<span style="background:#EF4444; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">💥 TRAP</span>`;
+      }
+      if (text.includes('บิน') || text.includes('วาร์ป') || text.includes('เที่ยวบิน') || text.includes('แท็กซี่') || text.includes('สร้าง')) {
+        return `<span style="background:#0EA5E9; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">✈️ WARP</span>`;
+      }
+      if (text.includes('ลดค่าผ่านทาง') || text.includes('คูณ') || text.includes('เงิน') || text.includes('โบนัส')) {
+        return `<span style="background:#10B981; color:#FFF; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">💰 TOLL</span>`;
+      }
+      return `<span style="background:#F59E0B; color:#1E1612; font-weight:900; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1.5px solid #1E1612; margin-right:6px;">🛡️ DEFENSE</span>`;
+    };
+
+    const renderGoldenSkillCard = (
+      iconHtml: string,
+      procPct: number,
+      textDesc: string,
+      title?: string,
+      subSkillHtml?: string
+    ): string => `
+      <div class="lgr-skill-golden-row" style="
+        background: #FFF9EB;
+        border: 3px solid #1E1612;
+        border-radius: 14px;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: inset 0 2px 0 rgba(255,255,255,0.7), 0 3px 0 #D9C398, 0 5px 0 #1E1612;
+      ">
+        <div style="
+          width: 56px;
+          height: 56px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #FEF9C3 0%, #FDE047 100%);
+          border: 2.5px solid #1E1612;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 2px 0 rgba(255,255,255,0.9), 0 2px 0 #1E1612;
+          flex-shrink: 0;
+          overflow: hidden;
+        ">
+          <span style="
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            background: #FFD43B;
+            color: #1E1612;
+            font-size: 10.5px;
+            font-weight: 900;
+            padding: 0px 6px;
+            border-radius: 999px;
+            border: 1.5px solid #1E1612;
+            box-shadow: 0 1px 0 #1E1612;
+            line-height: 15px;
+            z-index: 2;
+          ">S+</span>
+          ${iconHtml}
+        </div>
+        <div style="flex:1; font-size:13.5px; font-weight:800; color:#141413; line-height:1.45;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+            <div style="display:flex; align-items:center;">
+              ${getCategoryBadge(textDesc)}
+              ${title ? `<span style="color:#854D0E; font-size:13.5px; font-weight:900;">${title}</span>` : ''}
+            </div>
+            <span style="background:#1E1612; color:#FFD43B; font-weight:900; font-size:12px; padding:3px 10px; border-radius:999px; border:1.5px solid #CA8A04; font-variant-numeric:tabular-nums; flex-shrink:0;">
+              โอกาส ${procPct}%
+            </span>
+          </div>
+          <div style="color:#141413;">${textDesc}</div>
+          ${subSkillHtml || ''}
+        </div>
+      </div>
+    `;
+
+    const skillRows: string[] = [];
+
+    // 1. Character Innate Main Skill
+    skillRows.push(
+      renderGoldenSkillCard(
+        getMascotSvg(p.characterId, 46),
+        charDef.mainSkill.procPct,
+        charMainDef.effectDesc,
+        `สกิลติดตัว: ${charDef.name}`
+      )
+    );
+
+    // 2. Character Sub Skills (ความสามารถพิเศษ S+)
+    for (const sub of charDef.subSkills) {
+      const sDef = getSkillDef(sub.skillId);
+      skillRows.push(
+        renderGoldenSkillCard(
+          getMascotSvg(p.characterId, 46),
+          sub.procPct,
+          sDef.effectDesc,
+          `ความสามารถพิเศษ: ${sDef.name}`
+        )
+      );
+    }
+
+    // 3. Equipped Treasures (Main + Sub)
+    p.treasureIds.forEach((tid, idx) => {
+      const tr = getTreasureDef(tid);
+      const mDef = getSkillDef(tr.mainSkill.skillId);
+      const sDef = getSkillDef(tr.subSkill.skillId);
+      const subHtml = tr.subSkill
+        ? `<div style="font-size:12.5px; color:#141413; font-weight:800; margin-top:4px; background:#F3E5C8; border-radius:8px; padding:4px 10px; border:2px solid #1E1612;">(สกิลรอง: โอกาส ${tr.subSkill.procPct}% ${sDef.effectDesc})</div>`
+        : '';
+      skillRows.push(
+        renderGoldenSkillCard(
+          `<span style="font-size:28px;">${tr.iconEmoji}</span>`,
+          tr.mainSkill.procPct,
+          mDef.effectDesc,
+          `จี้เครื่องราง #${idx + 1}: ${tr.name}`,
+          subHtml
+        )
+      );
+    });
+
+    modal.innerHTML = `
+      <div style="
+        width: 840px;
+        max-width: 95vw;
+        background: #FFF9EB;
+        border: 4px solid #1E1612;
+        border-radius: 18px;
+        padding: 4px;
+        box-shadow: 0 10px 0 #1E1612;
+        display: flex;
+        flex-direction: column;
+      ">
+        <!-- Header with Player Tabs & Close -->
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 16px;
+          background: linear-gradient(180deg, #FFD43B 0%, #F59F00 100%);
+          border-radius: 14px 14px 0 0;
+          border-bottom: 3px solid #1E1612;
+        ">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="cartoon-title" style="font-size: 16px; color: #FFF;">
+              👑 ความสามารถตัวละคร & จี้เครื่องราง (${p.name})
+            </span>
+            <div style="display: flex; gap: 4px; margin-left: 10px;">
+              ${switcherHtml}
+            </div>
+          </div>
+          <button id="btnCloseInspector" style="
+            background: linear-gradient(180deg, #FF5A5F 0%, #DC2626 100%);
+            color: #FFF;
+            border: 2.5px solid #1E1612;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 0 #7F1D1D;
+          ">✕</button>
+        </div>
+
+        <!-- Authentic Golden Card Rows (No summary section) -->
+        <div style="
+          background: #FDF9EA;
+          border-radius: 0 0 14px 14px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 72vh;
+          overflow-y: auto;
+        " class="lgr-scroll">
+          ${skillRows.join('')}
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('open');
+
+    modal
+      .querySelector('#btnCloseInspector')
+      ?.addEventListener('click', () => modal.classList.remove('open'));
+
+    modal.querySelectorAll('.inspector-p-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const pid = (btn as HTMLElement).dataset.pid as PlayerId;
+        this.openPlayerInspector(pid);
+      });
+    });
+  }
+
+  // ==========================================================================
+  // SCREEN 6 & GAMEPLAY MODALS (City Build, Takeover, Coin Flip, Debt, Victory)
+  // ==========================================================================
+  private renderActiveGameplayModals(): void {
+    const modal = this.stageEl.querySelector(
+      '#modal_GAMEPLAY_ACTION'
+    ) as HTMLElement;
+    if (!modal) return;
+
+    // Never show in-game action / victory modals outside IN_GAME screen
+    if (this.state.screen !== 'IN_GAME') {
+      modal.classList.remove('open');
+      return;
+    }
+
+    if (this.state.victoryResult) {
+      this.renderVictoryModal(modal, this.state.victoryResult);
+      modal.classList.add('open');
+      return;
+    }
+
+    if (this.state.pendingDebt) {
+      if (this.canControlSlotLocally(this.state.pendingDebt.debtorId)) {
+        this.renderDebtResolutionModal(modal, this.state.pendingDebt);
+        modal.classList.add('open');
+        return;
+      }
+    }
+
+    if (this.state.pendingCityModal) {
+      if (this.canControlSlotLocally(this.state.pendingCityModal.playerId)) {
+        this.renderCityPurchaseModal(modal, this.state.pendingCityModal);
+        modal.classList.add('open');
+        return;
+      }
+    } else {
+      this.lastCityModalKey = null;
+    }
+
+    if (this.state.pendingAngelCardModal) {
+      if (this.canControlSlotLocally(this.state.pendingAngelCardModal.playerId)) {
+        this.renderAngelCardModal(modal, this.state.pendingAngelCardModal);
+        modal.classList.add('open');
+        return;
+      }
+    }
+
+    if (this.state.pendingTakeoverModal) {
+      if (this.canControlSlotLocally(this.state.pendingTakeoverModal.buyerId)) {
+        this.renderTakeoverModal(modal, this.state.pendingTakeoverModal);
+        modal.classList.add('open');
+        return;
+      }
+    }
+
+    if (this.state.pendingBonusGame) {
+      const activeP = this.getActivePlayer();
+      if (activeP && this.canControlSlotLocally(activeP.id)) {
+        this.renderBonusCoinFlipModal(modal, this.state.pendingBonusGame);
+        modal.classList.add('open');
+        return;
+      }
+    }
+
+    if (this.state.pendingFortuneCard) {
+      this.renderFortuneCardModal(modal, this.state.pendingFortuneCard);
+      modal.classList.add('open');
+      return;
+    }
+
+    modal.classList.remove('open');
+  }
+
+  /**
+   * SCREEN 6: CITY PURCHASE & CONSTRUCTION MODAL (Matches Reference Image 6)
+   */
+  private renderCityPurchaseModal(
+    modal: HTMLElement,
+    payload: CityModalPayload
+  ): void {
+    const tileDef: WorldTileDef = WORLD_MAP_TILES[payload.tileIndex];
+    const player = this.state.players.find((p) => p.id === payload.playerId);
+    const modalKey = `${payload.playerId}_${payload.tileIndex}_${payload.currentLevel}`;
+
+    const isOptLocked = (o: any) => Boolean(o.locked || o.isLockedByLap1);
+    const getOptLabel = (o: any) => o.label || o.labelTh || o.labelEn || `Tier ${o.level}`;
+    const getOptSubLabel = (o: any) => o.subLabel || o.labelEn || o.labelTh || '';
+    const getOptToll = (o: any) => {
+      if (typeof o.resultingToll === 'number' && !isNaN(o.resultingToll)) return o.resultingToll;
+      const mult = (MATCH_CONFIG.buildingTollMultipliers as any)[o.level] ?? 1;
+      return tileDef ? Math.round(tileDef.baseToll * mult) : 0;
+    };
+
+    const unlockedOptions = payload.options.filter((o) => !isOptLocked(o));
+    const affordableOptions = payload.options.filter(
+      (o) => !isOptLocked(o) && (player ? player.marble >= o.cost : true)
+    );
+
+    // "default to build most possible"
+    if (this.lastCityModalKey !== modalKey) {
+      this.lastCityModalKey = modalKey;
+      if (affordableOptions.length > 0) {
+        // Automatically pre-select highest affordable unlocked level
+        this.selectedBuildLevel =
+          affordableOptions[affordableOptions.length - 1].level;
+      } else if (unlockedOptions.length > 0) {
+        this.selectedBuildLevel =
+          payload.defaultSelectedLevel && !isOptLocked(payload.options.find(o => o.level === payload.defaultSelectedLevel))
+            ? payload.defaultSelectedLevel
+            : unlockedOptions[unlockedOptions.length - 1].level;
+      } else {
+        this.selectedBuildLevel = payload.options[0]?.level ?? BuildingLevel.LAND;
+      }
+    } else {
+      // If modal was already opened and user selected a level, verify it's not locked
+      if (
+        !unlockedOptions.some((o) => o.level === this.selectedBuildLevel) &&
+        unlockedOptions.length > 0
+      ) {
+        this.selectedBuildLevel =
+          affordableOptions.length > 0
+            ? affordableOptions[affordableOptions.length - 1].level
+            : unlockedOptions[unlockedOptions.length - 1].level;
+      }
+    }
+
+    const selectedOpt =
+      payload.options.find((o) => o.level === this.selectedBuildLevel) ??
+      payload.options[0];
+    const canAfford = player ? player.marble >= selectedOpt.cost : true;
+    const isSelectedLocked = isOptLocked(selectedOpt);
+
+    const cardsHtml = payload.options
+      .map((opt: any) => {
+        const locked = isOptLocked(opt);
+        const isSelected = !locked && opt.level === this.selectedBuildLevel;
+        const isLandmark = opt.level === BuildingLevel.LANDMARK;
+        const isRecommended = affordableOptions.length > 0 && opt.level === affordableOptions[affordableOptions.length - 1].level;
+        const label = getOptLabel(opt);
+        const subLabel = getOptSubLabel(opt);
+        return `
+          <div class="build-tier-card ${locked ? 'locked' : ''} ${
+            isSelected ? 'selected' : ''
+          } ${isLandmark ? 'landmark-tier' : ''}" data-level="${opt.level}">
+            ${
+              isRecommended && !locked
+                ? `<span style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:#FFD43B; color:#1E1612; font-weight:900; font-size:10px; padding:1px 8px; border-radius:999px; border:1.5px solid #1E1612; box-shadow:0 2px 0 #1E1612; z-index:3;">👑 แนะนำ!</span>`
+                : ''
+            }
+            ${
+              isSelected
+                ? `<span style="position:absolute; top:6px; right:8px; font-weight:900; color:#15803d; font-size:18px;">✔</span>`
+                : ''
+            }
+            <strong style="font-size:15px; font-family:var(--font-display); font-weight:800; color:#1E1612;">${label}</strong>
+            <div style="height:76px; display:flex; align-items:center; justify-content:center; margin:4px 0;">
+              ${locked ? '<div style="font-size:42px;">🔒</div>' : getBuildingSvg(opt.level, 72)}
+            </div>
+            <div style="font-size:11.5px; font-weight:800; color:${
+              locked ? '#DC2626' : isLandmark ? '#B45309' : '#475569'
+            };">
+              ${locked ? (payload.lapCount === 0 ? '🔒 ปลดล็อกรอบ 2 (Lap 2)' : (opt.lockReason ?? 'ยังสร้างไม่ได้')) : subLabel}
+            </div>
+            <div style="background:#1E1612; color:${
+              locked ? '#94A3B8' : '#FFD43B'
+            }; width:100%; padding:5px; border-radius:999px; font-weight:900; font-size:12.5px; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:4px; font-variant-numeric:tabular-nums;">
+              ${getMarbleGemSvg(13)} ${formatMarbleCompact(opt.cost)}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    modal.innerHTML = `
+      <div class="royal-panel" style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:16px 22px; position:relative;">
+        <!-- Top Ribbon Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="background:#FFF9EB; border:2.5px solid #1E1612; border-radius:999px; padding:4px 14px; font-size:12px; font-weight:900; color:#1E1612; box-shadow:0 2px 0 #1E1612;">
+            🏃 รอบการเดิน: Lap ${payload.lapCount + 1} ${
+              payload.lapCount === 0
+                ? '(รอบแรกสร้างสูงสุด 2 หลัง)'
+                : '(ปลดล็อกโรงแรม & แลนด์มาร์ก!)'
+            }
+          </div>
+          <div style="background:linear-gradient(180deg, ${tileDef.colorHex} 0%, #1E1612 100%); border:3px solid #FFD43B; border-radius:12px; padding:6px 28px; font-size:17px; font-weight:900; color:#FFF; box-shadow:0 4px 0 #1E1612;">
+            🏙️ ${tileDef.name.toUpperCase()} — ${tileDef.nameTh} ${
+              tileDef.group ? `(Group ${tileDef.group})` : '(Tourism)'
+            }
+          </div>
+          <button class="red-btn" id="btnCityModalClose" style="border-radius:50%; width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; font-size:16px;">✕</button>
+        </div>
+
+        <!-- Building Cards Grid -->
+        <div class="city-cards-grid" style="display:grid; grid-template-columns:repeat(${Math.min(
+          4,
+          payload.options.length
+        )}, 1fr); gap:14px; margin:auto 0; height:62%;">
+          ${cardsHtml}
+        </div>
+
+        <!-- Discount & Resulting Toll Bar -->
+        <div style="background:#FFF9EB; border:2.5px solid #1E1612; border-radius:12px; padding:8px 16px; text-align:center; font-size:13px; font-weight:900; color:#1E1612; box-shadow:0 2px 0 #1E1612;">
+          ส่วนลดก่อสร้าง (-${payload.constDiscountPct}%) |
+          ค่าก่อสร้าง: <span style="color:#B45309; font-variant-numeric:tabular-nums;">${formatMarbleFull(selectedOpt.cost)}</span> |
+          ค่าผ่านทางเริ่มต้น: <span style="color:#15803D; font-variant-numeric:tabular-nums;">${formatMarbleFull(getOptToll(selectedOpt))}</span>
+        </div>
+
+        <!-- Bottom Action Buttons: Wide Build button (1.6x) vs Compact Pass button -->
+        <div style="display:flex; justify-content:center; align-items:center; gap:20px;">
+          <button class="red-btn" id="btnPassBuild" style="width:140px; padding:10px; font-size:14px; font-weight:900;">
+            ข้าม (PASS)
+          </button>
+          <button class="green-btn" id="btnConfirmBuild" ${
+            !canAfford || isSelectedLocked ? 'disabled' : ''
+          } style="width:320px; padding:11px; font-size:16px; font-weight:900;">
+            ${
+              isSelectedLocked
+                ? `รอบ 1 ยังสร้างไม่ได้ (Locked)`
+                : canAfford
+                ? `🔨 สร้างเมือง (BUILD: ${formatMarbleFull(selectedOpt.cost)})`
+                : `เงินสดไม่พอ (${formatMarbleCompact(selectedOpt.cost)})`
+            }
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.querySelectorAll('.build-tier-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        if (card.classList.contains('locked')) return;
+        const lv = Number(
+          (card as HTMLElement).dataset.level
+        ) as BuildingLevel;
+        this.selectedBuildLevel = lv;
+        this.renderCityPurchaseModal(modal, payload);
+      });
+    });
+
+    modal
+      .querySelector('#btnPassBuild')
+      ?.addEventListener('click', () => {
+        this.lastCityModalKey = null;
+        this.callbacks.onPassCityBuild?.();
+      });
+    modal
+      .querySelector('#btnCityModalClose')
+      ?.addEventListener('click', () => {
+        this.lastCityModalKey = null;
+        this.callbacks.onPassCityBuild?.();
+      });
+    modal
+      .querySelector('#btnConfirmBuild')
+      ?.addEventListener('click', () => {
+        const lv = this.selectedBuildLevel;
+        const opt = payload.options.find(o => o.level === lv);
+        if (opt && isOptLocked(opt)) return;
+
+        if (lv === BuildingLevel.LANDMARK) {
+          soundManager.playLandmarkFanfare();
+        } else {
+          soundManager.playClick();
+        }
+        this.lastCityModalKey = null;
+        this.callbacks.onConfirmCityBuild?.(lv);
+      });
+  }
+
+  /**
+   * ANGEL SHIELD CARD DECISION MODAL (ถามทุกครั้งว่าจะใช้การ์ดนางฟ้าตอนนี้ หรือเก็บไว้ใช้กับเมืองแพงๆ ทีหลัง)
+   */
+  private renderAngelCardModal(
+    modal: HTMLElement,
+    payload: AngelCardModalPayload
+  ): void {
+    const tileDef = WORLD_MAP_TILES[payload.tileIndex];
+    const player = this.state.players.find((p) => p.id === payload.playerId);
+    const creditor =
+      payload.creditorId === 'BANK'
+        ? null
+        : this.state.players.find((p) => p.id === payload.creditorId);
+    const playerCash = player?.marble ?? 0;
+    const effectiveToll = payload.discountedTollAmount ?? payload.tollAmount;
+    const canAffordCash = playerCash >= effectiveToll;
+    const cashAfterPay = Math.max(0, playerCash - effectiveToll);
+    const isTax = payload.reason === 'TAX';
+
+    modal.innerHTML = `
+      <div class="royal-panel" style="width:760px; padding:22px 28px; display:flex; flex-direction:column; gap:16px; text-align:center;">
+        <!-- Divine Golden Angel Header -->
+        <div style="background:linear-gradient(180deg, #FDE047 0%, #EAB308 55%, #CA8A04 100%); border:4px solid #1E1612; border-radius:18px; padding:12px 22px; box-shadow:inset 0 3px 0 rgba(255,255,255,0.8), 0 5px 0 #854D0E, 0 8px 0 #1E1612; display:flex; align-items:center; justify-content:center; gap:12px;">
+          <span style="font-size:32px; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35));">👼</span>
+          <span style="font-family:var(--font-display); font-size:24px; font-weight:900; color:#FFFFFF; -webkit-text-stroke:2px #1E1612; text-shadow:0 3px 0 #1E1612; letter-spacing:0.04em;">
+            ANGEL SHIELD CARD
+          </span>
+          <span style="font-family:var(--font-body); font-size:15px; font-weight:900; color:#1E1612; background:#FFFBEB; padding:4px 14px; border-radius:999px; border:2.5px solid #1E1612; box-shadow:0 2px 0 #1E1612;">
+            ต้องการใช้การ์ดนางฟ้าตอนนี้ไหม?
+          </span>
+        </div>
+
+        <!-- Explanation & Toll Comparison Box -->
+        <div style="background:#FFFFFF; border:3.5px solid #1E1612; border-radius:16px; padding:18px 22px; box-shadow:0 4px 0 #1E1612; text-align:left; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2.5px dashed #CBD5E1; padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="background:${tileDef?.colorHex ?? '#EF4444'}; color:#FFF; padding:4px 14px; border-radius:999px; border:2.5px solid #1E1612; font-size:15px; font-weight:900; box-shadow:0 2px 0 #1E1612;">
+                ${(tileDef?.name ?? 'TAX').toUpperCase()}
+              </span>
+              <span style="font-size:22px; font-weight:900; color:#141413;">${tileDef?.nameTh ?? 'สรรพากร'}</span>
+            </div>
+            <div style="font-size:15px; font-
