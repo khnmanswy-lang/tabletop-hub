@@ -6,7 +6,7 @@
       "nameEn": "Magnetic Core",
       "iconEmoji": "🧲",
       "mainSkill": { "skillId": "M01_MAGNET", "procPct": 18 },
-      "subSkill": { "skillId": "S05_STEP_TOLL_X2", "procPct": 27 }
+      "subSkill": { "skillId": "S05_STEP_TOLL_X2", "procPct": 10 }
     },
     {
       "id": "TR_02_BLACKHOLE",
@@ -38,7 +38,7 @@
       "nameEn": "Healing First-Class Ticket",
       "iconEmoji": "🎫",
       "mainSkill": { "skillId": "M05_HEALING_TRAVEL", "procPct": 15 },
-      "subSkill": { "skillId": "S07_BLACK_CARD", "procPct": 30, "maxUses": 1 }
+      "subSkill": { "skillId": "S07_BLACK_CARD", "procPct": 7 }
     },
     {
       "id": "TR_06_BLUEPRINT",
@@ -46,7 +46,7 @@
       "nameEn": "Charming Perfume Vial",
       "iconEmoji": "🧪",
       "mainSkill": { "skillId": "M06_SUPER_PERFUME", "procPct": 23 },
-      "subSkill": { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 24, "maxUses": 1 }
+      "subSkill": { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 12 }
     },
     {
       "id": "TR_07_GUIDEBOOK",
@@ -78,7 +78,7 @@
       "nameEn": "Row Teleport Orb",
       "iconEmoji": "🔮",
       "mainSkill": { "skillId": "M10_DISRUPT_CITY", "procPct": 23 },
-      "subSkill": { "skillId": "S09_COIN_MASTER", "procPct": 27, "maxUses": 1 }
+      "subSkill": { "skillId": "S09_COIN_MASTER", "procPct": 10 }
     }
   ],
   "skills": [
@@ -270,8 +270,8 @@
       "nameEn": "Step Toll x2",
       "trigger": "ON_VISIT_OWN_LANDMARK",
       "effectDesc": "เมื่อเดินตกแลนด์มาร์กตัวเอง เพิ่มค่าผ่านทางเป็น x2 (สะสมสูงสุด x8)",
-      "charPct": 45,
-      "treasurePct": 27,
+      "charPct": 15,
+      "treasurePct": 10,
       "maxUsesPerMatch": null
     },
     {
@@ -290,37 +290,37 @@
       "id": "S07_BLACK_CARD",
       "code": "S07",
       "slotCategory": "SUB",
-      "name": "บัตรเครดิตดำ",
-      "nameEn": "Black Card (100% Toll Exempt)",
-      "trigger": "ON_BEFORE_PAY_TOLL",
-      "effectDesc": "เมื่อตกเมืองศัตรู ยกเว้นค่าผ่านทาง 100% ทันที (1 ครั้ง/เกม)",
-      "charPct": 50,
-      "treasurePct": 30,
-      "maxUsesPerMatch": 1
+      "name": "โบนัสเงินเดือนคูณสอง",
+      "nameEn": "Double START Salary",
+      "trigger": "ON_PASS_START",
+      "effectDesc": "เมื่อผ่านหรือตกจุด START มีโอกาสรับเงินเดือนเพิ่มเป็น 2 เท่า (x2) ทันที",
+      "charPct": 10,
+      "treasurePct": 7,
+      "maxUsesPerMatch": null
     },
     {
       "id": "S08_TAKEOVER_SHIELD",
       "code": "S08",
       "slotCategory": "SUB",
-      "name": "โล่กันซื้อต่อ",
-      "nameEn": "Takeover Shield",
-      "trigger": "ON_OPPONENT_ATTEMPT_TAKEOVER",
-      "effectDesc": "ป้องกันไม่ให้ศัตรูซื้อต่อ (Takeover) เมืองของเรา (1 ครั้ง/เกม)",
-      "charPct": 38,
-      "treasurePct": 24,
-      "maxUsesPerMatch": 1
+      "name": "ตัดไฟฉุกเฉิน",
+      "nameEn": "Toll Blackout Counter",
+      "trigger": "ON_AFTER_PAY_TOLL",
+      "effectDesc": "เมื่อจ่ายค่าผ่านทางให้ศัตรู มีโอกาสเลือกตัดไฟเมืองศัตรู 1 แห่ง (ค่าผ่านทาง 0 M จนกว่าจะมีคนเดินมาตก รวมถึงเจ้าของเมือง)",
+      "charPct": 18,
+      "treasurePct": 12,
+      "maxUsesPerMatch": null
     },
     {
       "id": "S09_COIN_MASTER",
       "code": "S09",
       "slotCategory": "SUB",
       "name": "เซียนมินิเกม",
-      "nameEn": "Coin Master",
-      "trigger": "ON_BONUS_GAME_START",
-      "effectDesc": "เมื่อเข้าช่องโยนเหรียญ ชนะตาแรก 100% และได้สิทธิ์ทายผิดแก้ตัวฟรี 1 ครั้ง (1 ครั้ง/เกม)",
-      "charPct": 38,
-      "treasurePct": 27,
-      "maxUsesPerMatch": 1
+      "nameEn": "Coin Master Replay",
+      "trigger": "ON_BONUS_GAME_END",
+      "effectDesc": "เมื่อเล่นมินิเกมโยนเหรียญจบ มีโอกาสได้เล่นมินิเกมโยนเหรียญรอบใหม่เพิ่มอีกทันที",
+      "charPct": 15,
+      "treasurePct": 10,
+      "maxUsesPerMatch": null
     },
     {
       "id": "S10_DOUBLE_BOOST",

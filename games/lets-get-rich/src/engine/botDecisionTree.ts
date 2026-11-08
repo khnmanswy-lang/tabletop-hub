@@ -250,13 +250,15 @@ export function evaluateLandingTileUtility(
 
   let utility = 0;
 
-  // 1. Salary bonus if passing/landing on START (Tile 0)
+  // 1. Salary bonus if passing/landing on START (Tile 0) + S07 Double Salary proc chance
   const stats = computePlayerStats(ai.characterId, ai.treasureIds);
+  const doubleSalaryPct = getEffectiveSkillPct(ai, 'S07_BLACK_CARD');
+  const baseSalary = Math.round(MATCH_CONFIG.salaryAmount * (1 + stats.salBonusPct / 100));
   const salaryGain = passedOrLandedStart
-    ? Math.round(MATCH_CONFIG.salaryAmount * (1 + stats.salBonusPct / 100))
+    ? Math.round(baseSalary * (1 + doubleSalaryPct / 100))
     : 0;
   if (passedOrLandedStart) {
-    utility += 280;
+    utility += 280 + Math.round(doubleSalaryPct * 4);
   }
 
   const effectiveCash = ai.marble + salaryGain;
@@ -466,8 +468,7 @@ export function evaluateLandingTileUtility(
     } else {
       // Owned by Enemy!
       const breakdown = engine.calculateTollBreakdown(effectiveTileIdx, ai.id);
-      const blackCardPct = getEffectiveSkillPct(ai, 'S07_BLACK_CARD');
-      let expectedToll = Math.round(breakdown.netToll * (1 - blackCardPct / 100));
+      let expectedToll = breakdown.netToll;
       if (ai.hasAngelCard || tile.isBlackout) {
         expectedToll = 0;
       } else if (ai.hasDiscountCoupon) {
@@ -483,9 +484,7 @@ export function evaluateLandingTileUtility(
         : Infinity;
 
       if (canTakeover && effectiveCash >= expectedToll + takeoverCost) {
-        const defender = match.players[tile.ownerId];
-        const shieldPct = defender ? getEffectiveSkillPct(defender, 'S08_TAKEOVER_SHIELD') : 0;
-        const successRate = 1 - shieldPct / 100;
+        const successRate = 1;
 
         if (analysis.selfWinningTiles.has(effectiveTileIdx)) {
           utility += Math.round(16_500 * successRate) - Math.round(expectedToll / 2000);

@@ -10,7 +10,7 @@
       "stats": { "dc": 4, "constDc": 2, "acqDc": 2, "tollDc": 2, "salLuck": 2 },
       "mainSkill": { "skillId": "M02_BLACK_HOLE", "procPct": 41 },
       "subSkills": [
-        { "skillId": "S05_STEP_TOLL_X2", "procPct": 45 },
+        { "skillId": "S05_STEP_TOLL_X2", "procPct": 15 },
         { "skillId": "S03_ISLAND_ESCAPE", "procPct": 83 }
       ]
     },
@@ -25,7 +25,7 @@
       "mainSkill": { "skillId": "M01_MAGNET", "procPct": 32 },
       "subSkills": [
         { "skillId": "S02_SHERIFF_TAX", "procPct": 27 },
-        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 38 }
+        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 18 }
       ]
     },
     {
@@ -52,8 +52,8 @@
       "stats": { "dc": 2, "constDc": 4, "acqDc": 1, "tollDc": 2, "salLuck": 3 },
       "mainSkill": { "skillId": "M03_BUILD_TO_START", "procPct": 26 },
       "subSkills": [
-        { "skillId": "S05_STEP_TOLL_X2", "procPct": 45 },
-        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 38 }
+        { "skillId": "S05_STEP_TOLL_X2", "procPct": 15 },
+        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 18 }
       ]
     },
     {
@@ -81,7 +81,7 @@
       "mainSkill": { "skillId": "M08_AIRPORT_RECALL", "procPct": 39 },
       "subSkills": [
         { "skillId": "S01_PERFUME_STEAL", "procPct": 30 },
-        { "skillId": "S07_BLACK_CARD", "procPct": 50 }
+        { "skillId": "S07_BLACK_CARD", "procPct": 10 }
       ]
     },
     {
@@ -94,8 +94,8 @@
       "stats": { "dc": 3, "constDc": 2, "acqDc": 2, "tollDc": 2, "salLuck": 3 },
       "mainSkill": { "skillId": "M10_DISRUPT_CITY", "procPct": 33 },
       "subSkills": [
-        { "skillId": "S09_COIN_MASTER", "procPct": 38 },
-        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 38 }
+        { "skillId": "S09_COIN_MASTER", "procPct": 15 },
+        { "skillId": "S08_TAKEOVER_SHIELD", "procPct": 18 }
       ]
     },
     {
@@ -109,7 +109,7 @@
       "mainSkill": { "skillId": "M09_VICTORY_HORN", "procPct": 68 },
       "subSkills": [
         { "skillId": "S06_AUTO_EXPO", "procPct": 35 },
-        { "skillId": "S07_BLACK_CARD", "procPct": 50 }
+        { "skillId": "S07_BLACK_CARD", "procPct": 10 }
       ]
     }
   ],

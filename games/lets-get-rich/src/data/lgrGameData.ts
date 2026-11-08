@@ -251,7 +251,7 @@ export const MATCH_CONFIG = {
   worldTravelTicketCost: 150_000,
   olympicBaseFee: 100_000,
   maxOlympicMultiplier: 5,
-  festivalCityCount: 3,
+  festivalCityCount: 0,
   festivalTollMultiplier: 2.0,
   colorMonopolyTollMultiplier: 2.0,
   takeoverCostMultiplier: 2.0,
