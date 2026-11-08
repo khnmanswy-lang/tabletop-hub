@@ -265,11 +265,7 @@ weight:900; color:#141413; display:flex; align-items:center; gap:6px;">
         ${
           bonus.autoWonRound1 || bonus.hasCoinMasterRetry
             ? `<div style="background:#DCFCE7; border:2.5px solid #15803D; border-radius:12px; padding:8px 14px; font-size:13px; font-weight:900; color:#166534;">
-                ⚡ สกิล [S09] เซียนมินิเกม (Coin Master): ${
-                  bonus.hasCoinMasterRetry
-                    ? 'มีสิทธิ์ทายผิดแก้ตัวฟรี 1 ครั้ง!'
-                    : 'ชนะด่านแรกอัตโนมัติ!'
-                }
+                ⚡ สกิล [S09] เซียนมินิเกม (Coin Master): ได้สิทธิ์เล่นมินิเกมโยนเหรียญรอบใหม่เพิ่มทันที!
               </div>`
             : ''
         }
