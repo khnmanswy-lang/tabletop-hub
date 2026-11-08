@@ -303,6 +303,7 @@ export interface MatchState {
   boardPickValidTiles: number[];
   pendingBlackHoleLandmarkIndex: number | null;
   pendingLineTeleportLandmarkIndex: number | null;
+  pendingBlackoutFromSkill?: boolean;
   pendingOlympicIsFree: boolean;
   disruptMode: DisruptActionMode;
   pendingDebt: PendingDebtState | null;
@@ -708,91 +709,3 @@ export class GameEngine {
           characterId: defaultChars[2],
           treasureIds: defaultTreasures[2],
           isSlotActive: true,
-        },
-        P4: {
-          id: 'P4',
-          name: 'Bot Kael',
-          colorHex: DEFAULT_PLAYER_COLORS.P4,
-          teamId: null,
-          controlType: 'AI_BOT',
-          characterId: defaultChars[3],
-          treasureIds: defaultTreasures[3],
-          isSlotActive: true,
-        },
-      },
-    };
-  }
-
-  // --------------------------------------------------------------------------
-  // SESSION STORAGE PERSISTENCE
-  // --------------------------------------------------------------------------
-
-  public saveToSessionStorage(): void {
-    try {
-      if (typeof window === 'undefined' || !window.sessionStorage) return;
-      const envelope: PersistedSessionEnvelope = {
-        version: 1,
-        screenState: this.screenState,
-        lobbyConfig: this.lobbyConfig,
-        matchState: this.matchState,
-      };
-      window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(envelope));
-    } catch {
-      // Ignore storage quota or private mode errors
-    }
-  }
-
-  public restoreFromSessionStorage(): boolean {
-    try {
-      if (typeof window === 'undefined' || !window.sessionStorage) return false;
-      const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (!raw) return false;
-      const parsed = JSON.parse(raw) as Partial<PersistedSessionEnvelope>;
-      if (parsed.version !== 1 || !parsed.lobbyConfig) return false;
-
-      this.lobbyConfig = parsed.lobbyConfig;
-      if (
-        this.lobbyConfig.ffaPlayerCount !== 2 &&
-        this.lobbyConfig.ffaPlayerCount !== 3 &&
-        this.lobbyConfig.ffaPlayerCount !== 4
-      ) {
-        this.lobbyConfig.ffaPlayerCount = 4;
-      }
-      for (const pid of PLAYER_IDS) {
-        const slot = this.lobbyConfig.players[pid];
-        if (slot) {
-          slot.treasureIds = sanitizePlayerTreasures(slot.characterId, slot.treasureIds);
-        }
-      }
-
-      if (parsed.matchState) {
-        this.matchState = parsed.matchState;
-      }
-
-      if (parsed.screenState === 'IN_GAME' && !this.matchState) {
-        this.screenState = 'LOBBY';
-      } else if (parsed.screenState) {
-        this.screenState = parsed.screenState;
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  public clearSessionStorage(): void {
-    try {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
-  private emitStateChange(): void {
-    this.saveToSessionStorage();
-    this.callbacks.onStateChange?.(this);
-  }
-
-  // --------------------------------------------------------------

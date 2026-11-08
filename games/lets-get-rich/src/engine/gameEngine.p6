@@ -1,9 +1,3 @@
-LoanAmount)}!`,
-      'TOLL'
-    );
-    this.callbacks.onFloatingText?.({
-      tileIndex: debtor.tileIndex,
-      text: `+${formatMarbleCompact(MATCH_CONFIG.bankLoanAmount)} LOAN`,
       colorHex: '#0284C7',
     });
 
@@ -24,7 +18,12 @@ LoanAmount)}!`,
     tile.ownerId = null;
     tile.buildingLevel = BuildingLevel.NONE;
     tile.olympicMultiplier = 1;
+    tile.isFestival = false;
+    tile.isBlackout = false;
     tile.stepMultiplier = 1;
+    if (this.matchState.olympicTileIndex === tileIndex) {
+      this.matchState.olympicTileIndex = null;
+    }
 
     this.appendLog(
       debtor.id,
@@ -79,7 +78,12 @@ LoanAmount)}!`,
         tile.ownerId = null;
         tile.buildingLevel = BuildingLevel.NONE;
         tile.olympicMultiplier = 1;
+        tile.isFestival = false;
+        tile.isBlackout = false;
         tile.stepMultiplier = 1;
+        if (this.matchState.olympicTileIndex === tile.index) {
+          this.matchState.olympicTileIndex = null;
+        }
       }
     }
 
@@ -160,6 +164,33 @@ LoanAmount)}!`,
     }
 
     const activePlayer = this.matchState.players[this.matchState.activePlayerId];
+
+    // If S08 Toll Blackout Counter was triggered when paying toll, open BLACKOUT_SELECT picker now
+    if (this.matchState.pendingBlackoutFromSkill) {
+      this.matchState.pendingBlackoutFromSkill = false;
+      if (activePlayer && !activePlayer.isBankrupt) {
+        const enemyTiles = this.matchState.tiles
+          .filter(
+            (t) =>
+              t.ownerId !== null &&
+              !this.arePlayersAllied(activePlayer.id, t.ownerId) &&
+              !t.isBlackout
+          )
+          .map((t) => t.index);
+        if (enemyTiles.length > 0) {
+          this.matchState.phase = 'BOARD_TARGET_PICK';
+          this.matchState.boardPickReason = 'BLACKOUT_SELECT';
+          this.matchState.boardPickValidTiles = enemyTiles;
+          this.appendLog(
+            activePlayer.id,
+            `🔌 ตัดไฟฉุกเฉินทำงาน! เลือกเมืองศัตรู 1 แห่งเพื่อตัดไฟให้ค่าผ่านทางเหลือ 0 M!`,
+            'SKILL'
+          );
+          this.emitStateChange();
+          return;
+        }
+      }
+    }
 
     // If M10 Row Teleport was queued from Landmark build (e.g. after Black Hole placement or debt queue), open it now
     if (this.matchState.pendingLineTeleportLandmarkIndex !== null) {

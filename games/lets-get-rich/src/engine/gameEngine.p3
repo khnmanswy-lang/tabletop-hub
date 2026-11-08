@@ -1,4 +1,49 @@
-sult {
+    }
+    this.matchState.gaugeValue = Math.max(2.0, Math.min(12.0, next));
+    return this.matchState.gaugeValue;
+  }
+
+  public releaseGaugeRoll(overrideGaugeValue?: number): DiceRollResult | null {
+    if (!this.matchState) return null;
+    if (this.matchState.phase !== 'GAUGE_CHARGING' && this.matchState.phase !== 'IDLE_ROLL') {
+      return null;
+    }
+
+    const player = this.matchState.players[this.matchState.activePlayerId];
+    if (player.isWaitingTravel) {
+      this.openWorldTravelPicker(player);
+      return null;
+    }
+
+    if (typeof overrideGaugeValue === 'number' && !Number.isNaN(overrideGaugeValue)) {
+      this.matchState.gaugeValue = Math.max(2.0, Math.min(12.0, overrideGaugeValue));
+    }
+
+    const rollResult = this.resolveTwoStageDiceRoll(player, this.matchState.gaugeValue);
+    this.matchState.lastDiceRoll = rollResult;
+    this.matchState.phase = 'DICE_ANIMATING';
+    this.matchState.extraRollGranted = false;
+
+    const dblTag = rollResult.isDouble ? ' (DOUBLE!)' : '';
+    const dcTag = rollResult.dcTriggered ? ' 🎯[คุมเต๋าแม่นยำ!]' : '';
+    this.appendLog(
+      player.id,
+      `🎲 ${player.name} ทอยได้ ${rollResult.die1} + ${rollResult.die2} = ${rollResult.sum}${dblTag}${dcTag}`,
+      'DICE'
+    );
+
+    if (rollResult.dcTriggered) {
+      this.callbacks.onToastBanner?.(
+        `🎯 ${player.name} คุมเต๋าทำงาน! ออก ${rollResult.sum} เป๊ะ (${rollResult.dcProcPct}%)`,
+        player.colorHex
+      );
+    }
+
+    this.emitStateChange();
+    return rollResult;
+  }
+
+  private resolveTwoStageDiceRoll(player: PlayerState, rawGauge: number): DiceRollResult {
     const g = Math.max(2.0, Math.min(12.0, rawGauge));
     const targetSum = Math.round(g);
     const stats = computePlayerStats(player.characterId, player.treasureIds);
@@ -323,18 +368,24 @@ sult {
     if (!this.matchState) return;
     player.lapCount += 1;
     const stats = computePlayerStats(player.characterId, player.treasureIds);
-    const salary = Math.round(MATCH_CONFIG.salaryAmount * (1 + stats.salBonusPct / 100));
+    let salary = Math.round(MATCH_CONFIG.salaryAmount * (1 + stats.salBonusPct / 100));
+    const doubled = this.tryTriggerSkill(player, 'S07_BLACK_CARD');
+    if (doubled) {
+      salary *= 2;
+    }
     player.marble += salary;
 
     this.appendLog(
       player.id,
-      `💰 ${player.name} ผ่านจุด START (รอบที่ ${player.lapCount + 1}) รับเงินเดือน +${formatMarbleCompact(salary)}!`,
-      'MOVE'
+      doubled
+        ? `💰⚡ ${player.name} ผ่านจุด START (รอบที่ ${player.lapCount + 1}) โบนัสเงินเดือนคูณสองทำงาน! รับเงินเดือน +${formatMarbleCompact(salary)} (x2)!`
+        : `💰 ${player.name} ผ่านจุด START (รอบที่ ${player.lapCount + 1}) รับเงินเดือน +${formatMarbleCompact(salary)}!`,
+      doubled ? 'SKILL' : 'MOVE'
     );
     this.callbacks.onFloatingText?.({
       tileIndex: 0,
-      text: `+${formatMarbleCompact(salary)} SALARY!`,
-      colorHex: '#16A34A',
+      text: doubled ? `+${formatMarbleCompact(salary)} SALARY x2!` : `+${formatMarbleCompact(salary)} SALARY!`,
+      colorHex: doubled ? '#E5A93B' : '#16A34A',
     });
   }
 
@@ -505,7 +556,12 @@ sult {
     if (this.arePlayersAllied(mover.id, tile.ownerId)) {
       if (tile.isBlackout) {
         tile.isBlackout = false;
-        this.appendLog(mover.id, `💡 ${mover.name} กู้คืนระบบไฟที่ ${def.nameTh} สำเร็จ!`, 'MOVE');
+        this.appendLog(mover.id, `💡 ${mover.name} เหยียบเมืองตัวเอง กู้คืนระบบไฟที่ ${def.nameTh} สำเร็จ!`, 'MOVE');
+        this.callbacks.onFloatingText?.({
+          tileIndex: tile.index,
+          text: `💡 ไฟกลับมาติดแล้ว!`,
+          colorHex: '#FDE047',
+        });
       }
       if (def.type === 'TOURISM') {
         this.appendLog(mover.id, `🏝️ ${mover.name} แวะพักผ่อนที่ ${def.nameTh} ของทีมตัวเอง`, 'MOVE');
@@ -549,24 +605,7 @@ sult {
     }
 
     const breakdown = this.calculateTollBreakdown(tile.index, mover.id);
-    let payableToll = breakdown.netToll;
-
-    // Hook 5: ON_BEFORE_PAY_TOLL -> S07_BLACK_CARD (100% Toll Exemption Once)
-    if (payableToll > 0 && this.tryTriggerSkill(mover, 'S07_BLACK_CARD')) {
-      payableToll = 0;
-      this.appendLog(
-        mover.id,
-        `💳 ${mover.name} ใช้บัตรเครดิตดำ! ยกเว้นค่าผ่านทางที่ ${def.nameTh} 100%!`,
-        'SKILL'
-      );
-      this.callbacks.onFloatingText?.({
-        tileIndex: tile.index,
-        text: `FREE! บัตรดำ 100%`,
-        colorHex: '#E5A93B',
-      });
-      this.proceedAfterEnemyTollPaid(mover, tile, def, 0, '💳 สกิลบัตรเครดิตดำ [S07] (ยกเว้นค่าผ่านทาง 100%)');
-      return;
-    }
+    const payableToll = breakdown.netToll;
 
     // Check Held Angel Shield Card -> Ask player whether to use it now or save it for later!
     if (payableToll > 0 && mover.hasAngelCard) {
@@ -670,23 +709,3 @@ sult {
     const def = WORLD_MAP_TILES[prompt.tileIndex];
     this.matchState.activePrompt = null;
 
-    if (useAngelCard && player.hasAngelCard) {
-      player.hasAngelCard = false;
-      this.callbacks.onAngelCardUsed?.({
-        playerId: player.id,
-        tileIndex: prompt.tileIndex,
-        targetName: def.nameTh,
-        reason: 'TOLL',
-      });
-      this.appendLog(
-        player.id,
-        `👼 ${player.name} ใช้การ์ดนางฟ้า! ยกเว้น${prompt.reason === 'TAX' ? 'ภาษีสรรพากร' : `ค่าผ่านทางที่ ${def.nameTh}`} 100%!`,
-        'TOLL'
-      );
-      this.callbacks.onFloatingText?.({
-        tileIndex: prompt.tileIndex,
-        text: `👼 นางฟ้า! ฟรี 100%`,
-        colorHex: '#FDE047',
-      });
-
-      if (prompt.reason ===

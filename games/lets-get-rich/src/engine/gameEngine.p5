@@ -1,4 +1,5 @@
-tate.boardPickReason = 'BLACK_HOLE_PLACE';
+    this.matchState.phase = 'BOARD_TARGET_PICK';
+    this.matchState.boardPickReason = 'BLACK_HOLE_PLACE';
     this.matchState.boardPickValidTiles = validTiles;
     this.matchState.pendingBlackHoleLandmarkIndex = landmarkTileIndex;
     this.appendLog(
@@ -39,30 +40,58 @@ tate.boardPickReason = 'BLACK_HOLE_PLACE';
 
   private startBonusCoinGame(player: PlayerState): void {
     if (!this.matchState) return;
-    // Hook 11: ON_BONUS_GAME_START -> S09_COIN_MASTER
-    const coinMasterProc = this.tryTriggerSkill(player, 'S09_COIN_MASTER');
-
-    const bonusState: PendingBonusGameState = coinMasterProc
-      ? {
-          playerId: player.id,
-          round: 2,
-          currentReward: MATCH_CONFIG.bonusGameRewards[1], // 200,000 M guaranteed Round 1 win!
-          hasCoinMasterRetry: true,
-          autoWonRound1: true,
-        }
-      : {
-          playerId: player.id,
-          round: 1,
-          currentReward: MATCH_CONFIG.bonusGameRewards[0], // 100,000 M base pot
-          hasCoinMasterRetry: false,
-          autoWonRound1: false,
-        };
+    const bonusState: PendingBonusGameState = {
+      playerId: player.id,
+      round: 1,
+      currentReward: MATCH_CONFIG.bonusGameRewards[0], // 100,000 M base pot
+      hasCoinMasterRetry: false,
+      autoWonRound1: false,
+    };
 
     this.matchState.activePrompt = {
       type: 'BONUS_COIN_GAME',
       bonusState,
     };
     this.emitStateChange();
+  }
+
+  private finishOrReplayBonusCoinGame(player: PlayerState): boolean {
+    if (!this.matchState || player.isBankrupt) {
+      if (this.matchState) {
+        this.matchState.activePrompt = null;
+        this.finishTileResolution();
+      }
+      return false;
+    }
+
+    // Hook 11: ON_BONUS_GAME_END -> S09_COIN_MASTER (15% Char / 10% Treasure to replay minigame another round)
+    if (this.tryTriggerSkill(player, 'S09_COIN_MASTER')) {
+      this.appendLog(
+        player.id,
+        `⚡ เซียนมินิเกมทำงาน! ${player.name} ได้สิทธิ์เล่นมินิเกมโยนเหรียญรอบใหม่เพิ่มอีกทันที!`,
+        'SKILL'
+      );
+      this.callbacks.onToastBanner?.(
+        `⚡ เซียนมินิเกม! ได้เล่นมินิเกมโยนเหรียญเพิ่มอีกรอบ!`,
+        '#9333EA'
+      );
+      this.matchState.activePrompt = {
+        type: 'BONUS_COIN_GAME',
+        bonusState: {
+          playerId: player.id,
+          round: 1,
+          currentReward: MATCH_CONFIG.bonusGameRewards[0],
+          hasCoinMasterRetry: false,
+          autoWonRound1: true,
+        },
+      };
+      this.emitStateChange();
+      return true;
+    }
+
+    this.matchState.activePrompt = null;
+    this.finishTileResolution();
+    return false;
   }
 
   public flipBonusCoin(_choice: 'HEADS' | 'TAILS'): {
@@ -95,9 +124,8 @@ tate.boardPickReason = 'BLACK_HOLE_PLACE';
           text: `+${formatMarbleCompact(nextReward)} JACKPOT!`,
           colorHex: '#E5A93B',
         });
-        this.matchState.activePrompt = null;
-        this.finishTileResolution();
-        return { wonRound: true, usedRetry: false, finished: true, reward: nextReward };
+        const replayed = this.finishOrReplayBonusCoinGame(player);
+        return { wonRound: true, usedRetry: replayed, finished: !replayed, reward: nextReward };
       }
 
       bs.round = (bs.round + 1) as 1 | 2 | 3;
@@ -105,27 +133,10 @@ tate.boardPickReason = 'BLACK_HOLE_PLACE';
       return { wonRound: true, usedRetry: false, finished: false, reward: nextReward };
     }
 
-    // Guessed wrong: check S09_COIN_MASTER free retry!
-    if (bs.hasCoinMasterRetry) {
-      bs.hasCoinMasterRetry = false;
-      this.appendLog(
-        player.id,
-        `⚡ เซียนมินิเกมทำงาน! ${player.name} ทายผิดแต่ได้สิทธิ์แก้ตัวฟรีอีก 1 ครั้ง!`,
-        'SKILL'
-      );
-      this.callbacks.onToastBanner?.(
-        `⚡ เซียนมินิเกม! ได้สิทธิ์โยนเหรียญแก้ตัวฟรี!`,
-        '#9333EA'
-      );
-      this.emitStateChange();
-      return { wonRound: false, usedRetry: true, finished: false, reward: bs.currentReward };
-    }
-
-    // Lose bonus game pot
+    // Guessed wrong: check if S09_COIN_MASTER grants a new minigame round!
     this.appendLog(player.id, `🪙 ${player.name} ทายเหรียญพลาด อดรับเงินรางวัลโบนัส`, 'MOVE');
-    this.matchState.activePrompt = null;
-    this.finishTileResolution();
-    return { wonRound: false, usedRetry: false, finished: true, reward: 0 };
+    const replayed = this.finishOrReplayBonusCoinGame(player);
+    return { wonRound: false, usedRetry: replayed, finished: !replayed, reward: 0 };
   }
 
   public takeBonusReward(): void {
@@ -145,8 +156,12 @@ tate.boardPickReason = 'BLACK_HOLE_PLACE';
         colorHex: '#16A34A',
       });
     }
-    this.matchState.activePrompt = null;
-    this.finishTileResolution();
+    if (player) {
+      this.finishOrReplayBonusCoinGame(player);
+    } else {
+      this.matchState.activePrompt = null;
+      this.finishTileResolution();
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -582,7 +597,12 @@ tate.boardPickReason = 'BLACK_HOLE_PLACE';
           tile.ownerId = null;
           tile.buildingLevel = BuildingLevel.NONE;
           tile.olympicMultiplier = 1;
+          tile.isFestival = false;
+          tile.isBlackout = false;
           tile.stepMultiplier = 1;
+          if (this.matchState.olympicTileIndex === tileIndex) {
+            this.matchState.olympicTileIndex = null;
+          }
 
           this.appendLog(
             player.id,
@@ -683,4 +703,9 @@ tate.boardPickReason = 'BLACK_HOLE_PLACE';
     debtor.marble += MATCH_CONFIG.bankLoanAmount;
     this.appendLog(
       debtor.id,
-      `🏦 ${debtor.name} กู้เงินฉุกเฉินจากธนาคาร +${formatMarbleCompact(MATCH_CONFIG.bank
+      `🏦 ${debtor.name} กู้เงินฉุกเฉินจากธนาคาร +${formatMarbleCompact(MATCH_CONFIG.bankLoanAmount)}!`,
+      'TOLL'
+    );
+    this.callbacks.onFloatingText?.({
+      tileIndex: debtor.tileIndex,
+      text: `+${formatMarbleCompact(MATCH_CONFIG.bankLoanAmount)} LOAN`,

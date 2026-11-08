@@ -1,4 +1,23 @@
-'TAX') {
+    if (useAngelCard && player.hasAngelCard) {
+      player.hasAngelCard = false;
+      this.callbacks.onAngelCardUsed?.({
+        playerId: player.id,
+        tileIndex: prompt.tileIndex,
+        targetName: def.nameTh,
+        reason: 'TOLL',
+      });
+      this.appendLog(
+        player.id,
+        `👼 ${player.name} ใช้การ์ดนางฟ้า! ยกเว้น${prompt.reason === 'TAX' ? 'ภาษีสรรพากร' : `ค่าผ่านทางที่ ${def.nameTh}`} 100%!`,
+        'TOLL'
+      );
+      this.callbacks.onFloatingText?.({
+        tileIndex: prompt.tileIndex,
+        text: `👼 นางฟ้า! ฟรี 100%`,
+        colorHex: '#FDE047',
+      });
+
+      if (prompt.reason ==='TAX') {
         this.finishTileResolution();
       } else {
         this.proceedAfterEnemyTollPaid(
@@ -35,7 +54,17 @@
   ): void {
     if (!this.matchState || mover.isBankrupt) return;
 
-    // Hook 6: ON_AFTER_PAY_TOLL -> M05_HEALING_TRAVEL
+    // Hook 6a: ON_AFTER_PAY_TOLL -> S08_TAKEOVER_SHIELD (18% Char / 12% Treasure Blackout Counter)
+    if (paidToll > 0) {
+      const hasBlackoutTarget = this.matchState.tiles.some(
+        (t) => t.ownerId !== null && !this.arePlayersAllied(mover.id, t.ownerId) && !t.isBlackout
+      );
+      if (hasBlackoutTarget && this.tryTriggerSkill(mover, 'S08_TAKEOVER_SHIELD')) {
+        this.matchState.pendingBlackoutFromSkill = true;
+      }
+    }
+
+    // Hook 6b: ON_AFTER_PAY_TOLL -> M05_HEALING_TRAVEL
     if (paidToll > 0 && this.tryTriggerSkill(mover, 'M05_HEALING_TRAVEL')) {
       this.warpPlayerToSkyTerminal(mover, true);
       this.finishTileResolution();
@@ -390,19 +419,24 @@
     landmarkTileIndex: number
   ): void {
     if (!this.matchState || enemy.isBankrupt) return;
+    const lmTile = this.matchState.tiles[landmarkTileIndex];
     const def = WORLD_MAP_TILES[landmarkTileIndex];
-    const breakdown = this.calculateTollBreakdown(landmarkTileIndex, enemy.id);
-    let payable = breakdown.netToll;
-
-    // Pulled enemy can still check S07_BLACK_CARD
-    if (payable > 0 && this.tryTriggerSkill(enemy, 'S07_BLACK_CARD')) {
+    if (lmTile?.isBlackout) {
+      lmTile.isBlackout = false;
       this.appendLog(
         enemy.id,
-        `💳 ${enemy.name} ใช้บัตรเครดิตดำ ยกเว้นค่าผ่านทางที่ ${def.nameTh}!`,
-        'SKILL'
+        `🔌 ${def.nameTh} ไฟดับอยู่! ${enemy.name} ไม่ต้องเสียค่าผ่านทาง (และไฟกลับมาติดแล้ว)!`,
+        'TOLL'
       );
+      this.callbacks.onFloatingText?.({
+        tileIndex: landmarkTileIndex,
+        text: `🔌 ไฟดับ! ฟรี 0 M`,
+        colorHex: '#38BDF8',
+      });
       return;
     }
+    const breakdown = this.calculateTollBreakdown(landmarkTileIndex, enemy.id);
+    const payable = breakdown.netToll;
 
     // Pulled enemy can also spend a held Angel Card (same as normal toll path)
     if (payable > 0 && enemy.hasAngelCard) {
@@ -462,22 +496,6 @@
     }
 
     this.matchState.activePrompt = null;
-
-    // Hook 7: ON_OPPONENT_ATTEMPT_TAKEOVER -> Defender checks S08_TAKEOVER_SHIELD
-    if (this.tryTriggerSkill(defender, 'S08_TAKEOVER_SHIELD')) {
-      this.appendLog(
-        defender.id,
-        `🛡️ โล่กันซื้อต่อทำงาน! ${defender.name} ป้องกันการซื้อต่อเมือง ${def.nameTh} สำเร็จ!`,
-        'SKILL'
-      );
-      this.callbacks.onFloatingText?.({
-        tileIndex: tile.index,
-        text: `🛡️ โล่กันซื้อต่อ!`,
-        colorHex: '#2563EB',
-      });
-      this.finishTileResolution();
-      return false;
-    }
 
     // Execute Takeover — the full takeover price goes to the previous owner
     buyer.marble -= prompt.takeoverCost;
@@ -650,8 +668,19 @@
       player.marble -= fee;
     }
 
+    const prevOlympicIdx = this.matchState.olympicTileIndex;
     for (const t of this.matchState.tiles) {
       t.olympicMultiplier = 1;
+      t.isFestival = false;
+    }
+
+    if (prevOlympicIdx !== null && prevOlympicIdx !== tileIndex) {
+      const prevDef = WORLD_MAP_TILES[prevOlympicIdx];
+      this.appendLog(
+        player.id,
+        `🏟️ งานโอลิมปิกที่ ${prevDef.nameTh} สิ้นสุดลง และย้ายไปจัดที่ใหม่!`,
+        'SYSTEM'
+      );
     }
 
     this.matchState.olympicHostCount = Math.min(4, this.matchState.olympicHostCount + 1);
@@ -680,5 +709,3 @@
     const validTiles = WORLD_MAP_TILES.map((t) => t.index).filter(
       (idx) => idx !== 0 && idx !== 8 && idx !== landmarkTileIndex
     );
-    this.matchState.phase = 'BOARD_TARGET_PICK';
-    this.matchS
