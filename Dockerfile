@@ -2,7 +2,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy application sources and install dependencies (triggers postinstall -> build-rich.js)
+# Copy application sources and install dependencies
 COPY . .
 RUN npm install --omit=dev
 

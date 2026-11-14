@@ -1,4 +1,4 @@
-# Tabletop Lounge (6 Multiplayer Games Online)
+# Tabletop Lounge (5 Multiplayer Games Online)
 
 A unified parlor game hub for real-time multiplayer tabletop games in the browser. Zero accounts required, ultra-low latency WebSockets, and crafted in the Anthropic editorial design style.
 
@@ -38,16 +38,7 @@ A unified parlor game hub for real-time multiplayer tabletop games in the browse
    - Route: `/flip-7`
    - WebSocket: `/flip-7/ws`
 
-5. **LINE Let's Get Rich: Peak Era (2–4 Players / 2v2)**
-   - The legendary 2014–2016 peak era recreated in full 3D!
-   - 32-tile isometric Three.js world map, curved rainbow dice-control gauge, 8 S+ characters, 10 S+ treasures.
-   - Real-time multiplayer over WebSockets across devices with automated rule-tree AI bots.
-   - Direct Lobby layout: Topbar, 4x horizontal player banners, (1/3) Character & 3-Treasure pickers, (2/3) Abilities inspector, sum stats & active 7-skill stack matrix.
-   - Triple, Line, and Tourism monopolies, Landmark defense, hostile takeovers, and debt/bankruptcy settlement.
-   - Route: `/rich`
-   - WebSocket: `/rich/ws`
-
-6. **Cockroach Poker / Kakerlakenpoker (3–5 Players)**
+5. **Cockroach Poker / Kakerlakenpoker (3–5 Players)**
    - The hit reverse set-collection bluffing game!
    - Features both **Classic Edition** (64 cards · 8 critters) and **Royal Edition** (65 cards · Royals & Penalty Deck + Wild + Blank Lie).
    - Slide face-down cards, call bluffs ("TRUE!" or "BLUFF!"), or secretly peek and pass forward.
@@ -153,13 +144,9 @@ tabletop-hub/
 │   ├── flip-7/
 │   │   ├── index.html        # Flip 7 client UI & live shoe tracker
 │   │   └── server.js         # Flip 7 game engine & hit/stay actions
-│   ├── cockroach-poker/
-│   │   ├── index.html        # Cockroach Poker client UI & bluff modals
-│   │   └── server.js         # Cockroach Poker room engine (Classic/Royal)
-│   └── lets-get-rich/
-│       ├── dist/             # Production 3D Three.js client bundle
-│       ├── engine.bundle.cjs # Authoritative headless game engine
-│       └── server.js         # Real-time WebSocket room & bot auto-player
+│   └── cockroach-poker/
+│       ├── index.html        # Cockroach Poker client UI & bluff modals
+│       └── server.js         # Cockroach Poker room engine (Classic/Royal)
 └── README.md                 # Deployment & open-source citations
 ```
 
@@ -171,8 +158,6 @@ In strict accordance with minimal open-source reliance, this project wraps battl
 
 - **ws** — High-performance WebSocket library for Node.js
   - GitHub: https://github.com/websockets/ws
-- **three** — 3D Isometric WebGL renderer for LINE Let's Get Rich
-  - GitHub: https://github.com/mrdoob/three.js
 - **pokersolver** — Poker hand evaluator and comparison engine
   - GitHub: https://github.com/goldfire/pokersolver
 - **cloudflared** — Cloudflare Tunnel client for zero-config public tunneling

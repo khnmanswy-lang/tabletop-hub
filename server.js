@@ -14,7 +14,6 @@ const { createBlindHeistRoom } = require('./games/blind-heist/server');
 const { createLoveLetterRoom } = require('./games/love-letter/server');
 const { createSlaveRoom } = require('./games/slave-card-game/server');
 const { createFlip7Room } = require('./games/flip-7/server');
-const { createRichGameRoom } = require('./games/lets-get-rich/server');
 const { createCockroachRoom } = require('./games/cockroach-poker/server');
 
 const PORT = process.env.PORT || 3000;
@@ -28,7 +27,6 @@ const blindHeist = createBlindHeistRoom();
 const loveLetter = createLoveLetterRoom();
 const slaveGame = createSlaveRoom();
 const flip7Game = createFlip7Room();
-const richGame = createRichGameRoom();
 const cockroachGame = createCockroachRoom();
 
 // 3. HTTP Server
@@ -54,7 +52,7 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({
       status: 'ok',
       uptime: Math.floor(process.uptime()),
-      games: ['blind-heist', 'love-letter', 'slave-card-game', 'flip-7', 'lets-get-rich', 'cockroach-poker'],
+      games: ['blind-heist', 'love-letter', 'slave-card-game', 'flip-7', 'cockroach-poker'],
       timestamp: new Date().toISOString()
     }));
   }
@@ -82,11 +80,6 @@ const server = http.createServer((req, res) => {
   // Cockroach Poker game route
   if (pathname === '/cockroach') {
     return cockroachGame.serveHtml(req, res);
-  }
-
-  // LINE Let's Get Rich route (HTML & static assets)
-  if (pathname === '/rich' || pathname.startsWith('/rich/') || pathname.startsWith('/assets/')) {
-    return richGame.serveStatic(req, res, pathname);
   }
 
   // Fallback 404
@@ -147,13 +140,6 @@ server.on('upgrade', (request, socket, head) => {
     return;
   }
 
-  if (pathname === '/rich/ws') {
-    richGame.wss.handleUpgrade(request, socket, head, (ws) => {
-      richGame.wss.emit('connection', ws, request);
-    });
-    return;
-  }
-
   if (pathname === '/cockroach/ws') {
     cockroachGame.wss.handleUpgrade(request, socket, head, (ws) => {
       cockroachGame.wss.emit('connection', ws, request);
@@ -167,7 +153,7 @@ server.on('upgrade', (request, socket, head) => {
 // 5. Start Server
 server.listen(PORT, HOST, () => {
   console.log(`====================================================`);
-  console.log(`  TABLETOP HUB IS ONLINE (6 GAMES LIVE)`);
+  console.log(`  TABLETOP HUB IS ONLINE (5 GAMES LIVE)`);
   console.log(`====================================================`);
   console.log(`  Port:            ${PORT}`);
   console.log(`  Lounge:          http://localhost:${PORT}/`);
@@ -176,7 +162,6 @@ server.listen(PORT, HOST, () => {
   console.log(`  Slave Game:      http://localhost:${PORT}/slave`);
   console.log(`  Flip 7:          http://localhost:${PORT}/flip-7`);
   console.log(`  Cockroach Poker: http://localhost:${PORT}/cockroach`);
-  console.log(`  Let's Get Rich:  http://localhost:${PORT}/rich`);
   console.log(`  Health Check:    http://localhost:${PORT}/health`);
   console.log(`====================================================`);
 });
