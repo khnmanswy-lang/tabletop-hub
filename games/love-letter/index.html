@@ -33,6 +33,28 @@
       --font-mono: 'JetBrains Mono', monospace;
     }
 
+    html[data-theme="dark"] {
+      --bg-primary: #141413;
+      --bg-secondary: #1C1B18;
+      --bg-surface: #22211D;
+      --bg-elevated: #282722;
+      --text-primary: #ECE9E2;
+      --text-secondary: #9E9B93;
+      --text-muted: #76746D;
+      --accent: #D97757;
+      --accent-hover: #E2886B;
+      --accent-soft: rgba(217, 119, 87, 0.16);
+      --border: #2A2925;
+      --border-strong: #3B3933;
+      --sage: #52B788;
+      --sage-soft: rgba(82, 183, 136, 0.15);
+      --crimson: #E06C60;
+      --crimson-soft: rgba(224, 108, 96, 0.15);
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -222,7 +244,7 @@
     }
 
     .turn-banner.my-turn {
-      background: #FFFDFB;
+      background: var(--bg-surface);
       border-color: var(--accent);
       border-left-width: 4px;
       animation: turnPulse 2.4s ease-in-out infinite;
@@ -291,7 +313,7 @@
     }
 
     .card-surface.deck-back {
-      background: #EAE6DC;
+      background: var(--bg-secondary);
       border: 1px solid var(--border-strong);
       display: flex;
       flex-direction: column;
@@ -886,8 +908,17 @@
         font-size: 15px;
       }
       .court-center {
-        padding: 12px;
-        gap: 14px;
+        padding: 10px 12px;
+        gap: 10px;
+      }
+      .court-center .card-surface {
+        width: 82px;
+        height: 112px;
+        padding: 6px;
+      }
+      .court-center .card-art {
+        width: 28px;
+        height: 28px;
       }
       .seats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -896,22 +927,33 @@
       .seat-card {
         padding: 10px 12px !important;
         min-width: 0;
-        gap: 8px;
+        gap: 6px;
       }
       .seat-name {
         font-size: 14px;
       }
-      .hand-section {
-        padding: 12px;
+      .hand-panel {
+        position: sticky;
+        bottom: 0;
+        z-index: 35;
+        padding: 10px 12px;
+        background: var(--bg-surface);
+        border-top: 2px solid var(--accent);
+        box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.14);
+        gap: 8px;
       }
       .hand-cards-container {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 10px !important;
+        gap: 8px !important;
       }
       .playing-card {
-        padding: 12px 10px !important;
-        min-height: 165px !important;
-        gap: 8px !important;
+        padding: 10px 10px !important;
+        min-height: 132px !important;
+        gap: 6px !important;
+      }
+      .playing-card .card-art {
+        width: 28px;
+        height: 28px;
       }
       .card-value {
         width: 28px;
@@ -919,11 +961,11 @@
         font-size: 14px;
       }
       .card-title {
-        font-size: 16px;
+        font-size: 15px;
       }
       .card-body {
-        font-size: 11.5px;
-        line-height: 1.35;
+        font-size: 11px;
+        line-height: 1.3;
       }
       .option-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -948,7 +990,7 @@
       }
     }
 
-    @media (max-width: 400px) {
+    @media (max-width: 350px) {
       .seats-grid {
         grid-template-columns: 1fr !important;
       }
@@ -1266,7 +1308,9 @@
         GAME_OVER: 'MATCH OVER'
       };
       const isLobby = gameState.stage === 'LOBBY';
+      const curTheme = document.documentElement.getAttribute('data-theme') || 'light';
       meta.innerHTML = `
+        <button class="btn btn-sm" onclick="toggleTheme()" title="Toggle Light/Dark Mode">${curTheme === 'dark' ? '☀️' : '🌙'}</button>
         <button class="btn btn-sm" onclick="openReferenceModal()" style="display:inline-flex;align-items:center;gap:4px;">
           <span>📜</span> <span>Reference Card</span>
         </button>
@@ -1937,6 +1981,32 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('tabletop_theme', theme);
+      if (gameState) renderTopbar();
+    }
+    window.toggleTheme = function() {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    };
+    applyTheme(localStorage.getItem('tabletop_theme') || 'light');
+
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    }
+    requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        if (!ws || ws.readyState !== WebSocket.OPEN) connectWebSocket();
+        else ws.send(JSON.stringify({ type: 'AUTH', token: sessionToken, name: savedName }));
+      }
+    });
 
     connectWebSocket();
   </script>
