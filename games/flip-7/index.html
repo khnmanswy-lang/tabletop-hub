@@ -34,6 +34,29 @@
       --font-mono: 'JetBrains Mono', monospace;
     }
 
+    html[data-theme="dark"] {
+      --bg-primary: #141413;
+      --bg-secondary: #1C1B18;
+      --bg-surface: #22211D;
+      --text-primary: #ECE9E2;
+      --text-secondary: #9E9B93;
+      --text-muted: #76746D;
+      --accent: #D97757;
+      --accent-hover: #E2886B;
+      --accent-soft: rgba(217, 119, 87, 0.16);
+      --border: #2A2925;
+      --border-strong: #3B3933;
+      --sage: #52B788;
+      --sage-soft: rgba(82, 183, 136, 0.15);
+      --crimson: #E06C60;
+      --crimson-soft: rgba(224, 108, 96, 0.15);
+      --gold: #E9C46A;
+      --gold-soft: rgba(233, 196, 106, 0.16);
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -275,11 +298,11 @@
     }
     .announcement-banner.bust {
       border-left-color: var(--crimson);
-      background: #FFF7F6;
+      background: var(--crimson-soft);
     }
     .announcement-banner.flip7 {
       border-left-color: var(--gold);
-      background: #FEFAF2;
+      background: var(--gold-soft);
       font-weight: 600;
     }
 
@@ -299,7 +322,7 @@
     }
 
     .console-banner.my-turn {
-      background: #FFFDFB;
+      background: var(--bg-surface);
       border-color: var(--accent);
       border-left-width: 4px;
       box-shadow: var(--shadow-md);
@@ -447,16 +470,33 @@
         gap: 6px;
       }
       .num-slot {
-        height: 64px;
+        height: 58px;
       }
       .num-slot .card-big-num {
-        font-size: 22px;
+        font-size: 20px;
       }
       .console-banner {
+        position: sticky;
+        bottom: 0;
+        z-index: 35;
+        order: 99;
         padding: 12px 14px;
+        background: var(--bg-surface);
+        border-top: 2px solid var(--accent);
+        box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.14);
+      }
+      .console-banner > div:last-child {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+      }
+      .console-banner > div:last-child .btn {
+        flex: 1;
+        justify-content: center;
       }
       .player-board {
-        padding: 12px 14px;
+        padding: 10px 12px;
+        gap: 8px;
       }
       .modal-card {
         padding: 16px;
@@ -464,7 +504,7 @@
         overflow-y: auto;
       }
       .btn {
-        min-height: 42px;
+        min-height: 40px;
         padding: 8px 12px;
       }
     }
@@ -863,7 +903,9 @@
       const meta = document.getElementById('topbarMeta');
       const dealer = gameState.players.find(p => p.id === gameState.dealerId);
       const isLobby = gameState.stage === 'LOBBY';
+      const curTheme = document.documentElement.getAttribute('data-theme') || 'light';
       meta.innerHTML = `
+        <button class="btn btn-sm" onclick="toggleTheme()" title="Toggle Light/Dark Mode">${curTheme === 'dark' ? '☀️' : '🌙'}</button>
         <button class="btn btn-sm" onclick="showRulesModal = true; renderModal();">📜 Rules</button>
         <span class="badge accent">STAGE: ${gameState.stage}</span>
         <span class="badge">ROUND: ${gameState.roundNumber}</span>
@@ -1222,6 +1264,32 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('tabletop_theme', theme);
+      if (gameState) renderTopbar();
+    }
+    window.toggleTheme = function() {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    };
+    applyTheme(localStorage.getItem('tabletop_theme') || 'light');
+
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    }
+    requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        if (!ws || ws.readyState !== WebSocket.OPEN) connectWebSocket();
+        else ws.send(JSON.stringify({ type: 'AUTH', token: sessionToken, name: savedName }));
+      }
+    });
 
     connectWebSocket();
   </script>

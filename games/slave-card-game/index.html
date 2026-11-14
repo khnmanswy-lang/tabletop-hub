@@ -29,6 +29,24 @@
       --font-mono: 'JetBrains Mono', monospace;
     }
 
+    html[data-theme="dark"] {
+      --bg: #141413;
+      --bg-surface: #22211D;
+      --bg-secondary: #1C1B18;
+      --text-primary: #ECE9E2;
+      --text-secondary: #9E9B93;
+      --text-muted: #76746D;
+      --border: #2A2925;
+      --border-strong: #3B3933;
+      --accent: #D97757;
+      --accent-hover: #E2886B;
+      --accent-soft: rgba(217, 119, 87, 0.16);
+      --danger: #E06C60;
+      --success: #52B788;
+      --shadow-sm: 0 2px 6px rgba(0,0,0,0.35);
+      --shadow-md: 0 6px 20px rgba(0,0,0,0.5);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg);
@@ -185,7 +203,7 @@
     }
     .announcement-banner.revolution {
       border-left-color: var(--danger);
-      background: #FDF4F2;
+      background: rgba(185, 56, 41, 0.12);
       font-weight: 600;
     }
 
@@ -282,8 +300,8 @@
       user-select: none;
       position: relative;
     }
-    .card.red { color: #C93B2B; }
-    .card.black { color: #141413; }
+    .card.red { color: #D94E3E; }
+    .card.black { color: var(--text-primary); }
     .card .c-top {
       font-size: 0.95rem;
       font-weight: 700;
@@ -316,7 +334,7 @@
       transform: translateY(-16px) scale(1.03);
       border-color: var(--accent);
       box-shadow: 0 8px 20px -3px rgba(217, 119, 87, 0.38), 0 0 0 2px var(--accent);
-      background: #FFFFFF;
+      background: var(--bg-surface);
       z-index: 2;
     }
 
@@ -341,7 +359,7 @@
     .player-card.active-turn {
       border-color: var(--accent);
       box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-md);
-      background: #FFFAF7;
+      background: var(--bg-surface);
     }
     .player-card.me {
       border-left: 3px solid var(--accent);
@@ -352,7 +370,7 @@
     }
     .player-card.finished {
       border-color: var(--success);
-      background: #F4F9F5;
+      background: rgba(46, 111, 64, 0.12);
     }
     .player-header {
       display: flex;
@@ -542,36 +560,51 @@
       .brand h1 {
         font-size: 1.4rem;
       }
+      .center-board {
+        padding: 12px 10px;
+        min-height: 110px;
+        margin-bottom: 10px;
+      }
       .players-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 8px !important;
+        margin-bottom: 12px !important;
       }
       .player-card {
         padding: 8px 10px !important;
         min-width: 0;
       }
       .hand-panel {
-        padding: 12px 10px !important;
+        position: sticky;
+        bottom: 0;
+        z-index: 35;
+        padding: 10px 10px !important;
+        background: var(--bg-surface);
+        border-top: 2px solid var(--accent);
+        box-shadow: 0 -6px 20px rgba(0,0,0,0.14);
+        gap: 8px !important;
       }
       .hand-row {
-        gap: 12px 4px;
+        gap: 10px 4px;
         justify-content: center;
+        padding: 12px 2px 4px;
       }
       .hand-row .card {
-        width: 48px;
-        height: 70px;
-        padding: 5px 6px;
+        width: 44px;
+        height: 64px;
+        padding: 4px 5px;
       }
-      .hand-row .card .c-top { font-size: 0.85rem; }
-      .hand-row .card .c-suit { font-size: 1.3rem; }
-      .hand-row .card .c-bot { font-size: 0.65rem; }
+      .hand-row .card .c-top { font-size: 0.8rem; }
+      .hand-row .card .c-suit { font-size: 1.2rem; }
+      .hand-row .card .c-bot { font-size: 0.6rem; }
       .hand-card.selected {
         transform: translateY(-10px) scale(1.03);
       }
       .hand-actions {
         flex-direction: column !important;
         align-items: stretch !important;
-        gap: 8px !important;
+        gap: 6px !important;
+        padding-top: 6px;
       }
       .hand-actions > div {
         display: flex !important;
@@ -582,8 +615,8 @@
         flex: 1 !important;
       }
       .btn {
-        min-height: 42px;
-        padding: 8px 12px;
+        min-height: 38px;
+        padding: 7px 10px;
       }
     }
 
@@ -876,7 +909,9 @@
         ROUND_OVER: `ROUND ${gameState.roundNumber} จบรอบ`
       };
       const isLobby = gameState.stage === 'LOBBY';
+      const curTheme = document.documentElement.getAttribute('data-theme') || 'light';
       meta.innerHTML = `
+        <button class="btn btn-sm" onclick="toggleTheme()" title="สลับโหมดสว่าง/มืด">${curTheme === 'dark' ? '☀️' : '🌙'}</button>
         <button class="btn btn-sm" onclick="showRulesModal = true; renderModal();">📜 กติกาไพ่สลาฟ</button>
         <button class="btn btn-sm ${showGuidance ? 'btn-accent' : ''}" onclick="toggleGuidance()" title="เปิด/ปิด แถบคำแนะนำการสู้ไพ่กลางโต๊ะ">
           💡 คำแนะนำ: ${showGuidance ? 'เปิด' : 'ปิด'}
@@ -1295,6 +1330,32 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('tabletop_theme', theme);
+      if (gameState) renderTopbar();
+    }
+    window.toggleTheme = function() {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    };
+    applyTheme(localStorage.getItem('tabletop_theme') || 'light');
+
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    }
+    requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        if (!ws || ws.readyState !== WebSocket.OPEN) connectWebSocket();
+        else ws.send(JSON.stringify({ type: 'AUTH', token: sessionToken, name: savedName }));
+      }
+    });
 
     connectWebSocket();
   </script>
