@@ -15,8 +15,21 @@
     --text-muted: #666560;
     --border: #E5E2DC;
     --accent: #D97757;
+    --accent-soft: rgba(217, 119, 87, 0.12);
     --success: #2E6F40;
     --danger: #B93829;
+  }
+  html[data-theme="dark"] {
+    --bg: #141413;
+    --surface: #1C1B18;
+    --surface-elevated: #22211D;
+    --text: #ECE9E2;
+    --text-muted: #9E9B93;
+    --border: #2A2925;
+    --accent: #D97757;
+    --accent-soft: rgba(217, 119, 87, 0.18);
+    --success: #52B788;
+    --danger: #E06C60;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -98,7 +111,7 @@
     text-align: center;
     font-family: 'JetBrains Mono', monospace;
   }
-  .pill-box.active { border-color: var(--accent); background: #FDF6F3; }
+  .pill-box.active { border-color: var(--accent); background: var(--accent-soft); }
   .pill-stage { font-size: 0.6rem; color: var(--text-muted); display: block; }
   .pill-val { font-size: 0.95rem; font-weight: 700; }
   .chip-selector { display: flex; gap: 10px; justify-content: center; margin: 12px 0; flex-wrap: wrap; }
@@ -187,12 +200,12 @@
     font-family: 'Newsreader', serif; font-size: 1.25rem; text-align: center;
     border: 1px solid var(--border);
   }
-  .banner.win { background: #EBF5EE; color: var(--success); border-color: #B8DFC4; }
-  .banner.lose { background: #FDECEB; color: var(--danger); border-color: #F5C2BE; }
+  .banner.win { background: rgba(46, 111, 64, 0.12); color: var(--success); border-color: var(--success); }
+  .banner.lose { background: rgba(185, 56, 41, 0.12); color: var(--danger); border-color: var(--danger); }
   .top-controls { display: flex; gap: 8px; margin-bottom: 16px; max-width: 420px; }
   input.name-input {
     padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
-    background: var(--surface-elevated); font-family: 'Inter', sans-serif; flex: 1;
+    background: var(--surface-elevated); color: var(--text); font-family: 'Inter', sans-serif; flex: 1;
   }
 
   @media (hover: none) {
@@ -220,6 +233,15 @@
       padding: 10px !important;
       min-width: 0;
     }
+    #actionPanel {
+      position: sticky;
+      bottom: 0;
+      z-index: 35;
+      background: var(--surface-elevated);
+      border-top: 2px solid var(--accent);
+      box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12);
+      margin-bottom: 0;
+    }
     .btn {
       min-height: 40px;
       padding: 8px 12px;
@@ -233,13 +255,22 @@
 
   @media (max-width: 480px) {
     .players-grid {
-      grid-template-columns: 1fr !important;
-      gap: 8px !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+    }
+    .player-card .cards-row {
+      min-height: 54px !important;
+      gap: 4px;
+    }
+    .player-card .card {
+      width: 38px;
+      height: 54px;
+      font-size: 0.95rem;
     }
     .chip-btn {
-      width: 46px;
-      height: 46px;
-      font-size: 1rem;
+      width: 44px;
+      height: 44px;
+      font-size: 0.95rem;
     }
     .top-controls {
       max-width: 100%;
@@ -303,7 +334,8 @@
     </div>
     <div class="subtitle">3–5 Players Silent Co-op Poker (★1 = Weakest, ★N = Strongest)</div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <button id="themeToggleBtn" class="btn" style="width:auto;padding:5px 10px;font-size:12px;" onclick="toggleTheme()" title="Toggle Light/Dark Mode">🌙</button>
     <button class="btn" style="width:auto;padding:5px 12px;font-size:12px;" onclick="openRulesModal()">📜 Rules</button>
     <button id="toggleGuidanceBtn" class="btn" style="width:auto;padding:5px 12px;font-size:12px;" onclick="toggleGuidance()" title="Toggle hand strength evaluation guidance">💡 Guidance: OFF</button>
     <div class="badge" id="stageBadge">CONNECTING...</div>
@@ -322,13 +354,13 @@
   <div class="cards-row" id="communityRow"></div>
 </div>
 
+<div class="players-grid" id="playersGrid"></div>
+
 <div class="section-box" id="actionPanel">
   <div class="label">Steal Rank Chip (★1 = Weakest Hand → ★<span id="maxRankLabel">3</span> = Strongest Hand)</div>
   <div class="chip-selector" id="chipSelector"></div>
   <button class="btn btn-primary" id="lockBtn" onclick="send({type:'TOGGLE_LOCK'})">Select a Chip to Lock In</button>
 </div>
-
-<div class="players-grid" id="playersGrid"></div>
 <div id="modalHost"></div>
 
 <script>
@@ -423,12 +455,41 @@
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   let ws;
   function connect() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
     ws = new WebSocket(proto + '//' + location.host + '/heist/ws');
     ws.onopen = () => send({ type: 'JOIN', token, name: myName });
     ws.onmessage = (e) => render(JSON.parse(e.data));
     ws.onclose = () => setTimeout(connect, 1500);
   }
   connect();
+
+  // Theme & Mobile Wake Lock + Auto-Resync
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('tabletop_theme', theme);
+    const btn = document.getElementById('themeToggleBtn');
+    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
+  function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') || 'light';
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  }
+  applyTheme(localStorage.getItem('tabletop_theme') || 'light');
+
+  let wakeLock = null;
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+      try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    }
+  }
+  requestWakeLock();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      requestWakeLock();
+      if (!ws || ws.readyState !== WebSocket.OPEN) connect();
+      else send({ type: 'JOIN', token, name: myName });
+    }
+  });
 
   function send(payload) {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify(payload));

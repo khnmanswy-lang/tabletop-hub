@@ -9,7 +9,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { WebSocketServer } = require('ws');
+
+const HTML_CLIENT = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const HTML_GZIP = zlib.gzipSync(Buffer.from(HTML_CLIENT, 'utf8'));
 
 // ============================================================================
 // 1. DECLARATIVE DECK & RULESET SPECIFICATION
@@ -606,9 +610,14 @@ function createCockroachRoom() {
   return {
     wss,
     serveHtml: (req, res) => {
-      const html = fs.readFileSync(htmlPath, 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(html);
+      const acceptEncoding = (req && req.headers && req.headers['accept-encoding']) || '';
+      if (acceptEncoding.includes('gzip')) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-cache' });
+        res.end(HTML_GZIP);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+        res.end(HTML_CLIENT);
+      }
     }
   };
 }

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { WebSocketServer } = require('ws');
 const { Hand } = require('pokersolver');
 
@@ -10,6 +11,7 @@ const SUITS = ['s', 'h', 'd', 'c'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 
 const HTML_CLIENT = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const HTML_GZIP = zlib.gzipSync(Buffer.from(HTML_CLIENT, 'utf8'));
 
 function createBlindHeistRoom() {
   let state = {
@@ -251,8 +253,14 @@ function createBlindHeistRoom() {
   return {
     wss,
     serveHtml: (req, res) => {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(HTML_CLIENT);
+      const acceptEncoding = (req && req.headers && req.headers['accept-encoding']) || '';
+      if (acceptEncoding.includes('gzip')) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-cache' });
+        res.end(HTML_GZIP);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+        res.end(HTML_CLIENT);
+      }
     }
   };
 }

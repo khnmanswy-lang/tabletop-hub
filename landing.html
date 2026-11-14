@@ -22,6 +22,20 @@
       --shadow-sm: 0 1px 3px rgba(20,20,19,0.04), 0 2px 8px rgba(20,20,19,0.03);
       --shadow-md: 0 6px 20px rgba(20,20,19,0.06), 0 1px 3px rgba(20,20,19,0.04);
     }
+    html[data-theme="dark"] {
+      --bg: #141413;
+      --surface: #1C1B18;
+      --surface-elevated: #22211D;
+      --text: #ECE9E2;
+      --text-muted: #9E9B93;
+      --border: #2A2925;
+      --border-strong: #3B3933;
+      --accent: #D97757;
+      --accent-hover: #E2886B;
+      --accent-soft: rgba(217, 119, 87, 0.16);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.5);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
       background: var(--bg);
@@ -308,7 +322,10 @@
       <h1>Tabletop Lounge</h1>
       <div class="subtitle">Multiplayer Parlor Games · Real-Time WebSockets</div>
     </div>
-    <div class="status-badge">● 5 Games Online</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button id="themeToggleBtn" onclick="toggleTheme()" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;padding:5px 12px;background:var(--surface-elevated);border:1px solid var(--border-strong);border-radius:999px;color:var(--text);cursor:pointer;transition:all 0.14s ease;">🌙 Dark Mode</button>
+      <div class="status-badge">● 5 Games Online</div>
+    </div>
   </header>
 
   <div class="hero">
@@ -449,9 +466,24 @@
 
   <footer>
     <div>Crafted in Anthropic Editorial Style</div>
-    <div>Native WebSockets · Zero Accounts Needed</div>
+    <div>Native WebSockets · Phone, Tablet & PC Ready</div>
   </footer>
 </div>
 
+<script>
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('tabletop_theme', theme);
+    const btn = document.getElementById('themeToggleBtn');
+    if (btn) {
+      btn.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+  }
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  }
+  applyTheme(localStorage.getItem('tabletop_theme') || 'light');
+</script>
 </body>
 </html>

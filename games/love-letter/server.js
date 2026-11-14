@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { WebSocketServer } = require('ws');
 
 const CARD_DEFS = [
@@ -25,6 +26,7 @@ const TOKENS_TO_WIN = {
 };
 
 const HTML_CLIENT = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const HTML_GZIP = zlib.gzipSync(Buffer.from(HTML_CLIENT, 'utf8'));
 
 function createLoveLetterRoom() {
   const game = {
@@ -694,8 +696,14 @@ function createLoveLetterRoom() {
   return {
     wss,
     serveHtml: (req, res) => {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(HTML_CLIENT);
+      const acceptEncoding = (req && req.headers && req.headers['accept-encoding']) || '';
+      if (acceptEncoding.includes('gzip')) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-cache' });
+        res.end(HTML_GZIP);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+        res.end(HTML_CLIENT);
+      }
     }
   };
 }
